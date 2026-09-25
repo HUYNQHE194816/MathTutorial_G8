@@ -23,7 +23,7 @@ public class MazeGridGenerator : MonoBehaviour
     public int Rows => rows;
     public int Columns => columns;
 
-    void Start()
+    void Awake()
     {
         if (goal == Vector2Int.zero)
             goal = new Vector2Int(rows - 1, columns - 1);
