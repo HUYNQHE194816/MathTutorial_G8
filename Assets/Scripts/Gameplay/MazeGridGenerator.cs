@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,15 +10,29 @@ public class MazeGridGenerator : MonoBehaviour
     public int columns = 6;
 
     [Header("Prefab & container")]
-    public GameObject cellPrefab;    // prefab có gắn CellView
-    public Transform gridContainer;  // object có GridLayoutGroup
+    public GameObject cellPrefab;
+    public Transform gridContainer;
 
     [Header("Điểm bắt đầu / đích")]
     public Vector2Int start = new Vector2Int(0, 0);
     public Vector2Int goal;
 
+    [Header("Cấu hình màn chơi (tùy chọn)")]
+    [Tooltip("Nếu gán, các giá trị bên dưới sẽ bị LevelConfig này ghi đè lúc Awake().")]
+    public LevelConfig config;
+
+    [Header("Độ khó - đường đi chính (bắt buộc phải đi qua để tới rương)")]
+    [Range(0, 100)]
+    [Tooltip("% số ô trên đường đi chính (không tính ô xuất phát) bắt buộc là câu hỏi.")]
+    public int questionRatioOnPath = 70;
+
+    [Header("Độ khó - ô ngoài đường đi chính (bẫy / nhánh phụ)")]
+    [Range(0, 100)] public int offPathDirtPercent = 55;
+    [Range(0, 100)] public int offPathQuestionPercent = 25; // phần còn lại tự là Rock
+
     private GridCellData[,] cellData;
     private CellView[,] cellViews;
+    private System.Random rnd;
 
     public Vector2Int StartPosition => start;
     public int Rows => rows;
@@ -25,50 +40,134 @@ public class MazeGridGenerator : MonoBehaviour
 
     void Awake()
     {
+        ApplyConfig();
+
         if (goal == Vector2Int.zero)
             goal = new Vector2Int(rows - 1, columns - 1);
 
-        GenerateData();
-        CarvePath();
-        BuildView();
-    }
+        rnd = new System.Random(System.Guid.NewGuid().GetHashCode()); // random thật mỗi lần vào scene
 
-    void GenerateData()
-    {
         cellData = new GridCellData[rows, columns];
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < columns; c++)
-                cellData[r, c] = new GridCellData(r, c) { isBlocked = true };
+                cellData[r, c] = new GridCellData(r, c);
+
+        List<Vector2Int> mainPath = BuildMainPath();
+        var pathSet = new HashSet<Vector2Int>(mainPath);
+
+        AssignPathTypes(mainPath);      // ép tỉ lệ Question trên đường đi chính
+        FillOffPathCells(pathSet);      // random Dirt/Question/Rock cho phần còn lại
+        AddExtraConnections(pathSet);   // mở thêm vài lối rẽ phụ cho đỡ nhàm
+
+        cellData[goal.x, goal.y].type = CellType.Goal;
+
+        BuildView();
     }
 
-    // Random-walk từ start đến goal, đảm bảo luôn có ít nhất một đường đi
-    void CarvePath()
+    void ApplyConfig()
     {
-        Vector2Int current = start;
-        MarkPath(current);
+        if (config == null) return;
+        rows = config.rows;
+        columns = config.columns;
+        questionRatioOnPath = config.questionRatioOnPath;
+        offPathDirtPercent = config.offPathDirtPercent;
+        offPathQuestionPercent = config.offPathQuestionPercent;
+    }
 
-        var rnd = new System.Random();
-        int safety = (rows + columns) * 4;
+    // ---- SỬA CỐT LÕI #1 ----
+    // Trước đây: đường đi bảo đảm chỉ đi phải/xuống (staircase), rất dễ đoán.
+    // Giờ: random walk có backtrack, đi được cả 4 hướng, tạo cảm giác mê cung thật,
+    // vẫn LUÔN tìm ra đường vì lưới ở bước này chưa có vật cản.
+    List<Vector2Int> BuildMainPath()
+    {
+        var path = new List<Vector2Int> { start };
+        var visited = new HashSet<Vector2Int> { start };
+        var current = start;
+        int guard = rows * columns * 8; // an toàn tuyệt đối, tránh vòng lặp vô hạn nếu có lỗi
 
-        while (current != goal && safety-- > 0)
+        while (current != goal && guard-- > 0)
         {
-            List<Vector2Int> options = new List<Vector2Int>();
-            if (current.x < goal.x) options.Add(new Vector2Int(current.x + 1, current.y));
-            if (current.y < goal.y) options.Add(new Vector2Int(current.x, current.y + 1));
-            if (options.Count == 0) break;
-
-            current = options[rnd.Next(options.Count)];
-            MarkPath(current);
+            Vector2Int? next = PickNextStep(current, visited);
+            if (next.HasValue)
+            {
+                visited.Add(next.Value);
+                path.Add(next.Value);
+                current = next.Value;
+            }
+            else if (path.Count > 1)
+            {
+                // Ngõ cụt tạm thời -> lùi lại 1 ô, thử hướng khác
+                path.RemoveAt(path.Count - 1);
+                current = path[path.Count - 1];
+            }
+            else
+            {
+                break; // không thể xảy ra trên lưới liền mạch, chỉ phòng hờ
+            }
         }
-
-        cellData[goal.x, goal.y].isGoal = true;
-        cellData[goal.x, goal.y].hasQuestion = false;
+        return path;
     }
 
-    void MarkPath(Vector2Int pos)
+    Vector2Int? PickNextStep(Vector2Int from, HashSet<Vector2Int> visited)
     {
-        cellData[pos.x, pos.y].isBlocked = false;
-        cellData[pos.x, pos.y].hasQuestion = true;
+        var dirs = new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+        var candidates = dirs
+            .Select(d => from + d)
+            .Where(p => InBounds(p) && !visited.Contains(p))
+            // thiên nhẹ về phía đích để đường không quá dài, vẫn đủ ngẫu nhiên để không đi thẳng tuột
+            .OrderBy(p => Vector2Int.Distance(p, goal) - rnd.NextDouble() * 2.5)
+            .ToList();
+
+        return candidates.Count > 0 ? candidates[0] : (Vector2Int?)null;
+    }
+
+    bool InBounds(Vector2Int p) => p.x >= 0 && p.x < rows && p.y >= 0 && p.y < columns;
+
+    // ---- SỬA CỐT LÕI #2 ----
+    // Trước đây: ô trên path chỉ đổi từ Rock -> Dirt/Question, còn ô vốn đã random ra Dirt
+    // thì GIỮ NGUYÊN Dirt -> có thể toàn bộ đường đi chỉ là Dirt, không phải trả lời câu hỏi nào.
+    // Giờ: ép cứng theo tỉ lệ questionRatioOnPath, không phụ thuộc random % ban đầu nữa.
+    void AssignPathTypes(List<Vector2Int> path)
+    {
+        var middle = path.Skip(1).ToList(); // bỏ ô xuất phát, ô goal sẽ bị set riêng sau
+        int questionCount = Mathf.CeilToInt(middle.Count * (questionRatioOnPath / 100f));
+
+        var questionCells = new HashSet<Vector2Int>(
+            middle.OrderBy(_ => rnd.Next()).Take(questionCount));
+
+        foreach (var p in path)
+            cellData[p.x, p.y].type = questionCells.Contains(p) ? CellType.Question : CellType.Dirt;
+
+        cellData[start.x, start.y].type = CellType.Dirt; // ô xuất phát luôn an toàn
+    }
+
+    void FillOffPathCells(HashSet<Vector2Int> pathSet)
+    {
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < columns; c++)
+            {
+                var p = new Vector2Int(r, c);
+                if (pathSet.Contains(p)) continue;
+
+                int roll = rnd.Next(0, 100);
+                cellData[r, c].type = roll < offPathDirtPercent ? CellType.Dirt
+                                     : roll < offPathDirtPercent + offPathQuestionPercent ? CellType.Question
+                                     : CellType.Rock;
+            }
+    }
+
+    void AddExtraConnections(HashSet<Vector2Int> pathSet)
+    {
+        int extra = (rows * columns) / 6; // mở thêm ~16% số ô làm lối rẽ phụ
+        for (int i = 0; i < extra; i++)
+        {
+            int r = rnd.Next(rows);
+            int c = rnd.Next(columns);
+            var p = new Vector2Int(r, c);
+            if (pathSet.Contains(p)) continue;
+            if (cellData[r, c].type == CellType.Rock)
+                cellData[r, c].type = rnd.Next(0, 100) < 60 ? CellType.Dirt : CellType.Question;
+        }
     }
 
     void BuildView()
@@ -79,7 +178,6 @@ public class MazeGridGenerator : MonoBehaviour
         grid.constraintCount = columns;
 
         for (int r = 0; r < rows; r++)
-        {
             for (int c = 0; c < columns; c++)
             {
                 GameObject go = Instantiate(cellPrefab, gridContainer);
@@ -87,9 +185,40 @@ public class MazeGridGenerator : MonoBehaviour
                 view.Setup(cellData[r, c]);
                 cellViews[r, c] = view;
             }
-        }
+
+        // Bắt buộc GridLayoutGroup sắp xếp vị trí các ô NGAY LẬP TỨC,
+        // nếu không PlayerController.Start() sẽ đọc vị trí ô xuất phát
+        // khi lưới chưa kịp layout xong (chạy trước 1 frame), khiến
+        // nhân vật bị đặt lệch (thường rơi vào giữa màn hình).
+        LayoutRebuilder.ForceRebuildLayoutImmediate(gridContainer.GetComponent<RectTransform>());
     }
 
     public GridCellData GetCell(int row, int col) => cellData[row, col];
     public CellView GetCellView(int row, int col) => cellViews[row, col];
+
+    // BFS: còn đường tới rương từ vị trí 'from' hay không (gọi sau mỗi lần 1 ô biến thành đá)
+    public bool HasPathToGoal(Vector2Int from)
+    {
+        var visited = new bool[rows, columns];
+        var queue = new Queue<Vector2Int>();
+        queue.Enqueue(from);
+        visited[from.x, from.y] = true;
+        Vector2Int[] dirs = { new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) };
+
+        while (queue.Count > 0)
+        {
+            var p = queue.Dequeue();
+            if (p == goal) return true;
+            foreach (var d in dirs)
+            {
+                var n = p + d;
+                if (n.x < 0 || n.x >= rows || n.y < 0 || n.y >= columns) continue;
+                if (visited[n.x, n.y]) continue;
+                if (cellData[n.x, n.y].type == CellType.Rock) continue;
+                visited[n.x, n.y] = true;
+                queue.Enqueue(n);
+            }
+        }
+        return false;
+    }
 }

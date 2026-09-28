@@ -24,13 +24,13 @@ public class CellView : MonoBehaviour, IPointerClickHandler
     public void Setup(GridCellData cellData)
     {
         data = cellData;
-        background.sprite = data.isBlocked ? rockSprite : dirtSprite;
+        background.sprite = data.type == CellType.Rock ? rockSprite : dirtSprite;
 
         if (questionMarkIcon != null)
-            questionMarkIcon.SetActive(data.hasQuestion && !data.isVisited);
+            questionMarkIcon.SetActive(data.type == CellType.Question && !data.isVisited);
 
         if (goalIcon != null)
-            goalIcon.SetActive(data.isGoal);
+            goalIcon.SetActive(data.type == CellType.Goal);
     }
 
     public void MarkVisited()

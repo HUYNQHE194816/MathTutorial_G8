@@ -124,8 +124,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CellView
   rockSprite: {fileID: -5017196069693398416, guid: 95ce87bb27089ea4c93d0c05fd5562a1, type: 3}
   dirtSprite: {fileID: -1073214669138202991, guid: 208d8471d1962c748a98e301480b8fbe, type: 3}
-  questionMarkIcon: {fileID: 0}
-  goalIcon: {fileID: 0}
+  questionMarkIcon: {fileID: 8600593071969785234}
+  goalIcon: {fileID: 6918792787635423650}
 --- !u!1 &6918792787635423650
 GameObject:
   m_ObjectHideFlags: 0
@@ -143,7 +143,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &4477213120402396194
 RectTransform:
   m_ObjectHideFlags: 0
@@ -218,7 +218,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8895827161078600663
 RectTransform:
   m_ObjectHideFlags: 0

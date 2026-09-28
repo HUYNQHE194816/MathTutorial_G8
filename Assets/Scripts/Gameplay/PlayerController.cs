@@ -3,10 +3,12 @@
 public class PlayerController : MonoBehaviour
 {
     public MazeGridGenerator maze;
-    public RectTransform playerToken; // sprite "Thợ mỏ" trong ảnh mẫu
+    public RectTransform playerToken;
 
     private Vector2Int currentPos;
     private Vector2Int previousPos;
+
+    public Vector2Int CurrentPosition => currentPos;
 
     void Start()
     {
@@ -18,20 +20,20 @@ public class PlayerController : MonoBehaviour
     {
         Vector2Int target = new Vector2Int(cell.row, cell.col);
         if (!IsAdjacent(currentPos, target)) return;
-        if (cell.isBlocked) return; // không thể bước lên ô đá
+        if (cell.type == CellType.Rock) return;
 
         previousPos = currentPos;
         currentPos = target;
         SnapToCell(currentPos);
 
-        if (cell.hasQuestion && !cell.isVisited)
+        bool needsQuestion = (cell.type == CellType.Question || cell.type == CellType.Goal) && !cell.isVisited;
+        if (needsQuestion)
         {
             var view = maze.GetCellView(cell.row, cell.col);
             GameManager.Instance.OnPlayerEnteredQuestionCell(cell, view);
         }
     }
 
-    // Trả lời sai -> "phải quay lại đi đường khác" (theo luật trong ảnh mẫu)
     public void StepBack()
     {
         currentPos = previousPos;
