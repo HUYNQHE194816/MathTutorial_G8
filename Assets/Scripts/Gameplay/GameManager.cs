@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 
@@ -40,6 +40,7 @@ public class GameManager : MonoBehaviour
         }
 
         timeRemaining = startTimeSeconds;
+        ReviewSessionData.Clear(); // Reset danh sách câu sai của lượt chơi trước
         if (endGamePanel != null) endGamePanel.SetActive(false);
         UpdateScoreUI();
     }
@@ -126,6 +127,7 @@ public class GameManager : MonoBehaviour
 
     public void OnClickPlayAgain() => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     public void OnClickBackToMenu() => SceneManager.LoadScene("MainMenu");
+    public void OnClickReviewAI() => SceneManager.LoadScene("AIReviewScene");
 
     void UpdateScoreUI()
     {

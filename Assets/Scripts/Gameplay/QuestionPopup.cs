@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,7 +20,7 @@ public class QuestionPopup : MonoBehaviour
     [Tooltip("Số giây để trả lời mỗi câu hỏi")]
     public float secondsPerQuestion = 15f;
 
-    private struct QuestionData
+    public struct QuestionData
     {
         public string question;
         public string[] options;
@@ -42,6 +42,7 @@ public class QuestionPopup : MonoBehaviour
     private int correctIndex;
     private Coroutine countdownRoutine;
     private bool answered;
+    private QuestionData currentData;
 
     public void Show(Action<bool> callback)
     {
@@ -49,19 +50,19 @@ public class QuestionPopup : MonoBehaviour
         answered = false;
         panel.SetActive(true);
 
-        var data = Bank[UnityEngine.Random.Range(0, Bank.Length)];
-        correctIndex = data.correctIndex;
+        currentData = Bank[UnityEngine.Random.Range(0, Bank.Length)];
+        correctIndex = currentData.correctIndex;
 
         for (int i = 0; i < answerButtons.Length; i++)
         {
             int idx = i;
-            answerLabels[i].text = data.options[i];
+            answerLabels[i].text = currentData.options[i];
             answerButtons[i].onClick.RemoveAllListeners();
             answerButtons[i].onClick.AddListener(() => Answer(idx));
         }
 
         if (countdownRoutine != null) StopCoroutine(countdownRoutine);
-        countdownRoutine = StartCoroutine(CountdownRoutine(data.question));
+        countdownRoutine = StartCoroutine(CountdownRoutine(currentData.question));
     }
 
     IEnumerator CountdownRoutine(string questionLabel)
@@ -105,7 +106,15 @@ public class QuestionPopup : MonoBehaviour
             countdownRoutine = null;
         }
 
+        bool isCorrect = (index == correctIndex);
+
+        // Lưu câu sai vào danh sách ôn tập AI
+        if (!isCorrect)
+        {
+            ReviewSessionData.AddWrong(currentData.question, currentData.options, index, currentData.correctIndex);
+        }
+
         panel.SetActive(false);
-        onAnswered?.Invoke(index == correctIndex);
+        onAnswered?.Invoke(isCorrect);
     }
 }
