@@ -13,6 +13,15 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         currentPos = maze.StartPosition;
+        playerToken.SetAsLastSibling(); // luôn vẽ đè lên lưới, không bị ô đất che
+        SnapToCell(currentPos);
+    }
+
+    // Vị trí ô lưới (toạ độ thế giới) chỉ đúng sau khi Canvas/GridLayout tính xong và đổi theo
+    // kích thước cửa sổ Game. Nếu chỉ đặt nhân vật 1 lần lúc Start, nhân vật dễ bị lệch ra ngoài
+    // màn hình. Bám theo ô hiện tại mỗi frame để luôn hiển thị đúng chỗ.
+    void LateUpdate()
+    {
         SnapToCell(currentPos);
     }
 
