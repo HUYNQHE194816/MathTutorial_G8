@@ -603,6 +603,9 @@ public class MillionaireManager : MonoBehaviour
     // 14-15: Victory / End Music -> Closing Theme
     void EndGame(string message, bool won)
     {
+        // current = số câu đã trả lời đúng (thua: câu hiện tại là câu sai)
+        ProgressSaveSystem.RecordSession(ProgressSaveSystem.SubjectHoa, current * 10, current, won ? 0 : 1, won, Time.timeSinceLevelLoad);
+
         endPanel.SetActive(true);
         endText.text = message;
         StartCoroutine(EndAudioRoutine(won));

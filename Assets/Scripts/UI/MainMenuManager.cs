@@ -10,6 +10,16 @@ public class MainMenuManager : MonoBehaviour
         SceneManager.LoadScene("SubjectSelectScene");
     }
 
+    public void OnClickDashboard()
+    {
+        if (!Application.CanStreamedLevelBeLoaded("DashboardScene"))
+        {
+            Debug.LogError("[MainMenu] DashboardScene chưa có trong Build Settings (Tools > KHTN 8 > Tạo DashboardScene).");
+            return;
+        }
+        SceneManager.LoadScene("DashboardScene");
+    }
+
     public void OnClickSettings()
     {
         settingsPanel.SetActive(true);

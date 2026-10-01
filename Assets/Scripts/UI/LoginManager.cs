@@ -1,397 +1,505 @@
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem.UI;
-#endif
 
 /// <summary>
-/// Scene đăng nhập cho học sinh lớp 8. Toàn bộ UI + animation dựng bằng code
-/// (không DOTween, không prefab) nên nhẹ và không cần chỉnh tay trong Editor.
+/// Scene đăng nhập cho học sinh: nhập Tên + Lớp -> lưu vào StudentProfileData -> vào MainMenu.
+/// Animation: intro (tiêu đề nảy, nhân vật + bong bóng thoại, thẻ trượt lên), idle (lơ lửng),
+/// focus ô nhập (viền vàng), sai (rung + đỏ), thành công (pháo hoa + nhân vật nhảy + fade).
+/// Toàn bộ dùng unscaledTime giống SubjectSelectManager.
 /// </summary>
 public class LoginManager : MonoBehaviour
 {
-    [SerializeField] private Sprite background, sparkle;
-    [SerializeField] private string nextScene = "MainMenu";
+    private const string PrefName = "login.name";
+    private const string PrefClass = "login.class";
 
-    static readonly Color Navy = new(.13f, .2f, .45f), Blue = new(.25f, .55f, 1f), Sun = new(1f, .8f, .2f),
-        Green = new(.3f, .78f, .45f), DGreen = new(.2f, .6f, .33f), Red = new(.92f, .3f, .3f),
-        FieldCol = new(.92f, .96f, 1f), FocusCol = new(1f, .97f, .82f);
+    private static readonly Color NormalColor = new Color(0.94f, 0.95f, 1f, 1f);
+    private static readonly Color FocusColor = new Color(1f, 0.94f, 0.68f, 1f);
+    private static readonly Color ErrorColor = new Color(1f, 0.76f, 0.76f, 1f);
+    private static readonly Color ErrorTextColor = new Color(0.86f, 0.2f, 0.25f, 1f);
+    private static readonly Color SuccessTextColor = new Color(0.1f, 0.6f, 0.35f, 1f);
 
-    struct Floater { public RectTransform rt; public float x, y0, speed, phase, amp, spin; public bool twinkle; }
+    [Header("Bố cục")]
+    [SerializeField] private RectTransform titleGroup;
+    [SerializeField] private RectTransform mascot;
+    [SerializeField] private RectTransform bubble;
+    [SerializeField] private TMP_Text bubbleText;
+    [SerializeField] private RectTransform card;
+    [SerializeField] private CanvasGroup cardGroup;
+    [Tooltip("Các nhóm hiện lần lượt trong thẻ: Tên, Lớp, Nút")]
+    [SerializeField] private CanvasGroup[] fieldGroups;
+    [SerializeField] private Image bgGlow;
 
-    readonly List<Floater> floaters = new();
-    readonly List<RectTransform> items = new();
-    Sprite round;
-    RectTransform card, mascot, face, eyeL, eyeR;
-    CanvasGroup fade;
-    TMP_InputField nameIn, classIn;
-    TMP_Text msg;
-    Button loginBtn;
-    Press loginPress;
-    bool busy;
+    [Header("Form")]
+    [SerializeField] private TMP_InputField nameInput;
+    [SerializeField] private TMP_InputField classInput;
+    [SerializeField] private Image nameFrame;
+    [SerializeField] private Image classFrame;
+    [SerializeField] private Button loginButton;
+    [SerializeField] private AnimatedButton loginButtonFx;
+    [SerializeField] private TMP_Text loginButtonLabel;
+    [SerializeField] private TMP_Text messageText;
+    [SerializeField] private CanvasGroup messageGroup;
 
-    // ---------------------------------------------------------------- lifecycle
+    [Header("Hiệu ứng")]
+    [SerializeField] private CanvasGroup fadeOverlay;
+    [SerializeField] private RectTransform effectsRoot;
+    [SerializeField] private Sprite sparkleSprite;
+    [SerializeField] private AudioSource sfx;
+    [SerializeField] private AudioClip successClip;
+    [SerializeField] private AudioClip errorClip;
+
+    [Header("Điều hướng")]
+    [SerializeField] private string nextSceneName = "MainMenu";
+
+    private Vector2 titleBase, mascotBase, cardBase;
+    private Vector2[] fieldBase;
+    private bool introDone, locked, mascotBusy;
+    private bool nameError, classError;
+    private TMP_InputField focused;
+    private Coroutine bubbleRoutine, messageRoutine;
+
+    // ---------- Easing ----------
+    private static float EaseOutCubic(float k) { k = 1f - k; return 1f - k * k * k; }
+
+    private static float EaseOutBack(float k)
+    {
+        const float c1 = 1.70158f, c3 = c1 + 1f;
+        float x = k - 1f;
+        return 1f + c3 * x * x * x + c1 * x * x;
+    }
+
+    private static float EaseOutBounce(float k)
+    {
+        const float n1 = 7.5625f, d1 = 2.75f;
+        if (k < 1f / d1) return n1 * k * k;
+        if (k < 2f / d1) { k -= 1.5f / d1; return n1 * k * k + 0.75f; }
+        if (k < 2.5f / d1) { k -= 2.25f / d1; return n1 * k * k + 0.9375f; }
+        k -= 2.625f / d1;
+        return n1 * k * k + 0.984375f;
+    }
+
+    private static IEnumerator Tween(float duration, System.Action<float> step)
+    {
+        for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+        {
+            step(t / duration);
+            yield return null;
+        }
+        step(1f);
+    }
+
+    private static IEnumerator Delayed(float delay, IEnumerator inner)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        yield return inner;
+    }
+
+    // ---------- Vòng đời ----------
     private void Awake()
     {
-        round = MakeRound();
-        Build();
+        titleBase = titleGroup.anchoredPosition;
+        mascotBase = mascot.anchoredPosition;
+        cardBase = card.anchoredPosition;
+
+        fieldBase = new Vector2[fieldGroups.Length];
+        for (int i = 0; i < fieldGroups.Length; i++)
+        {
+            var g = fieldGroups[i];
+            fieldBase[i] = ((RectTransform)g.transform).anchoredPosition;
+            g.alpha = 0f;
+        }
+
+        titleGroup.localScale = Vector3.zero;
+        mascot.localScale = Vector3.zero;
+        bubble.localScale = Vector3.zero;
+        cardGroup.alpha = 0f;
+        card.anchoredPosition = cardBase + new Vector2(0f, -200f);
+        messageGroup.alpha = 0f;
+
+        fadeOverlay.alpha = 1f;
+        fadeOverlay.blocksRaycasts = true;
+
+        nameInput.text = PlayerPrefs.GetString(PrefName, "");
+        classInput.text = PlayerPrefs.GetString(PrefClass, "");
+        bubbleText.text = "Xin chào! Mình là gia sư Khoa học của bạn. Bạn tên là gì nhỉ?";
+    }
+
+    private void OnEnable()
+    {
+        loginButton.onClick.AddListener(TrySubmit);
+        nameInput.onSelect.AddListener(OnNameSelect);
+        classInput.onSelect.AddListener(OnClassSelect);
+        nameInput.onDeselect.AddListener(OnAnyDeselect);
+        classInput.onDeselect.AddListener(OnAnyDeselect);
+        nameInput.onValueChanged.AddListener(OnNameChanged);
+        classInput.onValueChanged.AddListener(OnClassChanged);
+        nameInput.onSubmit.AddListener(OnNameSubmit);
+        classInput.onSubmit.AddListener(OnClassSubmit);
+    }
+
+    private void OnDisable()
+    {
+        loginButton.onClick.RemoveListener(TrySubmit);
+        nameInput.onSelect.RemoveListener(OnNameSelect);
+        classInput.onSelect.RemoveListener(OnClassSelect);
+        nameInput.onDeselect.RemoveListener(OnAnyDeselect);
+        classInput.onDeselect.RemoveListener(OnAnyDeselect);
+        nameInput.onValueChanged.RemoveListener(OnNameChanged);
+        classInput.onValueChanged.RemoveListener(OnClassChanged);
+        nameInput.onSubmit.RemoveListener(OnNameSubmit);
+        classInput.onSubmit.RemoveListener(OnClassSubmit);
     }
 
     private void Start()
     {
-        nameIn.text = PlayerPrefs.GetString("student_name", "");
-        classIn.text = PlayerPrefs.GetString("student_class", "");
-        StartCoroutine(Intro());
-        StartCoroutine(Blink());
+        StartCoroutine(IntroRoutine());
     }
 
     private void Update()
     {
+        float dt = Time.unscaledDeltaTime;
         float t = Time.unscaledTime;
-        foreach (var f in floaters)
+        float k = 1f - Mathf.Exp(-14f * dt);
+
+        if (bgGlow != null)
         {
-            if (f.twinkle)
-            {
-                f.rt.localScale = Vector3.one * (.55f + .45f * Mathf.Sin(t * 2.5f + f.phase));
-                f.rt.localEulerAngles = new Vector3(0, 0, t * f.spin);
-            }
-            else
-            {
-                f.rt.anchoredPosition = new Vector2(f.x + Mathf.Sin(t * .6f + f.phase) * f.amp,
-                    Mathf.Repeat(f.y0 + f.speed * t + 650f, 1300f) - 650f);
-                f.rt.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * .5f + f.phase) * f.spin * 2f);
-            }
+            var c = bgGlow.color;
+            c.a = 0.38f + 0.10f * Mathf.Sin(t * 0.8f);
+            bgGlow.color = c;
         }
-        // linh vật lắc lư nhẹ
-        face.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * 1.8f) * 4f);
-        face.localScale = new Vector3(1f, 1f + .03f * Mathf.Sin(t * 3.2f), 1f);
+
+        if (!introDone) return;
+
+        titleGroup.anchoredPosition = titleBase + new Vector2(0f, Mathf.Sin(t * 1.4f) * 8f);
+        titleGroup.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 0.9f) * 1.2f);
+
+        if (!mascotBusy)
+        {
+            mascot.anchoredPosition = mascotBase + new Vector2(0f, Mathf.Sin(t * 2f) * 10f);
+            mascot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 1.3f) * 3f);
+        }
+
+        AnimateFrame(nameFrame, focused == nameInput, nameError, k);
+        AnimateFrame(classFrame, focused == classInput, classError, k);
+
+        bool ready = nameInput.text.Trim().Length >= 2 && classInput.text.Trim().Length >= 1;
+        loginButtonFx.Pulse = ready && !locked;
     }
 
-    // ---------------------------------------------------------------- UI build
-    void Build()
+    private static void AnimateFrame(Image frame, bool isFocused, bool isError, float k)
     {
-        var cv = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        cv.transform.SetParent(transform, false);
-        cv.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-        var sc = cv.GetComponent<CanvasScaler>();
-        sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        sc.referenceResolution = new Vector2(1920, 1080);
-        sc.matchWidthOrHeight = .5f;
-        var root = (RectTransform)cv.transform;
-
-        if (!FindFirstObjectByType<EventSystem>())
-        {
-            var es = new GameObject("EventSystem", typeof(EventSystem));
-#if ENABLE_INPUT_SYSTEM
-            es.AddComponent<InputSystemUIInputModule>();
-#else
-            es.AddComponent<StandaloneInputModule>();
-#endif
-        }
-
-        // nền
-        var bg = Img("BG", root, Vector2.zero, Vector2.zero, background, background ? Color.white : new Color(.45f, .75f, 1f));
-        if (background)
-        {
-            bg.rectTransform.sizeDelta = new Vector2(1920, 1080);
-            var arf = bg.gameObject.AddComponent<AspectRatioFitter>();
-            arf.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
-            arf.aspectRatio = background.rect.width / background.rect.height;
-        }
-        else Stretch(bg.rectTransform);
-
-        // ký hiệu toán học trôi lơ lửng
-        string[] sy = { "+", "−", "×", "÷", "π", "√", "x²", "%", "=" };
-        for (int i = 0; i < 16; i++)
-        {
-            var t = Txt("Sym", root, sy[i % sy.Length], Random.Range(70, 130), new Color(1, 1, 1, .35f), new Vector2(200, 200), Vector2.zero);
-            floaters.Add(new Floater { rt = t.rectTransform, x = Random.Range(-900f, 900f), y0 = Random.Range(-650f, 650f), speed = Random.Range(20f, 50f), phase = Random.Range(0f, 6.28f), amp = Random.Range(20f, 60f), spin = Random.Range(-8f, 8f) });
-        }
-        // ngôi sao lấp lánh
-        for (int i = 0; i < 10; i++)
-        {
-            var im = Img("Spark", root, new Vector2(Random.Range(40, 70), Random.Range(40, 70)), new Vector2(Random.Range(-900f, 900f), Random.Range(-500f, 500f)), sparkle ? sparkle : round, i % 2 == 0 ? Sun : Color.white);
-            floaters.Add(new Floater { rt = im.rectTransform, phase = Random.Range(0f, 6.28f), spin = Random.Range(-30f, 30f), twinkle = true });
-        }
-
-        // thẻ đăng nhập
-        card = RT("Card", root, new Vector2(760, 780), Vector2.zero);
-        card.gameObject.AddComponent<CanvasGroup>();
-        Img("Shadow", card, new Vector2(760, 780), new Vector2(0, -14), round, new Color(0, .1f, .3f, .25f));
-        Img("Face", card, new Vector2(760, 780), Vector2.zero, round, Color.white);
-
-        // linh vật
-        mascot = RT("Mascot", card, new Vector2(170, 170), new Vector2(0, 390));
-        face = Img("Head", mascot, new Vector2(170, 170), Vector2.zero, round, Sun).rectTransform;
-        eyeL = Eye(face, -32); eyeR = Eye(face, 32);
-        Img("Mouth", face, new Vector2(44, 20), new Vector2(0, -30), round, Navy);
-        Img("CheekL", face, new Vector2(26, 26), new Vector2(-58, -14), round, new Color(1, .6f, .6f, .7f));
-        Img("CheekR", face, new Vector2(26, 26), new Vector2(58, -14), round, new Color(1, .6f, .6f, .7f));
-
-        var title = Txt("Title", card, "KHTN VUI LỚP 8", 58, Color.white, new Vector2(700, 80), new Vector2(0, 235));
-        title.fontStyle = FontStyles.Bold;
-        title.enableVertexGradient = true;
-        title.colorGradient = new VertexGradient(Blue, Blue, Navy, Navy);
-        var sub = Txt("Sub", card, "Đăng nhập để bắt đầu hành trình nhé!", 26, new Color(.4f, .45f, .6f), new Vector2(700, 40), new Vector2(0, 170));
-
-        nameIn = Field("Tên của em là gì?", 60);
-        classIn = Field("Em học lớp nào? (VD: 8A1)", -50);
-
-        var btn = RT("Button", card, new Vector2(620, 108), new Vector2(0, -175));
-        Img("Shadow", btn, new Vector2(620, 100), new Vector2(0, -8), round, DGreen);
-        var bf = Img("Face", btn, new Vector2(620, 100), new Vector2(0, 4), round, Green);
-        bf.raycastTarget = true;
-        Txt("Label", btn, "BẮT ĐẦU HỌC", 42, Color.white, new Vector2(620, 100), new Vector2(0, 4)).fontStyle = FontStyles.Bold;
-        loginBtn = btn.gameObject.AddComponent<Button>();
-        loginBtn.targetGraphic = bf;
-        loginBtn.transition = Selectable.Transition.None;
-        loginBtn.onClick.AddListener(Login);
-        loginPress = btn.gameObject.AddComponent<Press>();
-        loginPress.pulse = true;
-
-        msg = Txt("Msg", card, "", 28, Red, new Vector2(680, 44), new Vector2(0, -270));
-        msg.fontStyle = FontStyles.Bold;
-        var foot = Txt("Foot", card, "Học vui  •  Hiểu nhanh  •  Nhớ lâu", 24, new Color(.45f, .5f, .62f), new Vector2(700, 36), new Vector2(0, -335));
-
-        items.AddRange(new[] { title.rectTransform, sub.rectTransform, (RectTransform)nameIn.transform, (RectTransform)classIn.transform, btn, msg.rectTransform, foot.rectTransform });
-
-        // màn phủ đen để fade
-        var fo = Img("Fade", root, Vector2.zero, Vector2.zero, null, Color.black);
-        Stretch(fo.rectTransform);
-        fade = fo.gameObject.AddComponent<CanvasGroup>();
-        fade.alpha = 1f;
+        if (frame == null) return;
+        Color target = isError ? ErrorColor : isFocused ? FocusColor : NormalColor;
+        frame.color = Color.Lerp(frame.color, target, k);
+        var rt = frame.rectTransform;
+        rt.localScale = Vector3.Lerp(rt.localScale, Vector3.one * (isFocused ? 1.025f : 1f), k);
     }
 
-    TMP_InputField Field(string placeholder, float y)
+    // ---------- Intro ----------
+    private IEnumerator IntroRoutine()
     {
-        var bg = Img("Field", card, new Vector2(620, 84), new Vector2(0, y), round, FieldCol);
-        bg.raycastTarget = true;
-        var vp = RT("Viewport", bg.transform, Vector2.zero, Vector2.zero);
-        Stretch(vp); vp.offsetMin = new Vector2(28, 8); vp.offsetMax = new Vector2(-28, -8);
-        vp.gameObject.AddComponent<RectMask2D>();
-        var tx = Txt("Text", vp, "", 34, Navy, Vector2.zero, Vector2.zero);
-        Stretch(tx.rectTransform); tx.alignment = TextAlignmentOptions.MidlineLeft;
-        var pl = Txt("Placeholder", vp, placeholder, 34, new Color(.5f, .55f, .68f), Vector2.zero, Vector2.zero);
-        Stretch(pl.rectTransform); pl.alignment = TextAlignmentOptions.MidlineLeft; pl.fontStyle = FontStyles.Italic;
+        StartCoroutine(FadeOverlay(1f, 0f, 0.5f));
+        StartCoroutine(Delayed(0.2f, DropIn(titleGroup, titleBase + new Vector2(0f, 420f), titleBase, 0.9f)));
+        StartCoroutine(Delayed(0.6f, PopIn(mascot, 0.6f)));
+        StartCoroutine(Delayed(0.95f, PopIn(bubble, 0.45f)));
+        StartCoroutine(Delayed(0.8f, CardIn()));
 
-        bg.gameObject.SetActive(false); // gán tham chiếu xong mới bật để TMP_InputField khởi tạo đúng
-        var f = bg.gameObject.AddComponent<TMP_InputField>();
-        f.textViewport = vp; f.textComponent = tx; f.placeholder = pl; f.targetGraphic = bg;
-        f.transition = Selectable.Transition.None;
-        f.characterLimit = 24; f.customCaretColor = true; f.caretColor = Navy; f.caretWidth = 3;
-        f.selectionColor = new Color(.25f, .55f, 1f, .35f);
-        f.onSelect.AddListener(_ => bg.color = FocusCol);
-        f.onDeselect.AddListener(_ => bg.color = FieldCol);
-        f.onSubmit.AddListener(_ => Login());
-        bg.gameObject.SetActive(true);
-        return f;
+        yield return new WaitForSecondsRealtime(2.1f);
+        introDone = true;
+        nameInput.Select();
+        nameInput.ActivateInputField();
     }
 
-    RectTransform Eye(Transform p, float x)
+    private IEnumerator DropIn(RectTransform rt, Vector2 from, Vector2 to, float duration)
     {
-        var e = Img("Eye", p, new Vector2(46, 46), new Vector2(x, 14), round, Color.white);
-        Img("Pupil", e.transform, new Vector2(24, 24), new Vector2(0, -2), round, Navy);
-        return e.rectTransform;
+        rt.localScale = Vector3.one;
+        rt.anchoredPosition = from;
+        yield return Tween(duration, k => rt.anchoredPosition = Vector2.LerpUnclamped(from, to, EaseOutBounce(k)));
     }
 
-    // ---------------------------------------------------------------- logic
-    void Login()
+    private IEnumerator PopIn(RectTransform rt, float duration)
     {
-        if (busy) return;
-        string n = nameIn.text.Trim();
-        if (n.Length == 0)
+        yield return Tween(duration, k => rt.localScale = Vector3.one * EaseOutBack(k));
+        rt.localScale = Vector3.one;
+    }
+
+    private IEnumerator CardIn()
+    {
+        for (int i = 0; i < fieldGroups.Length; i++)
+            StartCoroutine(Delayed(0.3f + i * 0.1f, FieldIn(i)));
+
+        Vector2 from = cardBase + new Vector2(0f, -200f);
+        yield return Tween(0.6f, k =>
         {
-            Say("Em hãy nhập tên nhé!", Red);
-            StartCoroutine(Shake());
-            nameIn.Select();
+            card.anchoredPosition = Vector2.LerpUnclamped(from, cardBase, EaseOutBack(k));
+            cardGroup.alpha = Mathf.Clamp01(k * 2.2f);
+        });
+        card.anchoredPosition = cardBase;
+    }
+
+    private IEnumerator FieldIn(int i)
+    {
+        var g = fieldGroups[i];
+        var rt = (RectTransform)g.transform;
+        Vector2 to = fieldBase[i];
+        Vector2 from = to + new Vector2(0f, -36f);
+        yield return Tween(0.4f, k =>
+        {
+            float e = EaseOutCubic(k);
+            rt.anchoredPosition = Vector2.Lerp(from, to, e);
+            g.alpha = e;
+        });
+    }
+
+    // ---------- Sự kiện ô nhập ----------
+    private void OnNameSelect(string _) { focused = nameInput; SetBubble("Bạn tên là gì nhỉ?"); }
+    private void OnClassSelect(string _) { focused = classInput; SetBubble("Bạn học lớp nào vậy? Ví dụ: 8A1"); }
+
+    private void OnAnyDeselect(string _)
+    {
+        if (focused != null && !focused.isFocused) focused = null;
+    }
+
+    private void OnNameChanged(string _) { if (nameError) { nameError = false; HideMessage(); } }
+    private void OnClassChanged(string _) { if (classError) { classError = false; HideMessage(); } }
+
+    private void OnNameSubmit(string _)
+    {
+        if (string.IsNullOrWhiteSpace(nameInput.text)) return;
+        classInput.Select();
+        classInput.ActivateInputField();
+    }
+
+    private void OnClassSubmit(string _) { TrySubmit(); }
+
+    // ---------- Đăng nhập ----------
+    private void TrySubmit()
+    {
+        if (locked || !introDone) return;
+
+        string n = nameInput.text.Trim();
+        string c = classInput.text.Trim().ToUpperInvariant();
+
+        if (n.Length < 2)
+        {
+            Fail(true, "Bạn quên nhập tên rồi nè!");
             return;
         }
-        busy = true;
-        loginPress.pulse = false;
+        if (c.Length < 1)
+        {
+            Fail(false, "Nhập lớp của bạn nhé (ví dụ 8A1).");
+            return;
+        }
+
+        StartCoroutine(SuccessRoutine(n, c));
+    }
+
+    private void Fail(bool nameField, string message)
+    {
+        if (nameField) nameError = true; else classError = true;
+
+        ShowMessage(message, ErrorTextColor);
+        SetBubble("Hmm, kiểm tra lại giúp mình nhé!");
+        Play(errorClip);
+        StartCoroutine(ShakeCard());
+        StartCoroutine(MascotShake());
+
+        var input = nameField ? nameInput : classInput;
+        input.Select();
+        input.ActivateInputField();
+    }
+
+    private IEnumerator SuccessRoutine(string n, string c)
+    {
+        locked = true;
+
         StudentProfileData.studentName = n;
-        PlayerPrefs.SetString("student_name", n);
-        PlayerPrefs.SetString("student_class", classIn.text.Trim());
-        StartCoroutine(Success(n));
-    }
+        StudentProfileData.studentClass = c;
+        ProgressSaveSystem.Load(n, c);
+        PlayerPrefs.SetString(PrefName, n);
+        PlayerPrefs.SetString(PrefClass, c);
+        PlayerPrefs.Save();
 
-    void Say(string s, Color c)
-    {
-        msg.text = s; msg.color = c;
-        StartCoroutine(Tween(.25f, t => msg.rectTransform.localScale = Vector3.one * Mathf.LerpUnclamped(.8f, 1f, Back(t))));
-    }
+        nameInput.interactable = false;
+        classInput.interactable = false;
+        loginButton.interactable = false;
+        loginButtonFx.Pulse = false;
+        loginButtonLabel.text = "ĐANG VÀO...";
 
-    // ---------------------------------------------------------------- animation
-    IEnumerator Intro()
-    {
-        var cg = card.GetComponent<CanvasGroup>();
-        cg.alpha = 0; card.localScale = Vector3.one * .6f;
-        StartCoroutine(Tween(.5f, t => fade.alpha = 1f - t));
-        StartCoroutine(Reveal(mascot, .05f, 260f));
-        for (int i = 0; i < items.Count; i++) StartCoroutine(Reveal(items[i], .25f + i * .09f, -45f));
-        yield return Tween(.55f, t =>
+        Play(successClip);
+        SetBubble("Chào " + n + "! Cùng khám phá Khoa học 8 nào!");
+        ShowMessage("Đăng nhập thành công!", SuccessTextColor);
+
+        StartCoroutine(SparkleBurst(mascot.anchoredPosition));
+        yield return MascotJump();
+        yield return new WaitForSecondsRealtime(0.35f);
+
+        yield return Tween(0.3f, k =>
         {
-            cg.alpha = Mathf.Clamp01(t * 2f);
-            card.localScale = Vector3.one * Mathf.LerpUnclamped(.6f, 1f, Back(t));
+            card.localScale = Vector3.one * (1f - 0.08f * k);
+            cardGroup.alpha = 1f - k;
         });
-        if (!Application.isMobilePlatform) { nameIn.Select(); nameIn.ActivateInputField(); }
+
+        yield return LoadSceneWithFade(nextSceneName);
     }
 
-    IEnumerator Reveal(RectTransform r, float delay, float dy)
+    private IEnumerator LoadSceneWithFade(string sceneName)
     {
-        var g = r.GetComponent<CanvasGroup>();
-        if (!g) g = r.gameObject.AddComponent<CanvasGroup>();
-        var end = r.anchoredPosition;
-        g.alpha = 0; r.anchoredPosition = end + Vector2.up * dy;
-        yield return new WaitForSecondsRealtime(delay);
-        yield return Tween(.55f, t =>
+        if (!Application.CanStreamedLevelBeLoaded(sceneName))
         {
-            g.alpha = Mathf.Clamp01(t * 2.5f);
-            r.anchoredPosition = end + Vector2.up * dy * (1f - Back(t));
+            Debug.LogError("[Login] Scene '" + sceneName + "' chưa có trong Build Settings.");
+            // trả form về trạng thái nhập lại
+            card.localScale = Vector3.one;
+            cardGroup.alpha = 1f;
+            nameInput.interactable = true;
+            classInput.interactable = true;
+            loginButton.interactable = true;
+            loginButtonLabel.text = "VÀO HỌC NÀO!";
+            ShowMessage("Không tìm thấy scene: " + sceneName, ErrorTextColor);
+            locked = false;
+            yield break;
+        }
+
+        yield return FadeOverlay(0f, 1f, 0.35f);
+        var op = SceneManager.LoadSceneAsync(sceneName);
+        while (!op.isDone) yield return null;
+    }
+
+    // ---------- Thông báo & bong bóng ----------
+    private void ShowMessage(string message, Color color)
+    {
+        messageText.text = message;
+        messageText.color = color;
+        if (messageRoutine != null) StopCoroutine(messageRoutine);
+        messageRoutine = StartCoroutine(FadeGroup(messageGroup, 1f, 0.2f));
+    }
+
+    private void HideMessage()
+    {
+        if (messageGroup.alpha <= 0.01f) return;
+        if (messageRoutine != null) StopCoroutine(messageRoutine);
+        messageRoutine = StartCoroutine(FadeGroup(messageGroup, 0f, 0.2f));
+    }
+
+    private static IEnumerator FadeGroup(CanvasGroup g, float to, float duration)
+    {
+        float from = g.alpha;
+        yield return Tween(duration, k => g.alpha = Mathf.Lerp(from, to, k));
+    }
+
+    private void SetBubble(string text)
+    {
+        if (bubbleText.text == text) return;
+        bubbleText.text = text;
+        if (!introDone) return;
+        if (bubbleRoutine != null) StopCoroutine(bubbleRoutine);
+        bubbleRoutine = StartCoroutine(BubblePunch());
+    }
+
+    private IEnumerator BubblePunch()
+    {
+        yield return Tween(0.3f, k => bubble.localScale = Vector3.one * (1f + Mathf.Sin(k * Mathf.PI) * 0.1f));
+        bubble.localScale = Vector3.one;
+    }
+
+    // ---------- Hoạt ảnh ----------
+    private IEnumerator ShakeCard()
+    {
+        yield return Tween(0.42f, k =>
+        {
+            float x = Mathf.Sin(k * 32f) * (1f - k) * 22f;
+            card.anchoredPosition = cardBase + new Vector2(x, 0f);
         });
+        card.anchoredPosition = cardBase;
     }
 
-    IEnumerator Blink()
+    private IEnumerator MascotShake()
     {
-        while (true)
+        mascotBusy = true;
+        yield return Tween(0.42f, k =>
         {
-            yield return new WaitForSecondsRealtime(Random.Range(2f, 4f));
-            yield return Tween(.14f, t =>
-            {
-                var s = new Vector3(1f, 1f - .9f * Mathf.Sin(t * Mathf.PI), 1f);
-                eyeL.localScale = s; eyeR.localScale = s;
-            });
-        }
+            mascot.anchoredPosition = mascotBase;
+            mascot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(k * 28f) * (1f - k) * 10f);
+        });
+        mascotBusy = false;
     }
 
-    IEnumerator Shake()
+    private IEnumerator MascotJump()
     {
-        var p0 = card.anchoredPosition;
-        yield return Tween(.45f, t => card.anchoredPosition = p0 + Vector2.right * Mathf.Sin(t * 40f) * (1f - t) * 24f);
-        card.anchoredPosition = p0;
-    }
-
-    IEnumerator Success(string n)
-    {
-        loginBtn.interactable = false;
-        Say($"Chào {n}! Cùng khám phá Toán học nào!", Green);
-        StartCoroutine(Burst());
-        var p0 = mascot.anchoredPosition;
-        yield return Tween(.5f, t => mascot.anchoredPosition = p0 + Vector2.up * Mathf.Sin(t * Mathf.PI) * 70f);
-        yield return new WaitForSecondsRealtime(.5f);
-        yield return Tween(.4f, t => fade.alpha = t);
-
-        if (Application.CanStreamedLevelBeLoaded(nextScene)) SceneManager.LoadScene(nextScene);
-        else
+        mascotBusy = true;
+        yield return Tween(0.6f, k =>
         {
-            Debug.LogWarning($"[Login] Scene '{nextScene}' chưa có trong Build Settings.");
-            fade.alpha = 0; busy = false; loginBtn.interactable = true; loginPress.pulse = true;
-        }
+            float h = Mathf.Sin(k * Mathf.PI);
+            mascot.anchoredPosition = mascotBase + new Vector2(0f, h * 110f);
+            mascot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(k * Mathf.PI * 2f) * 8f);
+            float squash = k < 0.15f ? 1f - k * 0.5f : 1f + h * 0.08f;
+            mascot.localScale = new Vector3(1f / squash, squash, 1f);
+        });
+        mascot.localScale = Vector3.one;
+        mascot.anchoredPosition = mascotBase;
+        mascot.localRotation = Quaternion.identity;
+        // giữ trạng thái busy: sau khi thành công nhân vật đứng yên chờ chuyển cảnh
     }
 
-    IEnumerator Burst()
+    private IEnumerator FadeOverlay(float from, float to, float duration)
     {
-        const int n = 18;
-        var rts = new RectTransform[n]; var imgs = new Image[n]; var dirs = new Vector2[n];
+        fadeOverlay.blocksRaycasts = true;
+        yield return Tween(duration, k => fadeOverlay.alpha = Mathf.Lerp(from, to, k));
+        fadeOverlay.blocksRaycasts = to > 0.5f;
+    }
+
+    private void Play(AudioClip clip)
+    {
+        if (sfx != null && clip != null) sfx.PlayOneShot(clip);
+    }
+
+    private IEnumerator SparkleBurst(Vector2 center)
+    {
+        if (sparkleSprite == null || effectsRoot == null) yield break;
+
+        const int n = 28;
+        Color[] palette =
+        {
+            new Color(1f, 0.88f, 0.4f), Color.white, new Color(0.6f, 1f, 0.85f), new Color(1f, 0.7f, 0.85f)
+        };
+
+        var rts = new RectTransform[n];
+        var imgs = new Image[n];
+        var dirs = new Vector2[n];
+        var speeds = new float[n];
+
         for (int i = 0; i < n; i++)
         {
-            imgs[i] = Img("Burst", card, new Vector2(46, 46), new Vector2(0, 60), sparkle ? sparkle : round, i % 2 == 0 ? Sun : Blue);
-            rts[i] = imgs[i].rectTransform;
-            dirs[i] = Random.insideUnitCircle.normalized * Random.Range(250f, 450f);
+            var go = new GameObject("Sparkle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            rts[i] = (RectTransform)go.transform;
+            rts[i].SetParent(effectsRoot, false);
+            imgs[i] = go.GetComponent<Image>();
+            imgs[i].sprite = sparkleSprite;
+            imgs[i].raycastTarget = false;
+            imgs[i].color = palette[Random.Range(0, palette.Length)];
+            float a = (i / (float)n) * Mathf.PI * 2f + Random.Range(-0.2f, 0.2f);
+            dirs[i] = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+            speeds[i] = Random.Range(280f, 640f);
+            rts[i].sizeDelta = Vector2.one * Random.Range(34f, 84f);
+            rts[i].anchoredPosition = center;
         }
-        yield return Tween(.9f, t =>
+
+        const float dur = 1f;
+        for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
         {
-            float e = 1f - Mathf.Pow(1f - t, 3f);
+            float k = t / dur, e = EaseOutCubic(k);
             for (int i = 0; i < n; i++)
             {
-                rts[i].anchoredPosition = new Vector2(0, 60) + dirs[i] * e;
-                rts[i].localEulerAngles = new Vector3(0, 0, t * 360f);
-                rts[i].localScale = Vector3.one * (1f - t * .5f);
-                var c = imgs[i].color; c.a = 1f - t; imgs[i].color = c;
+                rts[i].anchoredPosition = center + dirs[i] * speeds[i] * e + new Vector2(0f, -120f * k * k);
+                rts[i].localScale = Vector3.one * (1f - k * 0.7f);
+                rts[i].localRotation = Quaternion.Euler(0f, 0f, k * 200f);
+                var c = imgs[i].color; c.a = 1f - k; imgs[i].color = c;
             }
-        });
-        foreach (var r in rts) Destroy(r.gameObject);
-    }
-
-    static IEnumerator Tween(float d, System.Action<float> f)
-    {
-        for (float t = 0; t < d; t += Time.unscaledDeltaTime) { f(t / d); yield return null; }
-        f(1f);
-    }
-
-    static float Back(float t) { t -= 1f; return 1f + 2.70158f * t * t * t + 1.70158f * t * t; }
-
-    // ---------------------------------------------------------------- helpers
-    static RectTransform RT(string n, Transform p, Vector2 size, Vector2 pos)
-    {
-        var r = new GameObject(n, typeof(RectTransform)).GetComponent<RectTransform>();
-        r.SetParent(p, false);
-        r.anchorMin = r.anchorMax = r.pivot = new Vector2(.5f, .5f);
-        r.sizeDelta = size; r.anchoredPosition = pos;
-        return r;
-    }
-
-    static void Stretch(RectTransform r)
-    {
-        r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.offsetMin = r.offsetMax = Vector2.zero;
-    }
-
-    Image Img(string n, Transform p, Vector2 size, Vector2 pos, Sprite s, Color c)
-    {
-        var i = RT(n, p, size, pos).gameObject.AddComponent<Image>();
-        i.sprite = s; i.color = c; i.raycastTarget = false;
-        i.type = s == round && s != null ? Image.Type.Sliced : Image.Type.Simple;
-        return i;
-    }
-
-    static TMP_Text Txt(string n, Transform p, string s, float size, Color col, Vector2 box, Vector2 pos)
-    {
-        var t = RT(n, p, box, pos).gameObject.AddComponent<TextMeshProUGUI>();
-        t.text = s; t.fontSize = size; t.color = col;
-        t.alignment = TextAlignmentOptions.Center;
-        t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.raycastTarget = false;
-        return t;
-    }
-
-    /// <summary>Sprite bo tròn 9-slice tạo bằng code (thẻ, ô nhập, nút, hình tròn).</summary>
-    static Sprite MakeRound()
-    {
-        const int N = 64;
-        var tx = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-        var px = new Color32[N * N];
-        for (int y = 0; y < N; y++)
-            for (int x = 0; x < N; x++)
-            {
-                float dx = Mathf.Max(0, Mathf.Abs(x + .5f - N / 2f) - 0f), dy = Mathf.Abs(y + .5f - N / 2f);
-                float d = Mathf.Sqrt(dx * dx + dy * dy);
-                px[y * N + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(N / 2f - d + .5f) * 255));
-            }
-        tx.SetPixels32(px); tx.Apply();
-        return Sprite.Create(tx, new Rect(0, 0, N, N), new Vector2(.5f, .5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(31, 31, 31, 31));
-    }
-
-    /// <summary>Hiệu ứng phóng to khi rê chuột / thu nhỏ khi nhấn, và nhịp "thở" cho nút chính.</summary>
-    class Press : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
-    {
-        public bool pulse;
-        float target = 1f, cur = 1f;
-        bool over;
-
-        public void OnPointerEnter(PointerEventData e) { over = true; target = 1.06f; }
-        public void OnPointerExit(PointerEventData e) { over = false; target = 1f; }
-        public void OnPointerDown(PointerEventData e) { target = .94f; }
-        public void OnPointerUp(PointerEventData e) { target = over ? 1.06f : 1f; }
-
-        void Update()
-        {
-            cur = Mathf.Lerp(cur, target, Time.unscaledDeltaTime * 14f);
-            float p = pulse && Mathf.Approximately(target, 1f) ? 1f + .025f * Mathf.Sin(Time.unscaledTime * 3f) : 1f;
-            transform.localScale = Vector3.one * cur * p;
+            yield return null;
         }
+        for (int i = 0; i < n; i++) Destroy(rts[i].gameObject);
     }
 }
