@@ -23,6 +23,21 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MainMenu.unity
     guid: c38a6c3f86f9e7f4aa153b88ae125ad9
+  - enabled: 1
+    path: Assets/Scenes/BiologyBossScene.unity
+    guid: b98f90de5c57bae499588f16f85f91ff
+  - enabled: 1
+    path: Assets/Scenes/ChapterSelectScene.unity
+    guid: 750c7629d2404190b98d49b8a80b1cad
+  - enabled: 1
+    path: Assets/Scenes/ChapterSelectScene_Hoa.unity
+    guid: 380bbb4d18024a7cb11f24c7fc7ae006
+  - enabled: 1
+    path: Assets/Scenes/ChapterSelectScene_Ly.unity
+    guid: 4f43f00e9d5d409bbf27861ebefa07cb
+  - enabled: 1
+    path: Assets/Scenes/LessonSelectScene.unity
+    guid: e259b8a9e29244c68398f9bce40d47b1
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -1,16 +1,16 @@
-﻿STT,Câu hỏi,A,B,C,D,Đáp án
-1,Đơn chất là gì?,Chất được tạo nên từ một nguyên tố hóa học,Chất được tạo nên từ hai nguyên tố hóa học,Chất có từ hai chất trở lên,Hỗn hợp của nhiều chất,A
-2,"Phân tử khối của H₂O là bao nhiêu? (H = 1, O = 16)",16,17,18,19,C
-3,Công thức hóa học của khí oxi là,O,O₂,O₃,2O,B
-4,"Trong phản ứng hóa học, tổng khối lượng các chất tham gia phản ứng",Lớn hơn tổng khối lượng sản phẩm,Nhỏ hơn tổng khối lượng sản phẩm,Bằng tổng khối lượng sản phẩm,Không xác định được,C
-5,Hiện tượng nào sau đây là hiện tượng hóa học?,Nước đá tan,Muối tan trong nước,Sắt bị gỉ,Nước sôi,C
-6,Chất nào sau đây là oxit?,NaCl,CaO,HCl,NaOH,B
-7,Hóa trị của O trong hầu hết các hợp chất là,I,II,III,IV,B
-8,Công thức hóa học của canxi clorua là,CaCl,Ca₂Cl,CaCl₂,Ca₂Cl₂,C
-9,Dấu hiệu quan trọng để nhận biết có phản ứng hóa học xảy ra là,Có chất mới tạo thành,Chất bị thay đổi trạng thái,Nhiệt độ môi trường thay đổi,Chất được nghiền nhỏ,A
-10,1 mol chất chứa khoảng bao nhiêu hạt?,"6,02 × 10²³","6,02 × 10²²","3,01 × 10²³","1,00 × 10²³",A
-11,"Khối lượng mol của CO₂ là bao nhiêu? (C = 12, O = 16)",28 g/mol,32 g/mol,44 g/mol,46 g/mol,C
-12,Dung dịch là,Hỗn hợp đồng nhất của chất tan và dung môi,Hỗn hợp không đồng nhất,Một chất nguyên chất,Một chất khí,A
-13,Phương trình hóa học nào được cân bằng đúng?,H₂ + O₂ → H₂O,2H₂ + O₂ → 2H₂O,H₂ + 2O₂ → H₂O,2H₂ + 2O₂ → H₂O,B
-14,Khí CO₂ nặng hơn hay nhẹ hơn không khí? (MCO₂ = 44; không khí ≈ 29),Nhẹ hơn,Bằng nhau,Nặng hơn,Không thể so sánh,C
-15,"Muốn tính số mol của một chất khi biết khối lượng, công thức là",n = m × M,n = m / M,n = M / m,n = m + M,B
+﻿STT,Câu hỏi,A,B,C,D,Đáp án,Chương,Bài
+1,Đơn chất là gì?,Chất được tạo nên từ một nguyên tố hóa học,Chất được tạo nên từ hai nguyên tố hóa học,Chất có từ hai chất trở lên,Hỗn hợp của nhiều chất,A,Chất – nguyên tử – phân tử,Đơn chất và hợp chất
+2,"Phân tử khối của H₂O là bao nhiêu? (H = 1, O = 16)",16,17,18,19,C,Chất – nguyên tử – phân tử,Công thức hóa học và hóa trị
+3,Công thức hóa học của khí oxi là,O,O₂,O₃,2O,B,Chất – nguyên tử – phân tử,Công thức hóa học và hóa trị
+4,"Trong phản ứng hóa học, tổng khối lượng các chất tham gia phản ứng",Lớn hơn tổng khối lượng sản phẩm,Nhỏ hơn tổng khối lượng sản phẩm,Bằng tổng khối lượng sản phẩm,Không xác định được,C,Phản ứng hóa học,Bảo toàn khối lượng và phương trình
+5,Hiện tượng nào sau đây là hiện tượng hóa học?,Nước đá tan,Muối tan trong nước,Sắt bị gỉ,Nước sôi,C,Phản ứng hóa học,Hiện tượng và dấu hiệu phản ứng
+6,Chất nào sau đây là oxit?,NaCl,CaO,HCl,NaOH,B,Chất – nguyên tử – phân tử,Đơn chất và hợp chất
+7,Hóa trị của O trong hầu hết các hợp chất là,I,II,III,IV,B,Chất – nguyên tử – phân tử,Công thức hóa học và hóa trị
+8,Công thức hóa học của canxi clorua là,CaCl,Ca₂Cl,CaCl₂,Ca₂Cl₂,C,Chất – nguyên tử – phân tử,Công thức hóa học và hóa trị
+9,Dấu hiệu quan trọng để nhận biết có phản ứng hóa học xảy ra là,Có chất mới tạo thành,Chất bị thay đổi trạng thái,Nhiệt độ môi trường thay đổi,Chất được nghiền nhỏ,A,Phản ứng hóa học,Hiện tượng và dấu hiệu phản ứng
+10,1 mol chất chứa khoảng bao nhiêu hạt?,"6,02 × 10²³","6,02 × 10²²","3,01 × 10²³","1,00 × 10²³",A,Mol và dung dịch,Mol và tính toán
+11,"Khối lượng mol của CO₂ là bao nhiêu? (C = 12, O = 16)",28 g/mol,32 g/mol,44 g/mol,46 g/mol,C,Mol và dung dịch,Mol và tính toán
+12,Dung dịch là,Hỗn hợp đồng nhất của chất tan và dung môi,Hỗn hợp không đồng nhất,Một chất nguyên chất,Một chất khí,A,Mol và dung dịch,Dung dịch
+13,Phương trình hóa học nào được cân bằng đúng?,H₂ + O₂ → H₂O,2H₂ + O₂ → 2H₂O,H₂ + 2O₂ → H₂O,2H₂ + 2O₂ → H₂O,B,Phản ứng hóa học,Bảo toàn khối lượng và phương trình
+14,Khí CO₂ nặng hơn hay nhẹ hơn không khí? (MCO₂ = 44; không khí ≈ 29),Nhẹ hơn,Bằng nhau,Nặng hơn,Không thể so sánh,C,Mol và dung dịch,Mol và tính toán
+15,"Muốn tính số mol của một chất khi biết khối lượng, công thức là",n = m × M,n = m / M,n = M / m,n = m + M,B,Mol và dung dịch,Mol và tính toán

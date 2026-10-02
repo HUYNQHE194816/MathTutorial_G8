@@ -3037,12 +3037,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1f95bab5517d1e44ac3ec84dad1a0ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FloatingMathSymbols
-  font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  count: 22
-  sizeRange: {x: 56, y: 130}
-  speedRange: {x: 18, y: 46}
-  alphaRange: {x: 0.1, y: 0.24}
-  fallbackArea: {x: 1920, y: 1080}
 --- !u!1 &1582083616
 GameObject:
   m_ObjectHideFlags: 0
@@ -4291,7 +4285,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "GIA S\u01AF KHTN 8\n1"
+  m_text: "GIA S\u01AF TO\xC1N 8"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

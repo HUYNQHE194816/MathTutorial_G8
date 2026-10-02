@@ -84,7 +84,10 @@ public class QuestionPopup : MonoBehaviour
     {
         List<Q> loaded = null;
 
-        if (!string.IsNullOrWhiteSpace(sheetUrl))
+        // Vào từ luồng Chọn chương -> Chọn bài: dùng đúng câu hỏi của bài đã chọn.
+        if (SubjectSession.TryGetCsv(SubjectId.Ly, out string sessionCsv)) loaded = ParseCsv(sessionCsv);
+
+        if (loaded == null && !string.IsNullOrWhiteSpace(sheetUrl))
         {
             using (var req = UnityWebRequest.Get(NormalizeSheetUrl(sheetUrl.Trim())))
             {

@@ -209,7 +209,6 @@ public class DashboardManager : MonoBehaviour
         for (int i = 0; i < ProgressSaveSystem.Subjects.Length; i++)
         {
             string subject = ProgressSaveSystem.Subjects[i];
-            bool available = subject != ProgressSaveSystem.SubjectSinh;   // Sinh: chưa có màn chơi
             var stats = ProgressSaveSystem.FindSubject(data, subject);
 
             var row = NewRect("Row_" + subject, subjectList);
@@ -236,8 +235,7 @@ public class DashboardManager : MonoBehaviour
 
             string info;
             float target = 0f;
-            if (!available) info = "Sắp ra mắt";
-            else if (stats == null || stats.attempts == 0) info = "Chưa chơi";
+            if (stats == null || stats.attempts == 0) info = "Chưa chơi";
             else
             {
                 target = ProgressSaveSystem.Accuracy(stats);
@@ -245,7 +243,7 @@ public class DashboardManager : MonoBehaviour
             }
             bars.Add(new BarAnim { fill = fill, target = target });
 
-            var infoText = MakeText("Info", row, info, 24f, available ? Ink : Muted, FontStyles.Bold, TextAlignmentOptions.MidlineRight);
+            var infoText = MakeText("Info", row, info, 24f, Ink, FontStyles.Bold, TextAlignmentOptions.MidlineRight);
             Place(infoText.rectTransform, new Vector2(240f, 0f), new Vector2(290f, 50f));
 
             subjectRows.Add(row);

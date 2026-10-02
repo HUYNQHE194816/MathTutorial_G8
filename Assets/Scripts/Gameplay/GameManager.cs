@@ -136,7 +136,7 @@ public class GameManager : MonoBehaviour
     }
 
     public void OnClickPlayAgain() => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    public void OnClickBackToMenu() => SceneManager.LoadScene("MainMenu");
+    public void OnClickBackToMenu() => SceneManager.LoadScene(SubjectSession.BackSceneOr(SubjectId.Ly, "MainMenu"));
 
     void UpdateScoreUI()
     {

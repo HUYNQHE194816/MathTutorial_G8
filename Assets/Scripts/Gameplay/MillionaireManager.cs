@@ -132,7 +132,9 @@ public class MillionaireManager : MonoBehaviour
     {
         endPanel.SetActive(false);
 
-        if (csvFile != null)
+        if (SubjectSession.TryGetCsv(SubjectId.Hoa, out string sessionCsv))
+            ParseQuestionsFromCsv(sessionCsv);   // vào từ luồng Chọn chương -> Chọn bài
+        else if (csvFile != null)
             ParseQuestionsFromCsv(csvFile.text);
         else if (loadFromSheetOnStart && !string.IsNullOrWhiteSpace(sheetCsvUrl))
             yield return LoadQuestionsFromSheet(sheetCsvUrl);
@@ -619,7 +621,7 @@ public class MillionaireManager : MonoBehaviour
         PlayMusic(closingTheme, true);                  // 15. Closing Theme
     }
 
-    public void OnClickBackToMenu() => SceneManager.LoadScene(menuSceneName);
+    public void OnClickBackToMenu() => SceneManager.LoadScene(SubjectSession.BackSceneOr(SubjectId.Hoa, menuSceneName));
 
     // ---------- TIỆN ÍCH ÂM THANH ----------
 

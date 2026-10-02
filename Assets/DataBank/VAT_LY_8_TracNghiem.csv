@@ -1,48 +1,48 @@
-﻿STT,Câu hỏi,A,B,C,D,Đáp án
-1,Khối lượng riêng của một chất cho biết:,Thể tích của một đơn vị khối lượng chất đó,Khối lượng của một đơn vị thể tích chất đó,Trọng lượng của vật làm từ chất đó,Độ lớn áp lực trên một đơn vị diện tích,B
-2,Công thức tính khối lượng riêng là:,D = m·V,D = V/m,D = m/V,D = m + V,C
-3,Đơn vị nào sau đây không phải là đơn vị của khối lượng riêng?,kg/m³,g/mL,g/cm³,N/m²,D
-4,"Một khối gang hình hộp chữ nhật có các cạnh 2 cm, 3 cm, 5 cm và khối lượng 210 g. Khối lượng riêng của gang là:","0,14 g/cm³",7 g/cm³,70 g/cm³,"10,5 g/cm³",B
-5,"Để đo thể tích hòn sỏi có hình dạng bất kì, không thấm nước, người ta thả sỏi vào ống đong chứa nước. Gọi V₁ là thể tích nước ban đầu, V₂ là thể tích nước và sỏi. Thể tích hòn sỏi là:",V₁ + V₂,V₁ − V₂,V₂ − V₁,V₂/V₁,C
-6,Áp lực là:,Lực ép có phương vuông góc với mặt bị ép,Lực ép có phương song song với mặt bị ép,Lực kéo vật theo phương ngang,Lực đẩy của chất lỏng lên vật,A
-7,Công thức tính áp suất và đơn vị đúng là:,p = F·S; đơn vị N,p = S/F; đơn vị m²,p = F/S; đơn vị Pa (1 Pa = 1 N/m²),p = F/S; đơn vị kg/m³,C
-8,"Một xe tăng có trọng lượng 350 000 N, tổng diện tích tiếp xúc của các bản xích với mặt đường là 1,5 m². Áp suất của xe tăng lên mặt đường xấp xỉ:",233 333 Pa,525 000 Pa,23 333 Pa,2 333 Pa,A
-9,"Muốn đóng cọc xuống đất dễ dàng hơn (tăng áp suất), người ta thường:",Làm tù đầu cọc,Dùng cọc nhẹ hơn,Giảm lực đóng,Vót nhọn đầu cọc,D
-10,Máy nén thuỷ lực hoạt động dựa trên tính chất nào của chất lỏng?,Chất lỏng chỉ tác dụng áp suất theo phương thẳng đứng,Áp suất tác dụng vào chất lỏng được truyền đi nguyên vẹn theo mọi hướng,Chất lỏng có khối lượng riêng lớn hơn chất rắn,Chất lỏng chỉ gây áp suất lên đáy bình,B
-11,Giác mút bám chắc vào mặt kính vì:,Áp suất không khí còn lại bên trong giác mút nhỏ hơn áp suất khí quyển bên ngoài,Áp suất không khí bên trong giác mút lớn hơn áp suất khí quyển,Kính hút giác mút bằng lực từ,Giác mút có trọng lượng lớn,A
-12,"Theo định luật Archimedes, lực đẩy tác dụng lên vật nhúng trong chất lỏng có độ lớn F_A = d·V (d là trọng lượng riêng của chất lỏng). V là:",Thể tích của vật,Thể tích chất lỏng trong bình,Thể tích của bình chứa,Thể tích phần chất lỏng bị vật chiếm chỗ,D
-13,Một vật đặt trong chất lỏng sẽ chìm xuống khi:,Lực đẩy Archimedes lớn hơn trọng lực,Lực đẩy Archimedes bằng 0,Trọng lực lớn hơn lực đẩy Archimedes,Vật có thể tích quá nhỏ,C
-14,Lực làm vật quay quanh một trục khi giá của lực:,Song song với trục quay,Không song song và không cắt trục quay,Cắt trục quay,Trùng với trục quay,B
-15,Đại lượng đặc trưng cho tác dụng làm quay của lực lên vật quanh một điểm hoặc một trục là:,Áp suất,Khối lượng riêng,Lực đẩy Archimedes,Moment lực,D
-16,"Với lực có độ lớn không đổi, giá của lực càng cách xa trục quay thì moment lực và tác dụng làm quay:",Càng lớn,Càng nhỏ,Không đổi,Bằng 0,A
-17,Vì sao đẩy cửa ở vị trí xa bản lề lại dễ mở hơn so với gần bản lề?,Lực đẩy lớn hơn,Cửa nhẹ hơn,Moment lực lớn hơn,Ma sát ở bản lề nhỏ hơn,C
-18,Cánh tay đòn của một lực là:,Độ dài của thanh đòn bẩy,Khoảng cách từ giá của lực tới điểm tựa (trục quay),Khoảng cách từ điểm đặt lực tới đầu thanh,Độ lớn của lực tác dụng,B
-19,Đòn bẩy loại 1 là đòn bẩy có:,"Điểm tựa nằm ngoài khoảng giữa điểm đặt của hai lực, lực tác dụng gần điểm tựa hơn",Điểm tựa nằm ở đầu thanh,Không có điểm tựa,Điểm tựa O nằm trong khoảng giữa điểm đặt của hai lực,D
-20,Đòn bẩy cho ta lợi về lực khi:,Cánh tay đòn của lực tác dụng dài hơn cánh tay đòn của lực cản,Cánh tay đòn của lực tác dụng ngắn hơn cánh tay đòn của lực cản,Hai cánh tay đòn bằng nhau,Điểm tựa trùng với điểm đặt lực,A
-21,"Trong cơ thể người, đầu là một đòn bẩy loại 1 với trục quay là:",Khớp vai,Khớp khuỷu tay,Đốt sống trên cùng,Đốt sống thắt lưng,C
-22,"Cọ đũa nhựa vào mảnh vải len, đũa nhựa nhiễm điện:","Dương, vì mất bớt electron","Dương, vì nhận thêm electron","Âm, vì nhận thêm electron từ vải len","Âm, vì mất bớt electron",C
-23,"Cọ đũa thuỷ tinh vào mảnh lụa, đũa thuỷ tinh nhiễm điện dương vì:",Đũa nhận thêm electron từ lụa,Electron dịch chuyển từ đũa thuỷ tinh sang lụa,Proton dịch chuyển từ lụa sang đũa,Đũa nhận thêm proton,B
-24,Tương tác giữa hai vật nhiễm điện là:,"Cùng loại đẩy nhau, khác loại hút nhau","Cùng loại hút nhau, khác loại đẩy nhau",Luôn hút nhau,Luôn đẩy nhau,A
-25,"Khi đưa vật nhiễm điện chạm vào quả cầu của điện nghiệm, hai lá kim loại xoè ra vì:",Hai lá bị Trái Đất hút,Hai lá bị nóng lên,Hai lá bị quả cầu hút,Hai lá nhiễm điện cùng dấu nên đẩy nhau,D
-26,Dòng điện là:,Dòng các hạt mang điện chuyển động hỗn loạn,Dòng chuyển dời có hướng của các hạt mang điện,Dòng nguyên tử chuyển động trong dây dẫn,Dòng nhiệt truyền trong dây dẫn,B
-27,Vật nào sau đây là vật dẫn điện?,Thanh thuỷ tinh,Dây nhựa,Đoạn dây nhôm,Thanh gỗ khô,C
-28,Chiều dòng điện quy ước trong mạch điện là chiều:,Từ cực dương của nguồn qua dây nối và thiết bị tới cực âm của nguồn,Từ cực âm của nguồn qua dây nối và thiết bị tới cực dương,Luôn thay đổi theo thời gian,Từ thiết bị tiêu thụ về nguồn điện,A
-29,Cầu chì có tác dụng:,Tăng cường độ dòng điện trong mạch,"Điều khiển đóng, ngắt mạch điện tự động từ xa",Phát ra âm thanh khi có dòng điện,"Ngắt mạch, bảo vệ thiết bị khi dòng điện tăng quá mức",D
-30,Mạ điện là ứng dụng của tác dụng nào của dòng điện?,Nhiệt,Hoá học,Phát sáng,Sinh lí,B
-31,Phương pháp sốc điện ngoài lồng ngực để cấp cứu người ngừng tim là ứng dụng tác dụng nào của dòng điện?,Nhiệt,Hoá học,Sinh lí,Phát sáng,C
-32,Cách mắc đúng ampe kế và vôn kế là:,"Ampe kế mắc nối tiếp, vôn kế mắc song song với thiết bị cần đo",Cả hai đều mắc nối tiếp,Cả hai đều mắc song song,"Ampe kế mắc song song, vôn kế mắc nối tiếp",A
-33,Đổi đơn vị: 250 mA = ?,"2,5 A",25 A,"0,025 A","0,25 A",D
-34,"Trên vỏ một chiếc pin có ghi 1,5 V. Số này cho biết:",Cường độ dòng điện mà pin cung cấp,Hiệu điện thế giữa hai cực của pin,Khối lượng của pin,Thể tích của pin,B
-35,"Khi nhiệt độ của vật tăng, các phân tử, nguyên tử cấu tạo nên vật:",Chuyển động chậm lại,Đứng yên,Chuyển động theo một hướng,Chuyển động hỗn loạn nhanh hơn,D
-36,"Trong thí nghiệm của Brown, các hạt phấn hoa trong nước chuyển động không ngừng về mọi hướng là do:",Các phân tử nước chuyển động hỗn loạn va chạm vào hạt phấn hoa,Hạt phấn hoa tự chuyển động,Nước bị đun nóng,Trọng lực tác dụng lên hạt phấn,A
-37,Năng lượng nhiệt (nhiệt năng) của vật là:,Năng lượng vật có nhờ chuyển động của cả vật,Năng lượng vật có nhờ độ cao so với mặt đất,"Năng lượng vật có được nhờ chuyển động nhiệt của các phân tử, nguyên tử cấu tạo nên vật",Năng lượng vật có nhờ bị biến dạng,C
-38,Nội năng của một vật là:,Tổng động năng của vật,"Tổng động năng và thế năng của các phân tử, nguyên tử cấu tạo nên vật",Thế năng hấp dẫn của vật,Tổng khối lượng của các phân tử,B
-39,Nhiệt lượng cần cung cấp để đun 2 kg nước từ 20 °C lên 30 °C là bao nhiêu? (Nhiệt dung riêng của nước là 4 180 J/kg·K),83 600 J,8 360 J,167 200 J,41 800 J,A
-40,Dẫn nhiệt là sự truyền năng lượng:,Bằng các dòng chất lưu chuyển động,Bằng các tia nhiệt,Trực tiếp từ các phân tử có động năng lớn hơn sang các phân tử có động năng nhỏ hơn thông qua va chạm,Chỉ xảy ra trong chân không,C
-41,Hình thức truyền nhiệt chủ yếu trong chất lỏng và chất khí là:,Dẫn nhiệt,Bức xạ nhiệt,Không truyền được nhiệt,Đối lưu,D
-42,Năng lượng từ Mặt Trời truyền tới Trái Đất chủ yếu bằng hình thức:,Dẫn nhiệt,Bức xạ nhiệt,Đối lưu,Dẫn nhiệt và đối lưu,B
-43,Cán chảo thường làm bằng gỗ hoặc nhựa vì:,"Gỗ, nhựa dẫn nhiệt kém nên tay không bị nóng","Gỗ, nhựa dẫn nhiệt tốt","Gỗ, nhựa nở vì nhiệt nhiều hơn kim loại","Gỗ, nhựa có khối lượng riêng lớn",A
-44,"Trong khí quyển, khí nào đóng vai trò quan trọng nhất trong việc gây ra hiệu ứng nhà kính?",Oxygen,Nitrogen,Carbon dioxide,Hydrogen,C
-45,Sắp xếp sự nở vì nhiệt của các chất từ nhiều đến ít:,Rắn > lỏng > khí,Lỏng > khí > rắn,Rắn > khí > lỏng,Khí > lỏng > rắn,D
-46,Nước có khối lượng riêng lớn nhất ở nhiệt độ:,0 °C,4 °C,8 °C,100 °C,B
-47,Băng kép (ghép từ hai thanh kim loại khác nhau) bị cong khi nóng lên vì:,Các chất rắn khác nhau nở vì nhiệt khác nhau,Chất rắn dẫn nhiệt tốt,Chất khí nở vì nhiệt nhiều hơn chất rắn,Nước có sự nở vì nhiệt đặc biệt,A
+﻿STT,Câu hỏi,A,B,C,D,Đáp án,Chương,Bài
+1,Khối lượng riêng của một chất cho biết:,Thể tích của một đơn vị khối lượng chất đó,Khối lượng của một đơn vị thể tích chất đó,Trọng lượng của vật làm từ chất đó,Độ lớn áp lực trên một đơn vị diện tích,B,Khối lượng riêng và áp suất,Khối lượng riêng
+2,Công thức tính khối lượng riêng là:,D = m·V,D = V/m,D = m/V,D = m + V,C,Khối lượng riêng và áp suất,Khối lượng riêng
+3,Đơn vị nào sau đây không phải là đơn vị của khối lượng riêng?,kg/m³,g/mL,g/cm³,N/m²,D,Khối lượng riêng và áp suất,Khối lượng riêng
+4,"Một khối gang hình hộp chữ nhật có các cạnh 2 cm, 3 cm, 5 cm và khối lượng 210 g. Khối lượng riêng của gang là:","0,14 g/cm³",7 g/cm³,70 g/cm³,"10,5 g/cm³",B,Khối lượng riêng và áp suất,Khối lượng riêng
+5,"Để đo thể tích hòn sỏi có hình dạng bất kì, không thấm nước, người ta thả sỏi vào ống đong chứa nước. Gọi V₁ là thể tích nước ban đầu, V₂ là thể tích nước và sỏi. Thể tích hòn sỏi là:",V₁ + V₂,V₁ − V₂,V₂ − V₁,V₂/V₁,C,Khối lượng riêng và áp suất,Khối lượng riêng
+6,Áp lực là:,Lực ép có phương vuông góc với mặt bị ép,Lực ép có phương song song với mặt bị ép,Lực kéo vật theo phương ngang,Lực đẩy của chất lỏng lên vật,A,Khối lượng riêng và áp suất,Áp suất
+7,Công thức tính áp suất và đơn vị đúng là:,p = F·S; đơn vị N,p = S/F; đơn vị m²,p = F/S; đơn vị Pa (1 Pa = 1 N/m²),p = F/S; đơn vị kg/m³,C,Khối lượng riêng và áp suất,Áp suất
+8,"Một xe tăng có trọng lượng 350 000 N, tổng diện tích tiếp xúc của các bản xích với mặt đường là 1,5 m². Áp suất của xe tăng lên mặt đường xấp xỉ:",233 333 Pa,525 000 Pa,23 333 Pa,2 333 Pa,A,Khối lượng riêng và áp suất,Áp suất
+9,"Muốn đóng cọc xuống đất dễ dàng hơn (tăng áp suất), người ta thường:",Làm tù đầu cọc,Dùng cọc nhẹ hơn,Giảm lực đóng,Vót nhọn đầu cọc,D,Khối lượng riêng và áp suất,Áp suất
+10,Máy nén thuỷ lực hoạt động dựa trên tính chất nào của chất lỏng?,Chất lỏng chỉ tác dụng áp suất theo phương thẳng đứng,Áp suất tác dụng vào chất lỏng được truyền đi nguyên vẹn theo mọi hướng,Chất lỏng có khối lượng riêng lớn hơn chất rắn,Chất lỏng chỉ gây áp suất lên đáy bình,B,Khối lượng riêng và áp suất,Áp suất chất lỏng và khí quyển
+11,Giác mút bám chắc vào mặt kính vì:,Áp suất không khí còn lại bên trong giác mút nhỏ hơn áp suất khí quyển bên ngoài,Áp suất không khí bên trong giác mút lớn hơn áp suất khí quyển,Kính hút giác mút bằng lực từ,Giác mút có trọng lượng lớn,A,Khối lượng riêng và áp suất,Áp suất chất lỏng và khí quyển
+12,"Theo định luật Archimedes, lực đẩy tác dụng lên vật nhúng trong chất lỏng có độ lớn F_A = d·V (d là trọng lượng riêng của chất lỏng). V là:",Thể tích của vật,Thể tích chất lỏng trong bình,Thể tích của bình chứa,Thể tích phần chất lỏng bị vật chiếm chỗ,D,Khối lượng riêng và áp suất,Lực đẩy Archimedes
+13,Một vật đặt trong chất lỏng sẽ chìm xuống khi:,Lực đẩy Archimedes lớn hơn trọng lực,Lực đẩy Archimedes bằng 0,Trọng lực lớn hơn lực đẩy Archimedes,Vật có thể tích quá nhỏ,C,Khối lượng riêng và áp suất,Lực đẩy Archimedes
+14,Lực làm vật quay quanh một trục khi giá của lực:,Song song với trục quay,Không song song và không cắt trục quay,Cắt trục quay,Trùng với trục quay,B,Tác dụng làm quay của lực,Moment lực
+15,Đại lượng đặc trưng cho tác dụng làm quay của lực lên vật quanh một điểm hoặc một trục là:,Áp suất,Khối lượng riêng,Lực đẩy Archimedes,Moment lực,D,Tác dụng làm quay của lực,Moment lực
+16,"Với lực có độ lớn không đổi, giá của lực càng cách xa trục quay thì moment lực và tác dụng làm quay:",Càng lớn,Càng nhỏ,Không đổi,Bằng 0,A,Tác dụng làm quay của lực,Moment lực
+17,Vì sao đẩy cửa ở vị trí xa bản lề lại dễ mở hơn so với gần bản lề?,Lực đẩy lớn hơn,Cửa nhẹ hơn,Moment lực lớn hơn,Ma sát ở bản lề nhỏ hơn,C,Tác dụng làm quay của lực,Moment lực
+18,Cánh tay đòn của một lực là:,Độ dài của thanh đòn bẩy,Khoảng cách từ giá của lực tới điểm tựa (trục quay),Khoảng cách từ điểm đặt lực tới đầu thanh,Độ lớn của lực tác dụng,B,Tác dụng làm quay của lực,Đòn bẩy
+19,Đòn bẩy loại 1 là đòn bẩy có:,"Điểm tựa nằm ngoài khoảng giữa điểm đặt của hai lực, lực tác dụng gần điểm tựa hơn",Điểm tựa nằm ở đầu thanh,Không có điểm tựa,Điểm tựa O nằm trong khoảng giữa điểm đặt của hai lực,D,Tác dụng làm quay của lực,Đòn bẩy
+20,Đòn bẩy cho ta lợi về lực khi:,Cánh tay đòn của lực tác dụng dài hơn cánh tay đòn của lực cản,Cánh tay đòn của lực tác dụng ngắn hơn cánh tay đòn của lực cản,Hai cánh tay đòn bằng nhau,Điểm tựa trùng với điểm đặt lực,A,Tác dụng làm quay của lực,Đòn bẩy
+21,"Trong cơ thể người, đầu là một đòn bẩy loại 1 với trục quay là:",Khớp vai,Khớp khuỷu tay,Đốt sống trên cùng,Đốt sống thắt lưng,C,Tác dụng làm quay của lực,Đòn bẩy
+22,"Cọ đũa nhựa vào mảnh vải len, đũa nhựa nhiễm điện:","Dương, vì mất bớt electron","Dương, vì nhận thêm electron","Âm, vì nhận thêm electron từ vải len","Âm, vì mất bớt electron",C,Điện,Hiện tượng nhiễm điện
+23,"Cọ đũa thuỷ tinh vào mảnh lụa, đũa thuỷ tinh nhiễm điện dương vì:",Đũa nhận thêm electron từ lụa,Electron dịch chuyển từ đũa thuỷ tinh sang lụa,Proton dịch chuyển từ lụa sang đũa,Đũa nhận thêm proton,B,Điện,Hiện tượng nhiễm điện
+24,Tương tác giữa hai vật nhiễm điện là:,"Cùng loại đẩy nhau, khác loại hút nhau","Cùng loại hút nhau, khác loại đẩy nhau",Luôn hút nhau,Luôn đẩy nhau,A,Điện,Hiện tượng nhiễm điện
+25,"Khi đưa vật nhiễm điện chạm vào quả cầu của điện nghiệm, hai lá kim loại xoè ra vì:",Hai lá bị Trái Đất hút,Hai lá bị nóng lên,Hai lá bị quả cầu hút,Hai lá nhiễm điện cùng dấu nên đẩy nhau,D,Điện,Hiện tượng nhiễm điện
+26,Dòng điện là:,Dòng các hạt mang điện chuyển động hỗn loạn,Dòng chuyển dời có hướng của các hạt mang điện,Dòng nguyên tử chuyển động trong dây dẫn,Dòng nhiệt truyền trong dây dẫn,B,Điện,Dòng điện và tác dụng của dòng điện
+27,Vật nào sau đây là vật dẫn điện?,Thanh thuỷ tinh,Dây nhựa,Đoạn dây nhôm,Thanh gỗ khô,C,Điện,Dòng điện và tác dụng của dòng điện
+28,Chiều dòng điện quy ước trong mạch điện là chiều:,Từ cực dương của nguồn qua dây nối và thiết bị tới cực âm của nguồn,Từ cực âm của nguồn qua dây nối và thiết bị tới cực dương,Luôn thay đổi theo thời gian,Từ thiết bị tiêu thụ về nguồn điện,A,Điện,Dòng điện và tác dụng của dòng điện
+29,Cầu chì có tác dụng:,Tăng cường độ dòng điện trong mạch,"Điều khiển đóng, ngắt mạch điện tự động từ xa",Phát ra âm thanh khi có dòng điện,"Ngắt mạch, bảo vệ thiết bị khi dòng điện tăng quá mức",D,Điện,Dòng điện và tác dụng của dòng điện
+30,Mạ điện là ứng dụng của tác dụng nào của dòng điện?,Nhiệt,Hoá học,Phát sáng,Sinh lí,B,Điện,Dòng điện và tác dụng của dòng điện
+31,Phương pháp sốc điện ngoài lồng ngực để cấp cứu người ngừng tim là ứng dụng tác dụng nào của dòng điện?,Nhiệt,Hoá học,Sinh lí,Phát sáng,C,Điện,Dòng điện và tác dụng của dòng điện
+32,Cách mắc đúng ampe kế và vôn kế là:,"Ampe kế mắc nối tiếp, vôn kế mắc song song với thiết bị cần đo",Cả hai đều mắc nối tiếp,Cả hai đều mắc song song,"Ampe kế mắc song song, vôn kế mắc nối tiếp",A,Điện,Cường độ dòng điện và hiệu điện thế
+33,Đổi đơn vị: 250 mA = ?,"2,5 A",25 A,"0,025 A","0,25 A",D,Điện,Cường độ dòng điện và hiệu điện thế
+34,"Trên vỏ một chiếc pin có ghi 1,5 V. Số này cho biết:",Cường độ dòng điện mà pin cung cấp,Hiệu điện thế giữa hai cực của pin,Khối lượng của pin,Thể tích của pin,B,Điện,Cường độ dòng điện và hiệu điện thế
+35,"Khi nhiệt độ của vật tăng, các phân tử, nguyên tử cấu tạo nên vật:",Chuyển động chậm lại,Đứng yên,Chuyển động theo một hướng,Chuyển động hỗn loạn nhanh hơn,D,Nhiệt,Năng lượng nhiệt và nội năng
+36,"Trong thí nghiệm của Brown, các hạt phấn hoa trong nước chuyển động không ngừng về mọi hướng là do:",Các phân tử nước chuyển động hỗn loạn va chạm vào hạt phấn hoa,Hạt phấn hoa tự chuyển động,Nước bị đun nóng,Trọng lực tác dụng lên hạt phấn,A,Nhiệt,Năng lượng nhiệt và nội năng
+37,Năng lượng nhiệt (nhiệt năng) của vật là:,Năng lượng vật có nhờ chuyển động của cả vật,Năng lượng vật có nhờ độ cao so với mặt đất,"Năng lượng vật có được nhờ chuyển động nhiệt của các phân tử, nguyên tử cấu tạo nên vật",Năng lượng vật có nhờ bị biến dạng,C,Nhiệt,Năng lượng nhiệt và nội năng
+38,Nội năng của một vật là:,Tổng động năng của vật,"Tổng động năng và thế năng của các phân tử, nguyên tử cấu tạo nên vật",Thế năng hấp dẫn của vật,Tổng khối lượng của các phân tử,B,Nhiệt,Năng lượng nhiệt và nội năng
+39,Nhiệt lượng cần cung cấp để đun 2 kg nước từ 20 °C lên 30 °C là bao nhiêu? (Nhiệt dung riêng của nước là 4 180 J/kg·K),83 600 J,8 360 J,167 200 J,41 800 J,A,Nhiệt,Năng lượng nhiệt và nội năng
+40,Dẫn nhiệt là sự truyền năng lượng:,Bằng các dòng chất lưu chuyển động,Bằng các tia nhiệt,Trực tiếp từ các phân tử có động năng lớn hơn sang các phân tử có động năng nhỏ hơn thông qua va chạm,Chỉ xảy ra trong chân không,C,Nhiệt,Truyền nhiệt
+41,Hình thức truyền nhiệt chủ yếu trong chất lỏng và chất khí là:,Dẫn nhiệt,Bức xạ nhiệt,Không truyền được nhiệt,Đối lưu,D,Nhiệt,Truyền nhiệt
+42,Năng lượng từ Mặt Trời truyền tới Trái Đất chủ yếu bằng hình thức:,Dẫn nhiệt,Bức xạ nhiệt,Đối lưu,Dẫn nhiệt và đối lưu,B,Nhiệt,Truyền nhiệt
+43,Cán chảo thường làm bằng gỗ hoặc nhựa vì:,"Gỗ, nhựa dẫn nhiệt kém nên tay không bị nóng","Gỗ, nhựa dẫn nhiệt tốt","Gỗ, nhựa nở vì nhiệt nhiều hơn kim loại","Gỗ, nhựa có khối lượng riêng lớn",A,Nhiệt,Truyền nhiệt
+44,"Trong khí quyển, khí nào đóng vai trò quan trọng nhất trong việc gây ra hiệu ứng nhà kính?",Oxygen,Nitrogen,Carbon dioxide,Hydrogen,C,Nhiệt,Truyền nhiệt
+45,Sắp xếp sự nở vì nhiệt của các chất từ nhiều đến ít:,Rắn > lỏng > khí,Lỏng > khí > rắn,Rắn > khí > lỏng,Khí > lỏng > rắn,D,Nhiệt,Sự nở vì nhiệt
+46,Nước có khối lượng riêng lớn nhất ở nhiệt độ:,0 °C,4 °C,8 °C,100 °C,B,Nhiệt,Sự nở vì nhiệt
+47,Băng kép (ghép từ hai thanh kim loại khác nhau) bị cong khi nóng lên vì:,Các chất rắn khác nhau nở vì nhiệt khác nhau,Chất rắn dẫn nhiệt tốt,Chất khí nở vì nhiệt nhiều hơn chất rắn,Nước có sự nở vì nhiệt đặc biệt,A,Nhiệt,Sự nở vì nhiệt
