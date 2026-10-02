@@ -17,6 +17,14 @@ public class MazeGridGenerator : MonoBehaviour
     public Vector2Int start = new Vector2Int(0, 0);
     public Vector2Int goal;
 
+    [Header("Số lượng cố định")]
+    [Tooltip("> 0: map có ĐÚNG số ô câu hỏi này (bỏ qua các % độ khó bên dưới). Đặt 0 để dùng random theo %.")]
+    public int fixedQuestionCount = 15;
+    [Tooltip("Số ô đá chặn đường cố định (chỉ dùng khi Fixed Question Count > 0).")]
+    public int fixedRockCount = 15;
+    [Tooltip("Lưới được chia thành các khối vuông cỡ này; câu hỏi/đá được rải lần lượt qua TỪNG khối nên phân bố đều toàn map.")]
+    [Min(1)] public int blockSize = 2;
+
     [Header("Cấu hình màn chơi (tùy chọn)")]
     [Tooltip("Nếu gán, các giá trị bên dưới sẽ bị LevelConfig này ghi đè lúc Awake().")]
     public LevelConfig config;
@@ -52,16 +60,79 @@ public class MazeGridGenerator : MonoBehaviour
             for (int c = 0; c < columns; c++)
                 cellData[r, c] = new GridCellData(r, c);
 
-        List<Vector2Int> mainPath = BuildMainPath();
-        var pathSet = new HashSet<Vector2Int>(mainPath);
-
-        AssignPathTypes(mainPath);      // ép tỉ lệ Question trên đường đi chính
-        FillOffPathCells(pathSet);      // random Dirt/Question/Rock cho phần còn lại
-        AddExtraConnections(pathSet);   // mở thêm vài lối rẽ phụ cho đỡ nhàm
+        if (fixedQuestionCount > 0)
+        {
+            BuildBalancedLayout();          // đúng N câu hỏi + M đá, rải ĐỀU toàn map
+        }
+        else
+        {
+            List<Vector2Int> mainPath = BuildMainPath();
+            var pathSet = new HashSet<Vector2Int>(mainPath);
+            AssignPathTypes(mainPath);      // ép tỉ lệ Question trên đường đi chính
+            FillOffPathCells(pathSet);      // random Dirt/Question/Rock cho phần còn lại
+            AddExtraConnections(pathSet);   // mở thêm vài lối rẽ phụ cho đỡ nhàm
+        }
 
         cellData[goal.x, goal.y].type = CellType.Goal;
 
         BuildView();
+    }
+
+    // Map cân bằng: chia lưới thành các khối blockSize x blockSize rồi rải câu hỏi / đá lần lượt
+    // qua TỪNG khối (round-robin, khối đang ít ô đặc biệt nhất được ưu tiên) nên mỗi khu vực chỉ
+    // chênh nhau tối đa 1 ô -> không bao giờ dồn về một phía. Ô còn lại là đất (cũng đều theo).
+    // Nếu bố cục làm rương bị chặn kín bởi đá thì rải lại (thường thành công ngay lần đầu).
+    void BuildBalancedLayout()
+    {
+        for (int attempt = 0; attempt < 300; attempt++)
+        {
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < columns; c++)
+                    cellData[r, c] = new GridCellData(r, c);
+            cellData[goal.x, goal.y].type = CellType.Goal;
+
+            ScatterEvenly(fixedQuestionCount, CellType.Question);
+            ScatterEvenly(fixedRockCount, CellType.Rock);
+
+            if (HasPathToGoal(start)) return;
+        }
+        Debug.LogWarning("[Maze] Không tạo được bố cục còn đường tới rương sau 300 lần thử — kiểm tra lại số đá / kích thước lưới.");
+    }
+
+    class Block { public List<Vector2Int> free = new List<Vector2Int>(); public int used; }
+
+    void ScatterEvenly(int count, CellType type)
+    {
+        int bs = Mathf.Max(1, blockSize);
+        var map = new Dictionary<Vector2Int, Block>();
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < columns; c++)
+            {
+                var p = new Vector2Int(r, c);
+                if (p == start || p == goal) continue;
+                var key = new Vector2Int(r / bs, c / bs);
+                if (!map.TryGetValue(key, out var b)) map[key] = b = new Block();
+                if (cellData[r, c].type == CellType.Dirt) b.free.Add(p); else b.used++;
+            }
+
+        var blocks = map.Values.ToList();
+        int placed = 0;
+        while (placed < count && blocks.Any(b => b.free.Count > 0))
+        {
+            foreach (var b in blocks.OrderBy(b => b.used).ThenBy(_ => rnd.Next()).ToList())
+            {
+                if (placed >= count) break;
+                if (b.free.Count == 0) continue;
+                int i = rnd.Next(b.free.Count);
+                var p = b.free[i];
+                b.free.RemoveAt(i);
+                cellData[p.x, p.y].type = type;
+                b.used++;
+                placed++;
+            }
+        }
+        if (placed < count)
+            Debug.LogWarning($"[Maze] Lưới {rows}x{columns} không đủ chỗ cho {count} ô {type} (chỉ đặt được {placed}).");
     }
 
     void ApplyConfig()
