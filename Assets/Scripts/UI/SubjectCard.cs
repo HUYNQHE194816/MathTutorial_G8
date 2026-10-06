@@ -76,7 +76,7 @@ public class SubjectCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     }
 
     // ---------- Pointer ----------
-    public void OnPointerEnter(PointerEventData e) { hovered = true; }
+    public void OnPointerEnter(PointerEventData e) { if (!hovered && !busy && !InputLocked) GameAudio.Play(Snd.UiHover); hovered = true; }
     public void OnPointerExit(PointerEventData e) { hovered = false; }
     public void OnPointerClick(PointerEventData e)
     {

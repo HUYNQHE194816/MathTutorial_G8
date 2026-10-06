@@ -19,7 +19,7 @@ public class Companion : MonoBehaviour
         var sh = new GameObject("Shadow"); sh.transform.SetParent(go.transform, false); sh.transform.localPosition = new Vector3(0, -1.2f, 0);
         sh.transform.localScale = new Vector3(.2f, .07f, 1f);
         var ss = sh.AddComponent<SpriteRenderer>(); ss.sprite = ProcSprites.Circle; ss.color = new Color(0, 0, 0, .3f); ss.sortingOrder = -900;
-        Fx.Ring(pos, 2.4f, Bolt, .45f); Fx.Burst(pos, 14, Fx.HealCols); Sfx.Tone(500, .25f, 2, .2f, 300);
+        Fx.Ring(pos, 2.4f, Bolt, .45f); Fx.Burst(pos, 14, Fx.HealCols); Sfx.Tone(500, .25f, 2, .2f, 300, snd: Snd.AllySpawn);
         return c;
     }
 
@@ -52,7 +52,7 @@ public class Companion : MonoBehaviour
         {
             cd = 1.1f;
             Projectile.SpawnFriendly(pos, dir * 11f, Mathf.Max(4f, Mathf.Round(owner.Damage * .45f)), Bolt);
-            Sfx.Tone(640, .08f, 2, .1f, 200);
+            Sfx.Tone(640, .08f, 2, .1f, 200, snd: Snd.AllyShoot);
         }
     }
 }

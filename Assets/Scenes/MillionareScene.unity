@@ -1467,7 +1467,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0e7746ea860dfa4fa6d81496a8d045a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MillionaireManager
-  csvFile: {fileID: 4900000, guid: 18640e470c5908246a5a0bb98827dd47, type: 3}
+  csvFile: {fileID: 4900000, guid: b7884678b7e1ba54d8c7d47168ca5111, type: 3}
   sheetCsvUrl: 
   loadFromSheetOnStart: 1
   questions:
@@ -1530,6 +1530,9 @@ MonoBehaviour:
   ladderContainer: {fileID: 150166006}
   ladderItemPrefab: {fileID: 1337471202}
   fiftyFiftyButton: {fileID: 56848436}
+  askExpertsButton: {fileID: 0}
+  askAudienceButton: {fileID: 0}
+  stopButton: {fileID: 0}
   endPanel: {fileID: 860041757}
   endText: {fileID: 1899567090}
   menuSceneName: MainMenu

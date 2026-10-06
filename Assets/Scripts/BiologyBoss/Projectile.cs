@@ -76,7 +76,7 @@ public class Projectile : MonoBehaviour
         vel = to.normalized * Mathf.Max(9f, vel.magnitude * 1.5f);
         MakeFriendly(d, new Color(.7f, 1f, 1f));
         Fx.Ring(here, 1.8f, new Color(.5f, .9f, 1f), .25f); Fx.Burst(here, 8, new[] { new Color(.5f, .9f, 1f), Color.white });
-        Sfx.Tone(520, .1f, 2, .15f, 200);
+        Sfx.Tone(520, .1f, 2, .15f, 200, snd: Snd.SwordReflect);
     }
 
     public static void ClearAll() { for (int i = All.Count - 1; i >= 0; i--) if (All[i] != null) Destroy(All[i].gameObject); }

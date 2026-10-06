@@ -53,6 +53,14 @@ public class MillionaireManager : MonoBehaviour
 
     [Header("Quyền trợ giúp")]
     public Button fiftyFiftyButton;
+    [Tooltip("Hỏi tổ tư vấn. Để trống = tự tạo (nhân bản kiểu từ nút 50:50).")]
+    public Button askExpertsButton;
+    [Tooltip("Hỏi ý kiến khán giả trường quay. Để trống = tự tạo.")]
+    public Button askAudienceButton;
+
+    [Header("Dừng cuộc chơi")]
+    [Tooltip("Dừng lại và mang tiền về. Để trống = tự tạo.")]
+    public Button stopButton;
 
     [Header("Màn kết thúc")]
     public GameObject endPanel;
@@ -123,6 +131,12 @@ public class MillionaireManager : MonoBehaviour
     bool locked;            // đang chờ hiệu ứng, không cho bấm
     TMP_Text[] ladder;
 
+    // Quyền trợ giúp: mỗi quyền chỉ dùng 1 lần cả ván
+    bool fiftyUsed, expertsUsed, audienceUsed;
+    readonly bool[] eliminated = new bool[4];   // đáp án đã bị 50:50 loại ở câu hiện tại
+    Transform canvasRoot;
+    bool infoClosed;
+
     void Start()
     {
         StartCoroutine(InitRoutine());
@@ -175,7 +189,11 @@ public class MillionaireManager : MonoBehaviour
         }
 
         BuildLadder();
+        BuildExtraUi();
         fiftyFiftyButton.onClick.AddListener(UseFiftyFifty);
+        askExpertsButton.onClick.AddListener(UseAskExperts);
+        askAudienceButton.onClick.AddListener(UseAskAudience);
+        stopButton.onClick.AddListener(OnClickStop);
         for (int i = 0; i < answerButtons.Length; i++)
         {
             int idx = i;
@@ -201,7 +219,7 @@ public class MillionaireManager : MonoBehaviour
             answerButtons[i].image.color = normalColor;
             answerLabels[i].text = "";
         }
-        fiftyFiftyButton.interactable = false;
+        DisableAllHelp();
 
         if (!skipIntro)
         {
@@ -222,7 +240,7 @@ public class MillionaireManager : MonoBehaviour
             yield return WaitClip(letsPlayClip);
         }
 
-        fiftyFiftyButton.interactable = true;
+        RefreshLifelines();
     }
 
     // ---------- TẢI / PHÂN TÍCH CÂU HỎI ----------
@@ -483,6 +501,8 @@ public class MillionaireManager : MonoBehaviour
 
         var q = questions[current];
         var tier = GetTier(current);
+        for (int e = 0; e < 4; e++) eliminated[e] = false;
+        RefreshStopButton();
         questionText.text = FormatChem(q.text);
         string[] letters = { "A", "B", "C", "D" };
 
@@ -577,6 +597,7 @@ public class MillionaireManager : MonoBehaviour
     IEnumerator FiftyFiftyRoutine()
     {
         locked = true;
+        fiftyUsed = true;
         fiftyFiftyButton.interactable = false;
 
         // 11. Lifeline SFX
@@ -596,6 +617,7 @@ public class MillionaireManager : MonoBehaviour
             wrong.RemoveAt(pick);
             answerButtons[idx].interactable = false;
             answerLabels[idx].text = "";
+            eliminated[idx] = true;
         }
         yield return WaitClip(lifelineResultClip);
 
@@ -603,14 +625,22 @@ public class MillionaireManager : MonoBehaviour
     }
 
     // 14-15: Victory / End Music -> Closing Theme
-    void EndGame(string message, bool won)
+    // walkedAway = người chơi chủ động dừng để mang tiền về.
+    void EndGame(string message, bool won, bool walkedAway = false)
     {
         // current = số câu đã trả lời đúng (thua: câu hiện tại là câu sai)
-        ProgressSaveSystem.RecordSession(ProgressSaveSystem.SubjectHoa, current * 10, current, won ? 0 : 1, won, Time.timeSinceLevelLoad);
+        int wrong = (won || walkedAway) ? 0 : 1;
+        // Dừng khi đã qua mốc an toàn đầu tiên (câu 5) thì tính là một ván thắng
+        bool counted = won || (walkedAway && current > Milestones[0]);
+        ProgressSaveSystem.RecordSession(ProgressSaveSystem.SubjectHoa, current * 10, current, wrong, counted, Time.timeSinceLevelLoad);
+
+        DisableAllHelp();
+        if (stopButton != null) stopButton.gameObject.SetActive(false);
 
         endPanel.SetActive(true);
+        endPanel.transform.SetAsLastSibling();
         endText.text = message;
-        StartCoroutine(EndAudioRoutine(won));
+        StartCoroutine(EndAudioRoutine(won || (walkedAway && current > 0)));
     }
 
     IEnumerator EndAudioRoutine(bool won)
@@ -619,6 +649,268 @@ public class MillionaireManager : MonoBehaviour
         PlayMusic(clip, false);
         yield return WaitClip(clip);
         PlayMusic(closingTheme, true);                  // 15. Closing Theme
+    }
+
+    // ================= QUYỀN TRỢ GIÚP MỚI + DỪNG CUỘC CHƠI =================
+
+    // Độ chính xác của chuyên gia / khán giả giảm dần theo độ khó của câu
+    float ExpertAccuracy(int index) => index >= LastIndex ? 0.5f : index < 5 ? 0.9f : index < 10 ? 0.75f : 0.6f;
+
+    int AudienceCorrectPercent(int index)
+    {
+        if (index >= LastIndex) return Random.Range(30, 46);
+        if (index < 5) return Random.Range(65, 86);
+        if (index < 10) return Random.Range(45, 71);
+        return Random.Range(35, 56);
+    }
+
+    List<int> RemainingWrong(Question q)
+    {
+        var list = new List<int>();
+        for (int i = 0; i < 4; i++)
+            if (i != q.correctIndex && !eliminated[i]) list.Add(i);
+        return list;
+    }
+
+    string PrizeNow() => current > 0 ? Prizes[Mathf.Min(current, Prizes.Length) - 1] : "0";
+
+    void DisableAllHelp()
+    {
+        if (fiftyFiftyButton != null) fiftyFiftyButton.interactable = false;
+        if (askExpertsButton != null) askExpertsButton.interactable = false;
+        if (askAudienceButton != null) askAudienceButton.interactable = false;
+        if (stopButton != null) stopButton.interactable = false;
+    }
+
+    void RefreshLifelines()
+    {
+        if (fiftyFiftyButton != null) fiftyFiftyButton.interactable = !fiftyUsed;
+        if (askExpertsButton != null) askExpertsButton.interactable = !expertsUsed;
+        if (askAudienceButton != null) askAudienceButton.interactable = !audienceUsed;
+        if (stopButton != null) stopButton.interactable = true;
+    }
+
+    void RefreshStopButton()
+    {
+        QuizUi.SetButtonLabel(stopButton, $"DỪNG CUỘC CHƠI\nNhận {PrizeNow()} đ");
+    }
+
+    // Nhân bản kiểu từ nút 50:50 để 3 nút mới giống hệt giao diện cũ, không phải sửa scene
+    void BuildExtraUi()
+    {
+        var cv = QuizUi.RootCanvas(fiftyFiftyButton);
+        canvasRoot = cv != null ? cv.transform : null;
+        var parent = fiftyFiftyButton.transform.parent;
+
+        if (askExpertsButton == null)
+            askExpertsButton = CloneLifeline("AskExpertsButton", parent, "TỔ TƯ VẤN", new Vector2(125f, -170f), new Vector2(150f, 84f), new Vector2(0f, 1f), 30f);
+        if (askAudienceButton == null)
+            askAudienceButton = CloneLifeline("AskAudienceButton", parent, "TRƯỜNG QUAY", new Vector2(125f, -265f), new Vector2(150f, 84f), new Vector2(0f, 1f), 30f);
+        if (stopButton == null)
+        {
+            stopButton = CloneLifeline("StopButton", parent, "DỪNG CUỘC CHƠI", new Vector2(-145f, -75f), new Vector2(250f, 90f), new Vector2(1f, 1f), 28f);
+            stopButton.image.color = new Color32(150, 55, 20, 255);
+        }
+        RefreshStopButton();
+        DisableAllHelp(); // mở khoá sau phần giới thiệu
+    }
+
+    Button CloneLifeline(string objName, Transform parent, string label, Vector2 pos, Vector2 size, Vector2 anchor, float fontMax)
+    {
+        var b = Instantiate(fiftyFiftyButton, parent);
+        b.name = objName;
+        b.onClick.RemoveAllListeners();
+        b.gameObject.SetActive(true);
+
+        var rt = (RectTransform)b.transform;
+        rt.anchorMin = rt.anchorMax = anchor;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+
+        var t = b.GetComponentInChildren<TMP_Text>(true);
+        if (t == null) t = QuizUi.Label("Label", b.transform, questionText, label, fontMax, Color.white);
+        t.text = label;
+        QuizUi.Stretch(t.rectTransform);
+        t.rectTransform.offsetMin = new Vector2(6f, 4f);
+        t.rectTransform.offsetMax = new Vector2(-6f, -4f);
+        t.alignment = TextAlignmentOptions.Center;
+        t.textWrappingMode = TextWrappingModes.Normal;
+        t.enableAutoSizing = true;
+        t.fontSizeMax = fontMax;
+        t.fontSizeMin = 12f;
+        return b;
+    }
+
+    // ---------- Hỏi tổ tư vấn ----------
+
+    void UseAskExperts()
+    {
+        if (locked || expertsUsed) return;
+        StartCoroutine(ExpertsRoutine());
+    }
+
+    IEnumerator ExpertsRoutine()
+    {
+        locked = true;
+        expertsUsed = true;
+        askExpertsButton.interactable = false;
+
+        PlaySfx(lifelineClip);                    // 11. Lifeline SFX
+        yield return WaitClip(lifelineClip);
+        PlaySfx(lifelineResultClip);              // 12. Lifeline Result SFX
+
+        var q = questions[current];
+        var wrongLeft = RemainingWrong(q);
+        float acc = ExpertAccuracy(current);
+        string[] tone = { "Tôi chắc chắn đáp án là", "Tôi nghiêng về đáp án", "Theo tôi, đáp án là", "Tôi đoán đáp án là" };
+
+        var sb = new System.Text.StringBuilder();
+        var votes = new int[4];
+        for (int i = 1; i <= 3; i++)
+        {
+            bool right = wrongLeft.Count == 0 || Random.value < acc;
+            int pick = right ? q.correctIndex : wrongLeft[Random.Range(0, wrongLeft.Count)];
+            votes[pick]++;
+            sb.Append($"Chuyên gia {i}:  {tone[Random.Range(0, tone.Length)]} <b><color=#F5B826>{"ABCD"[pick]}</color></b>\n");
+        }
+        int best = 0;
+        for (int i = 1; i < 4; i++) if (votes[i] > votes[best]) best = i;
+        sb.Append($"\n<b>{votes[best]}/3</b> chuyên gia ủng hộ đáp án <b><color=#F5B826>{"ABCD"[best]}</color></b>");
+
+        yield return ShowInfoPanel("TỔ TƯ VẤN", sb.ToString(), null);
+        locked = false;
+    }
+
+    // ---------- Hỏi ý kiến trường quay ----------
+
+    void UseAskAudience()
+    {
+        if (locked || audienceUsed) return;
+        StartCoroutine(AudienceRoutine());
+    }
+
+    IEnumerator AudienceRoutine()
+    {
+        locked = true;
+        audienceUsed = true;
+        askAudienceButton.interactable = false;
+
+        PlaySfx(lifelineClip);
+        yield return WaitClip(lifelineClip);
+        PlaySfx(lifelineResultClip);
+
+        var q = questions[current];
+        var wrongLeft = RemainingWrong(q);
+        int correctPct = AudienceCorrectPercent(current);
+        if (wrongLeft.Count <= 1) correctPct = Mathf.Max(correctPct, 55 + Random.Range(0, 16)); // chỉ còn 2 đáp án: khán giả dễ chọn đúng hơn
+
+        var pct = new int[4];
+        pct[q.correctIndex] = correctPct;
+        int remain = 100 - correctPct;
+        if (wrongLeft.Count > 0)
+        {
+            // Chia phần còn lại cho các đáp án sai chưa bị loại, ngẫu nhiên nhưng tổng đúng 100%
+            var w = new float[wrongLeft.Count]; float sum = 0f;
+            for (int i = 0; i < w.Length; i++) { w[i] = Random.Range(0.3f, 1f); sum += w[i]; }
+            int given = 0;
+            for (int i = 0; i < w.Length; i++)
+            {
+                int v = i == w.Length - 1 ? remain - given : Mathf.RoundToInt(remain * w[i] / sum);
+                v = Mathf.Clamp(v, 0, remain - given);
+                pct[wrongLeft[i]] = v; given += v;
+            }
+        }
+        else pct[q.correctIndex] = 100;
+
+        yield return ShowInfoPanel("Ý KIẾN TRƯỜNG QUAY", null, pct);
+        locked = false;
+    }
+
+    // Hộp kết quả trợ giúp: chữ (tổ tư vấn) hoặc biểu đồ cột % (trường quay). Chờ người chơi bấm Đóng.
+    IEnumerator ShowInfoPanel(string title, string body, int[] percents)
+    {
+        if (canvasRoot == null) yield break;
+        infoClosed = false;
+
+        var overlay = QuizUi.Overlay("LifelinePanel", canvasRoot, QuizUi.Dim);
+        var card = QuizUi.Card(overlay, new Vector2(960f, 640f), QuizUi.Gold);
+
+        var t = QuizUi.Label("Title", card, questionText, title, 56f, QuizUi.Gold);
+        QuizUi.Anchor(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(880f, 90f));
+
+        if (percents == null)
+        {
+            var b = QuizUi.Label("Body", card, questionText, body ?? "", 36f, Color.white, TextAlignmentOptions.Center, FontStyles.Normal);
+            QuizUi.Anchor(b.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 0f), new Vector2(860f, 330f));
+        }
+        else
+        {
+            const float baseY = 190f, maxH = 260f;
+            for (int i = 0; i < 4; i++)
+            {
+                float x = (i - 1.5f) * 190f;
+                float h = Mathf.Max(6f, maxH * percents[i] / 100f);
+                bool dead = eliminated[i];
+
+                var bar = QuizUi.Box("Bar" + "ABCD"[i], card, dead ? new Color32(90, 90, 110, 255) : QuizUi.Gold);
+                var brt = bar.rectTransform;
+                brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0f);
+                brt.pivot = new Vector2(0.5f, 0f);
+                brt.anchoredPosition = new Vector2(x, baseY);
+                brt.sizeDelta = new Vector2(110f, h);
+
+                var pl = QuizUi.Label("Pct" + i, card, questionText, percents[i] + "%", 36f, Color.white);
+                QuizUi.Anchor(pl.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(x, baseY + h + 28f), new Vector2(170f, 50f));
+
+                var ll = QuizUi.Label("Letter" + i, card, questionText, "ABCD"[i].ToString(), 44f, dead ? new Color32(140, 140, 160, 255) : QuizUi.Gold);
+                QuizUi.Anchor(ll.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(x, baseY - 32f), new Vector2(110f, 56f));
+            }
+        }
+
+        var close = QuizUi.MakeButton("CloseButton", card, questionText, "ĐÃ HIỂU", QuizUi.Orange, Color.white, 36f, () => infoClosed = true);
+        QuizUi.Anchor((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 62f), new Vector2(300f, 80f));
+
+        yield return new WaitUntil(() => infoClosed);
+        Destroy(overlay.gameObject);
+    }
+
+    // ---------- Dừng cuộc chơi, ra về nhận tiền ----------
+
+    void OnClickStop()
+    {
+        if (locked || canvasRoot == null) return;
+        locked = true;
+
+        int answered = current;                 // số câu đã trả lời đúng = mốc tiền đang đứng
+        string now = PrizeNow();
+        string safe = SafePrize();
+
+        var overlay = QuizUi.Overlay("StopConfirmPanel", canvasRoot, QuizUi.Dim);
+        var card = QuizUi.Card(overlay, new Vector2(960f, 520f), QuizUi.Gold);
+
+        var t = QuizUi.Label("Title", card, questionText, "DỪNG CUỘC CHƠI?", 56f, QuizUi.Gold);
+        QuizUi.Anchor(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(880f, 90f));
+
+        string msg = $"Bạn đã trả lời đúng <b>{answered}</b> câu.\nDừng bây giờ, bạn ra về với <b><color=#F5B826>{now}</color></b> đồng.\n\n" +
+                     $"<size=75%>Nếu chơi tiếp mà trả lời sai, bạn chỉ còn <b>{safe}</b> đồng (mốc an toàn).</size>";
+        var m = QuizUi.Label("Message", card, questionText, msg, 38f, Color.white, TextAlignmentOptions.Center, FontStyles.Normal);
+        QuizUi.Anchor(m.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 20f), new Vector2(860f, 250f));
+
+        var keep = QuizUi.MakeButton("KeepPlayingButton", card, questionText, "CHƠI TIẾP", QuizUi.Green, Color.white, 34f, () =>
+        {
+            Destroy(overlay.gameObject);
+            locked = false;
+        });
+        QuizUi.Anchor((RectTransform)keep.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-210f, 62f), new Vector2(380f, 84f));
+
+        var stop = QuizUi.MakeButton("TakeMoneyButton", card, questionText, "DỪNG & NHẬN TIỀN", QuizUi.Orange, Color.white, 32f, () =>
+        {
+            Destroy(overlay.gameObject);
+            StopMusic();
+            EndGame($"Bạn dừng cuộc chơi sau {answered} câu đúng.\nBạn ra về với {now} đồng!", false, true);
+        });
+        QuizUi.Anchor((RectTransform)stop.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(210f, 62f), new Vector2(380f, 84f));
     }
 
     public void OnClickBackToMenu() => SceneManager.LoadScene(SubjectSession.BackSceneOr(SubjectId.Hoa, menuSceneName));

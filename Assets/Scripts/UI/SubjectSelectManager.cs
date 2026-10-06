@@ -51,7 +51,7 @@ public class SubjectSelectManager : MonoBehaviour
 
         if (!card.available || string.IsNullOrEmpty(card.sceneToLoad))
         {
-            card.PlayShake();
+            card.PlayShake(); GameAudio.Play(Snd.CardLocked);
             ShowToast($"Môn {card.subjectName} sắp ra mắt!");
             return;
         }
@@ -70,7 +70,7 @@ public class SubjectSelectManager : MonoBehaviour
             c.PlayDismiss(new Vector2(dir == 0f ? 0f : dir, -0.3f));
         }
 
-        StartCoroutine(SparkleBurst(Vector2.zero));
+        GameAudio.Play(Snd.CardSelect); StartCoroutine(SparkleBurst(Vector2.zero));
         yield return selected.PlaySelected(Vector2.zero);
         yield return new WaitForSecondsRealtime(0.25f);
 
@@ -81,7 +81,7 @@ public class SubjectSelectManager : MonoBehaviour
     {
         if (SubjectCard.InputLocked) return;
         SubjectCard.InputLocked = true;
-        StartCoroutine(LoadSceneWithFade(menuSceneName, null));
+        GameAudio.Play(Snd.UiBack); StartCoroutine(LoadSceneWithFade(menuSceneName, null));
     }
 
     private IEnumerator LoadSceneWithFade(string sceneName, SubjectCard selected)

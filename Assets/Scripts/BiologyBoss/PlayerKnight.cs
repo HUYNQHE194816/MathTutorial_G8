@@ -64,7 +64,7 @@ public class PlayerKnight : MonoBehaviour
         if (k != null && k.leftShiftKey.wasPressedThisFrame && dashCd <= 0f)
         {
             dashT = .16f; dashCd = 1.1f; Invuln = Mathf.Max(Invuln, .3f); dashDir = moving ? mv : new Vector2(face, 0f);
-            Sfx.Tone(200, .15f, 2, .2f, 300);
+            Sfx.Tone(200, .15f, 2, .2f, 300, snd: Snd.PlayerDash);
         }
         Vector2 vel = mv * Speed;
         if (dashT > 0f) { dashT -= dt; vel = dashDir * Speed * 3.4f; Fx.Afterimage(body.sprite, transform.position, face < 0, new Color(.5f, .7f, 1f, .6f)); }
@@ -97,7 +97,7 @@ public class PlayerKnight : MonoBehaviour
         cd = AtkInterval; swing = .18f;
         Vector2 c = Center; Vector2 to = boss.Position - c;
         float ang = Mathf.Atan2(to.y, to.x) * Mathf.Rad2Deg;
-        Fx.Slash(c, ang, Range, FireSword || IceSword ? SwordColor : (Color?)null); Sfx.Tone(320, .12f, 1, .2f, -160);
+        Fx.Slash(c, ang, Range, FireSword || IceSword ? SwordColor : (Color?)null); Sfx.Tone(320, .12f, 1, .2f, -160, snd: Snd.PlayerSlash);
         for (int i = Projectile.All.Count - 1; i >= 0; i--)
         {
             var b = Projectile.All[i];
@@ -147,7 +147,7 @@ public class PlayerKnight : MonoBehaviour
         Vector2 o = Position + Vector2.up * .3f; Vector2 to = boss.Position - o; float a = Mathf.Atan2(to.y, to.x);
         float dmg = Mathf.Max(6f, Mathf.Round(Damage * .8f));
         for (int i = -1; i <= 1; i++) { float an = a + i * .3f; IceRow.Spawn(o, new Vector2(Mathf.Cos(an), Mathf.Sin(an)), dmg, 1.2f); }
-        Fx.Ring(Center, 2.4f, new Color(.55f, .9f, 1f), .35f); Fx.Burst(Center, 10, Fx.IceCols); Sfx.Tone(900, .25f, 2, .2f, -400);
+        Fx.Ring(Center, 2.4f, new Color(.55f, .9f, 1f), .35f); Fx.Burst(Center, 10, Fx.IceCols); Sfx.Tone(900, .25f, 2, .2f, -400, snd: Snd.IceCast);
     }
 
     /// <summary>Buff Đệ Hiệp Sĩ: gọi 1 đệ đi theo (không cộng dồn).</summary>
@@ -162,11 +162,11 @@ public class PlayerKnight : MonoBehaviour
         if (Invuln > 0f && !force) return;
         if (Shield > 0)
         {
-            Shield--; Invuln = .5f; Fx.Ring(Center, 1.5f, new Color(.43f, .9f, 1f)); Sfx.Tone(600, .12f, 2, .2f); return;
+            Shield--; Invuln = .5f; Fx.Ring(Center, 1.5f, new Color(.43f, .9f, 1f)); Sfx.Tone(600, .12f, 2, .2f, snd: Snd.ShieldBlock); return;
         }
         Hp -= d; Invuln = .9f; CameraRig.Shake(6f); mgr.HitStop(.06f); mgr.ui.FlashRed();
         mgr.ui.Float(Center + Vector2.up * 1.2f, "-" + d, new Color(1f, .36f, .36f), true);
-        Fx.Burst(Center, 12, new[] { new Color(1f, .36f, .36f), Color.white }); Sfx.Tone(110, .2f, 1, .3f, -60);
+        Fx.Burst(Center, 12, new[] { new Color(1f, .36f, .36f), Color.white }); Sfx.Tone(110, .2f, 1, .3f, -60, snd: Snd.PlayerHurt);
         if (Hp <= 0f) { Hp = 0f; Alive = false; mgr.OnPlayerDied(); }
     }
 }

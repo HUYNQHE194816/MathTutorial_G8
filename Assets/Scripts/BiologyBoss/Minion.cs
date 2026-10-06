@@ -20,7 +20,7 @@ public class Minion : MonoBehaviour
         var sh = new GameObject("Shadow"); sh.transform.SetParent(go.transform, false); sh.transform.localPosition = new Vector3(0, -.75f, 0);
         sh.transform.localScale = new Vector3(.3f, .1f, 1f);
         var ss = sh.AddComponent<SpriteRenderer>(); ss.sprite = ProcSprites.Circle; ss.color = new Color(0, 0, 0, .35f); ss.sortingOrder = -900;
-        Fx.Ring(pos, 2.4f, new Color(.7f, .4f, 1f), .5f); Fx.Burst(pos, 14, Puff); Sfx.Tone(260, .25f, 2, .2f, 200);
+        Fx.Ring(pos, 2.4f, new Color(.7f, .4f, 1f), .5f); Fx.Burst(pos, 14, Puff); Sfx.Tone(260, .25f, 2, .2f, 200, snd: Snd.MinionSpawn);
         return m;
     }
 
@@ -59,7 +59,7 @@ public class Minion : MonoBehaviour
         if (shootT <= 0f && d > 3f)
         {
             shootT = Random.Range(2.8f, 4f);
-            Projectile.Spawn(pos, dir * 5.5f, pl); Sfx.Tone(380, .1f, 0, .12f, -100);
+            Projectile.Spawn(pos, dir * 5.5f, pl); Sfx.Tone(380, .1f, 0, .12f, -100, snd: Snd.MinionShoot);
         }
     }
 
@@ -72,7 +72,7 @@ public class Minion : MonoBehaviour
         if (!dot)
         {
             Vector2 away = (Vector2)transform.position - (pl != null ? pl.Center : Vector2.zero); knock = away.normalized * 9f;
-            Fx.Burst(transform.position, crit ? 10 : 6, Puff); Sfx.Tone(150, .08f, 0, .2f, -60);
+            Fx.Burst(transform.position, crit ? 10 : 6, Puff); Sfx.Tone(150, .08f, 0, .2f, -60, snd: Snd.MinionHit);
         }
         if (mgr != null) mgr.ui.Float((Vector2)transform.position + Vector2.up * 1.1f, Mathf.RoundToInt(dmg).ToString(), dot ? new Color(1f, .55f, .2f) : (crit ? new Color(1f, .82f, .4f) : Color.white), crit);
         if (Hp <= 0f) Kill();
@@ -89,7 +89,7 @@ public class Minion : MonoBehaviour
     public void Kill()
     {
         Fx.Ring(transform.position, 2.2f, new Color(.7f, .4f, 1f), .35f); Fx.Burst(transform.position, 18, Puff, 3f, 10f);
-        Sfx.Tone(110, .25f, 4, .25f, -50); CameraRig.Shake(2f); Destroy(gameObject);
+        Sfx.Tone(110, .25f, 4, .25f, -50, snd: Snd.MinionDie); CameraRig.Shake(2f); Destroy(gameObject);
     }
 
     public static void ClearAll(bool withFx = false)

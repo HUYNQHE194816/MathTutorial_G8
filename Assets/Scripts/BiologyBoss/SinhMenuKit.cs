@@ -87,7 +87,7 @@ public static class SinhMenuKit
         var frame = CBox(n, p, frameColor ?? Gold, pos, size, true);
         var inner = CBox("Fill", frame, fill, Vector2.zero, Vector2.zero); Stretch(inner, 5, 5, 5, 5);
         var b = frame.gameObject.AddComponent<Button>(); b.targetGraphic = frame.GetComponent<Image>(); b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(() => cb());
+        var clickSnd = n == "Back" ? Snd.UiBack : Snd.UiClick; b.onClick.AddListener(() => { GameAudio.Play(clickSnd); cb(); });
         var sh = frame.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, .45f); sh.effectDistance = new Vector2(0, -6);
         var l = Label("Label", frame, label, fs, txt, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
         Stretch(l.rectTransform, 12, 0, 12, 0);
@@ -169,6 +169,6 @@ public class UiCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         rt.localScale = Vector3.Lerp(rt.localScale, Vector3.one * (hot ? hoverScale : 1f), k);
     }
 
-    public void OnPointerEnter(PointerEventData e) { hot = true; }
+    public void OnPointerEnter(PointerEventData e) { if (ready && !hot) GameAudio.Play(Snd.UiHover); hot = true; }
     public void OnPointerExit(PointerEventData e) { hot = false; }
 }

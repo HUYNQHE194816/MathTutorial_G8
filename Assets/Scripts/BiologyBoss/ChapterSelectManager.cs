@@ -76,8 +76,8 @@ public class ChapterSelectManager : MonoBehaviour
 
     void Pick(FlowChapter ch)
     {
-        if (ch.locked) { SinhMenuKit.Toast(root, "Chương này sắp ra mắt!"); return; }
-        SubjectSession.Choose(ch);
+        if (ch.locked) { GameAudio.Play(Snd.CardLocked); SinhMenuKit.Toast(root, "Chương này sắp ra mắt!"); return; }
+        GameAudio.Play(Snd.ChapterSelect); SubjectSession.Choose(ch);
         SinhMenuKit.LoadScene(SubjectSession.LessonScene);
     }
 }

@@ -47,8 +47,8 @@ public class AnimatedButton : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         rt.localScale = Vector3.Lerp(rt.localScale, Vector3.one * target, k);
     }
 
-    public void OnPointerEnter(PointerEventData e) { hovered = true; }
+    public void OnPointerEnter(PointerEventData e) { if (!hovered && FxEnabled) GameAudio.Play(Snd.UiHover); hovered = true; }
     public void OnPointerExit(PointerEventData e) { hovered = false; pressed = false; }
-    public void OnPointerDown(PointerEventData e) { pressed = true; }
+    public void OnPointerDown(PointerEventData e) { pressed = true; if (FxEnabled) GameAudio.Play(Snd.UiClick); }
     public void OnPointerUp(PointerEventData e) { pressed = false; }
 }

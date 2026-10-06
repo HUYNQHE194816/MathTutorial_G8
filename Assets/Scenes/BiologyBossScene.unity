@@ -285,11 +285,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c915e11be98258b4cad4d97979c1bd52, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossFightManager
-  totalQuestions: 20
-  hpPerQuestion: 150
-  wrongAnswerDamage: 25
-  buffEvery: 3
-  maxBuffs: 6
+  totalQuestions: 15
+  hpPerQuestion: 100
+  wrongAnswerDamage: 20
+  buffEvery: 2
+  maxBuffs: 5
   backSceneName: SubjectSelectScene
   sheetUrl: 
   csvFile: {fileID: 4900000, guid: f27776cac26139c4fba965b318da4a0c, type: 3}

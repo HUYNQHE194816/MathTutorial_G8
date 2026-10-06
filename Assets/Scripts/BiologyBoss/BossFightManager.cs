@@ -171,7 +171,7 @@ public class BossFightManager : MonoBehaviour
     // ---------- Luồng game ----------
     public void StartGame() { if (State != BossState.Menu || loading) return; ui.ShowMenu(false); BeginFight(); }
 
-    void BeginFight() { State = BossState.Playing; Boss.Begin(); Sfx.Tone(300, .3f, 2, .25f, 400); }
+    void BeginFight() { State = BossState.Playing; Boss.Begin(); Sfx.Tone(300, .3f, 2, .25f, 400, snd: Snd.FightStart); GameAudio.PlayMusic(Mus.BossFight); }
 
     void Update()
     {
@@ -219,7 +219,7 @@ public class BossFightManager : MonoBehaviour
         var q = order[answered]; map = new[] { 0, 1, 2, 3 }; Shuffle(map);
         var shown = new string[4]; for (int i = 0; i < 4; i++) shown[i] = q.answers[map[i]];
         ui.ShowQuestion(answered + 1, totalQuestions, q.text, shown);
-        Sfx.Tone(500, .3f, 2, .25f, 300);
+        Sfx.Tone(500, .3f, 2, .25f, 300, snd: Snd.QuizOpen);
     }
 
     void Choose(int i)
@@ -270,7 +270,7 @@ public class BossFightManager : MonoBehaviour
         if (offered.Length == 0) return;
         State = BossState.BuffPick; hitStop = 0f; Time.timeScale = 0f; lockBuff = false;
         ui.ShowBuffChoice(offered, owned.Count, maxBuffs);
-        Sfx.Tone(600, .3f, 2, .25f, 300);
+        Sfx.Tone(600, .3f, 2, .25f, 300, snd: Snd.BuffOpen);
     }
 
     void ChooseBuff(int i)
@@ -287,7 +287,7 @@ public class BossFightManager : MonoBehaviour
         owned.Add(b); b.Apply(Player);
         ui.SetBuffs(owned);
         ui.ShowToast(b.Name, b.Desc, b.Color);
-        Fx.Boom(Player.Center, 1f, Fx.BuffCols);
+        Fx.Boom(Player.Center, 1f, Fx.BuffCols); Sfx.Play(Snd.BuffPick);
     }
 
     // ---------- Kết thúc ----------
@@ -304,8 +304,8 @@ public class BossFightManager : MonoBehaviour
 
     IEnumerator EndRoutine(bool win)
     {
-        Record(win);
-        if (win) { Sfx.Tone(523, .2f, 2, .3f); yield return new WaitForSeconds(.2f); Sfx.Tone(659, .2f, 2, .3f); yield return new WaitForSeconds(.2f); Sfx.Tone(784, .4f, 2, .3f); }
+        Record(win); GameAudio.StopMusic(); Sfx.Play(win ? Snd.Victory : Snd.Defeat);
+        if (win && !Sfx.Has(Snd.Victory)) { Sfx.Tone(523, .2f, 2, .3f); yield return new WaitForSeconds(.2f); Sfx.Tone(659, .2f, 2, .3f); yield return new WaitForSeconds(.2f); Sfx.Tone(784, .4f, 2, .3f); }
         else yield return new WaitForSeconds(1.3f);
         string sub = win
             ? $"Bạn đã vượt qua {totalQuestions} câu hỏi Sinh học!\nTrả lời sai {wrong} lần, còn {Mathf.CeilToInt(Player.Hp)} máu."

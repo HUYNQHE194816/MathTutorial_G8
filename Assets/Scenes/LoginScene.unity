@@ -394,7 +394,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "GIA S\u01AF TO\xC1N 8"
+  m_text: "GIA S\u01AF KHTN 8\n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1482,7 +1482,7 @@ MonoBehaviour:
   effectsRoot: {fileID: 2132434975}
   sparkleSprite: {fileID: 21300000, guid: 6e568ee90fb751ed99cb991566087563, type: 3}
   sfx: {fileID: 771112088}
-  successClip: {fileID: 8300000, guid: 0349c17fef3349243a6bdd9ae5cf5250, type: 3}
+  successClip: {fileID: 8300000, guid: 8a4f112ea7777da4d9688b127b07e8ba, type: 3}
   errorClip: {fileID: 8300000, guid: 576b8f046508e554db06236f01b58c06, type: 3}
   nextSceneName: MainMenu
 --- !u!82 &771112088
@@ -1496,11 +1496,11 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 905df66f6bd165b4c86e8e781ab1eb7d, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -3037,12 +3037,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1f95bab5517d1e44ac3ec84dad1a0ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FloatingMathSymbols
-  font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  count: 22
-  sizeRange: {x: 56, y: 130}
-  speedRange: {x: 18, y: 46}
-  alphaRange: {x: 0.1, y: 0.24}
-  fallbackArea: {x: 1920, y: 1080}
 --- !u!1 &1582083616
 GameObject:
   m_ObjectHideFlags: 0
@@ -4291,7 +4285,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "GIA S\u01AF KHTN 8\n1"
+  m_text: "GIA S\u01AF KHTN 8\n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

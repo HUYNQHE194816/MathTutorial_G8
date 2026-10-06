@@ -62,7 +62,7 @@ public class BossFightUI : MonoBehaviour
     {
         var rt = Box(n, p, Color.white, C, C, C, pos, size, true); Skin(rt);
         var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = rt.GetComponent<Image>(); BtnColors(b, norm, hi);
-        b.onClick.AddListener(() => cb());
+        var clickSnd = n.StartsWith("Opt") ? Snd.None : (n.Contains("Back") ? Snd.UiBack : Snd.UiClick); b.onClick.AddListener(() => { GameAudio.Play(clickSnd); cb(); });
         var sh = rt.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, .8f); sh.effectDistance = new Vector2(0, -7);
         var l = Label("Label", rt, label, fs, txt, TextAnchor.MiddleCenter); Stretch(l.rectTransform, 12, 0, 12, 0);
         return b;
@@ -154,7 +154,7 @@ public class BossFightUI : MonoBehaviour
         // Menu
         menuPanel = Full("MenuPanel", root, new Color(.05f, .04f, .09f, .82f), true).gameObject;
         var mt = Label("Title", menuPanel.transform, "HIỆP SĨ SINH HỌC", 110, Gold, TextAnchor.MiddleCenter); Place(mt.rectTransform, C, C, C, new Vector2(0, 260), new Vector2(1700, 150));
-        var ms = menuSub = Label("Sub", menuPanel.transform, "Đánh Rồng Lửa để mở 15 câu hỏi Sinh học 8.\nCứ xong 3 câu được chọn 1 trong 3 buff (tối đa 5, mỗi buff chỉ 1 lần).\nTrả lời sai: rồng hồi máu, mạnh hơn và phun lửa trừng phạt!", 42, Color.white, TextAnchor.MiddleCenter, FontStyle.Normal);
+        var ms = menuSub = Label("Sub", menuPanel.transform, "Đánh Rồng Lửa để mở 15 câu hỏi Sinh học 8.\nCứ xong 2 câu được chọn 1 trong 3 buff (tối đa 5, mỗi buff chỉ 1 lần).\nTrả lời sai: rồng hồi máu, mạnh hơn và phun lửa trừng phạt!", 42, Color.white, TextAnchor.MiddleCenter, FontStyle.Normal);
         Place(ms.rectTransform, C, C, C, new Vector2(0, 90), new Vector2(1600, 150));
         var mc = Label("Controls", menuPanel.transform, "W A S D: di chuyển     Space / Chuột trái: chém (tự ngắm, chém tan đạn lửa)     Shift: lướt né", 34, new Color(.8f, .85f, 1f), TextAnchor.MiddleCenter, FontStyle.Normal);
         Place(mc.rectTransform, C, C, C, new Vector2(0, -50), new Vector2(1700, 90));

@@ -77,7 +77,7 @@ public class LessonSelectManager : MonoBehaviour
 
     void Play(string lesson)
     {
-        SubjectSession.Lesson = lesson;
+        GameAudio.Play(Snd.LessonSelect); SubjectSession.Lesson = lesson;
         SinhMenuKit.LoadScene(SubjectSession.GameScene(SubjectSession.Subject));
     }
 }

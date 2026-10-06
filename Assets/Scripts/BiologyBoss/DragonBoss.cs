@@ -88,7 +88,7 @@ public class DragonBoss : MonoBehaviour
         if (Dead) return;
         float before = Hp; Hp = Mathf.Min(MaxHp, Hp + healAmount); float gained = Hp - before;
         DamageMult = Mathf.Min(maxDamageMult, DamageMult + damageUpPerWrong);
-        Fx.Ring(Position, 6f, new Color(.5f, 1f, .55f), .5f); Fx.Burst(Position, 26, Fx.HealCols, 2f, 9f); Sfx.Tone(330, .5f, 2, .25f, 400);
+        Fx.Ring(Position, 6f, new Color(.5f, 1f, .55f), .5f); Fx.Burst(Position, 26, Fx.HealCols, 2f, 9f); Sfx.Tone(330, .5f, 2, .25f, 400, snd: Snd.BossHeal);
         mgr.ui.Float(Position + new Vector2(0f, 2.9f), "+" + Mathf.RoundToInt(gained) + " MÁU", new Color(.5f, 1f, .55f), true);
         mgr.ui.SetRage(DamageMult);
         mgr.ui.ShowToast("RỒNG HỒI MÁU!", "Sát thương rồng +" + Mathf.RoundToInt(damageUpPerWrong * 100f) + "%  (tổng ×" + DamageMult.ToString("0.0") + ")", new Color(1f, .45f, .35f));
@@ -107,7 +107,7 @@ public class DragonBoss : MonoBehaviour
         if (Dead || Invulnerable || freezeCd > 0f || frozenT > 0f) return;
         freezeCd = s + 4f; frozenT = s; hover = false; mouthT = 0f; flapT = 0f;
         StopAllCoroutines(); if (telegraph != null) Destroy(telegraph); Hazards.ClearAll();
-        Fx.Ring(Position, 6f, new Color(.55f, .9f, 1f), .45f); Fx.Burst(Position, 22, Fx.IceCols, 2f, 8f); Sfx.Tone(900, .3f, 2, .2f, -300);
+        Fx.Ring(Position, 6f, new Color(.55f, .9f, 1f), .45f); Fx.Burst(Position, 22, Fx.IceCols, 2f, 8f); Sfx.Tone(900, .3f, 2, .2f, -300, snd: Snd.BossFreeze);
         mgr.ui.Float(Position + new Vector2(0f, 3f), "ĐÓNG BĂNG!", new Color(.6f, .92f, 1f), true);
         StartCoroutine(FreezeRoutine());
     }
@@ -115,7 +115,7 @@ public class DragonBoss : MonoBehaviour
     IEnumerator FreezeRoutine()
     {
         while (frozenT > 0f) yield return null;
-        Fx.Burst(Position, 16, Fx.IceCols, 2f, 8f); Sfx.Tone(500, .15f, 0, .15f, 200);
+        Fx.Burst(Position, 16, Fx.IceCols, 2f, 8f); Sfx.Tone(500, .15f, 0, .15f, 200, snd: Snd.BossUnfreeze);
         if (!Dead) StartCoroutine(Brain(.4f));
     }
 
@@ -182,7 +182,7 @@ public class DragonBoss : MonoBehaviour
         if (Invulnerable)
         {
             if (dot) return;
-            if (immuneMsgT <= 0f) { immuneMsgT = .6f; mgr.ui.Float(Position + new Vector2(0, 2.6f), "MIỄN NHIỄM", new Color(.6f, .9f, 1f), false); Sfx.Tone(700, .08f, 2, .15f); }
+            if (immuneMsgT <= 0f) { immuneMsgT = .6f; mgr.ui.Float(Position + new Vector2(0, 2.6f), "MIỄN NHIỄM", new Color(.6f, .9f, 1f), false); Sfx.Tone(700, .08f, 2, .15f, snd: Snd.BossImmune); }
             Fx.Burst(Position, 4, Fx.BoltCols); return;
         }
         Hp -= d;
@@ -195,14 +195,14 @@ public class DragonBoss : MonoBehaviour
         Vector2 rnd = new Vector2(Random.Range(-.9f, .9f), Random.Range(-.6f, .6f));
         mgr.ui.Float(Position + new Vector2(rnd.x, 2.4f), Mathf.RoundToInt(d).ToString(), crit ? new Color(1f, .82f, .4f) : Color.white, crit);
         Fx.Burst(Position + rnd, crit ? 14 : 8, crit ? Fx.FireCols : Fx.HitCols); Fx.Sparks(Position + rnd, crit ? 10 : 5, crit ? new Color(1f, .85f, .4f) : Color.white);
-        Sfx.Tone(crit ? 170 : 120, .1f, 0, .25f, -60);
+        Sfx.Tone(crit ? 170 : 120, .1f, 0, .25f, -60, snd: crit ? Snd.BossHitCrit : Snd.BossHit);
         Damaged?.Invoke();
     }
 
     public void Lightning(float dmg)
     {
         if (Invulnerable) return;
-        Fx.Lightning(Position); Fx.Boom(Position, .8f, Fx.BoltCols); TakeDamage(dmg, false);
+        Sfx.Play(Snd.Thunder); Fx.Lightning(Position); Fx.Boom(Position, .8f, Fx.BoltCols); TakeDamage(dmg, false);
     }
 
     // ---------- AI ----------
@@ -247,8 +247,8 @@ public class DragonBoss : MonoBehaviour
 
     void PhaseToasts()
     {
-        if (!toast2 && Hp01 <= phase2At) { toast2 = true; mgr.ui.ShowToast("RỒNG THỨC TỈNH!", "Laze từ miệng + sóng chấn từ cánh", new Color(1f, .6f, .3f)); mgr.ui.FlashRed(); Sfx.Tone(90, .6f, 1, .3f, -30); }
-        if (!toast3 && Hp01 <= phase3At) { toast3 = true; mgr.ui.ShowToast("RỒNG CUỒNG NỘ!", "Ra chiêu nhanh và rộng dần", new Color(1f, .45f, .35f)); mgr.ui.FlashRed(); Sfx.Tone(80, .6f, 1, .3f, -30); }
+        if (!toast2 && Hp01 <= phase2At) { toast2 = true; mgr.ui.ShowToast("RỒNG THỨC TỈNH!", "Laze từ miệng + sóng chấn từ cánh", new Color(1f, .6f, .3f)); mgr.ui.FlashRed(); Sfx.Tone(90, .6f, 1, .3f, -30, snd: Snd.BossRoar); }
+        if (!toast3 && Hp01 <= phase3At) { toast3 = true; mgr.ui.ShowToast("RỒNG CUỒNG NỘ!", "Ra chiêu nhanh và rộng dần", new Color(1f, .45f, .35f)); mgr.ui.FlashRed(); Sfx.Tone(80, .6f, 1, .3f, -30, snd: Snd.BossRoar); }
     }
 
     Vector2 Mouth => Position + Vector2.up * 1.1f;
@@ -262,7 +262,7 @@ public class DragonBoss : MonoBehaviour
         {
             mouthT = .4f; int k = 3 + Mathf.RoundToInt(lv * 4f + (rc - 1f) * 5f); float aim = Aim();
             for (int i = 0; i < k; i++) Shoot(aim + (i - (k - 1) / 2f) * .22f, (95f + lv * 40f) / 16f * (1f + (Haste - 1f) * .5f));
-            Sfx.Tone(220, .2f, 1, .2f, -120);
+            Sfx.Tone(220, .2f, 1, .2f, -120, snd: Snd.BossFireball);
             if (n < 2) yield return W(.45f);
         }
         yield return W(.6f);
@@ -276,7 +276,7 @@ public class DragonBoss : MonoBehaviour
         {
             mouthT = .4f;
             for (int i = 0; i < cnt; i++) Shoot(i / (float)cnt * 6.2832f + n * .17f, (70f + lv * 30f) / 16f * (1f + (Haste - 1f) * .5f));
-            Sfx.Tone(150, .3f, 1, .2f, -80);
+            Sfx.Tone(150, .3f, 1, .2f, -80, snd: Snd.BossFireball);
             yield return W(.6f);
         }
         yield return W(.3f);
@@ -284,7 +284,7 @@ public class DragonBoss : MonoBehaviour
 
     IEnumerator Rain()   // mưa thiên thạch: vòng đỏ cảnh báo rồi nổ
     {
-        float lv = mgr.Level, rc = Reach, hs = Mathf.Sqrt(Haste); int k = 4 + Mathf.RoundToInt(lv * 5f + (rc - 1f) * 6f);
+        float lv = mgr.Level, rc = Reach, hs = Mathf.Sqrt(Haste); int k = 4 + Mathf.RoundToInt(lv * 5f + (rc - 1f) * 6f); Sfx.Play(Snd.BossMeteorWarn);
         for (int i = 0; i < k; i++)
         {
             Vector2 p = pl.Position;
@@ -298,7 +298,7 @@ public class DragonBoss : MonoBehaviour
     IEnumerator Charge()   // vệt đỏ báo trước rồi lao thẳng vào người chơi
     {
         float hs = Mathf.Sqrt(Haste), hit = 2.4f * (1f + (Reach - 1f) * .5f);
-        Vector2 d = (pl.Center - Position).normalized; Sfx.Tone(130, .6f, 1, .2f, 60);
+        Vector2 d = (pl.Center - Position).normalized; Sfx.Tone(130, .6f, 1, .2f, 60, snd: Snd.BossChargeWarn);
         telegraph = new GameObject("ChargeTelegraph"); var tsr = telegraph.AddComponent<SpriteRenderer>();
         tsr.sprite = ProcSprites.Pixel; tsr.sortingOrder = -850; telegraph.transform.localScale = new Vector3(80f, 6f * (1f + (Reach - 1f) * .5f), 1f);
         telegraph.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
@@ -327,7 +327,7 @@ public class DragonBoss : MonoBehaviour
         {
             float charge = Mathf.Max(.55f, 1.05f / Haste), ang = Aim();
             var beam = LaserBeam.Spawn(pl, Mouth, Mouth + Dir(ang) * 40f, .22f, new Color(1f, .3f, .3f, .55f), false);
-            Sfx.Tone(300, charge, 2, .2f, 500);
+            Sfx.Tone(300, charge, 2, .2f, 500, snd: Snd.BossLaserCharge);
             for (float e = 0f; e < charge; e += Time.deltaTime)   // gom năng lượng: tia cảnh báo bám theo, 35% cuối thì khoá hướng
             {
                 mouthT = .1f; if (e < charge * .65f) ang = Aim();
@@ -335,7 +335,7 @@ public class DragonBoss : MonoBehaviour
                 Fx.Spawn(ProcSprites.Glow, Mouth, new Color(1f, .5f, .3f, .7f), .15f, 1.8f * (e / charge) + .3f, .2f, Vector2.zero, order: 4800);
                 yield return null;
             }
-            Sfx.Tone(160, .7f, 1, .35f, -80); CameraRig.Shake(5f); mgr.ui.FlashRed();
+            Sfx.Tone(160, .7f, 1, .35f, -80, snd: Snd.BossLaserFire); CameraRig.Shake(5f); mgr.ui.FlashRed();
             float dur = .75f, sweep = (Random.value < .5f ? -1f : 1f) * .35f * Reach;   // tia quét ngang qua người chơi
             for (float e = 0f; e < dur; e += Time.deltaTime)
             {
@@ -358,11 +358,11 @@ public class DragonBoss : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             Vector2 o = Position + Vector2.down * 2.4f, d = (pl.Center - o).normalized;
-            flapT = .7f; mouthT = .3f; Sfx.Tone(200, .35f, 4, .2f, -100);
+            flapT = .7f; mouthT = .3f; Sfx.Tone(200, .35f, 4, .2f, -100, snd: Snd.BossWingFlap);
             var warn = LaserBeam.Spawn(pl, o, o + d * 40f, halfW * 2f, new Color(1f, .7f, .3f, .14f), false);
             for (float e = 0f; e < Mathf.Max(.4f, .6f / Haste); e += Time.deltaTime) { flapT = .2f; yield return null; }
             Destroy(warn.gameObject);
-            Sfx.Tone(80, .5f, 1, .35f, -30); CameraRig.Shake(6f * Reach);
+            Sfx.Tone(80, .5f, 1, .35f, -30, snd: Snd.BossWingQuake); CameraRig.Shake(6f * Reach);
             Fx.Ring(o, 3.5f, new Color(1f, .75f, .4f), .35f);
             Shockwave.Spawn(pl, o, d, 9f * Mathf.Sqrt(Haste), halfW, 1.2f * Reach, 14);
             yield return W(.55f);
@@ -377,7 +377,7 @@ public class DragonBoss : MonoBehaviour
         enraged = true; Invulnerable = true; hover = false;
         Projectile.ClearAll(); Meteor.ClearAll(); Hazards.ClearAll();
         mgr.ui.FlashRed(); mgr.ui.ShowToast("RỒNG NỔI GIẬN!", "Mọi chiêu thức tung ra liên tục - né lưới laze!", new Color(1f, .35f, .3f));
-        Sfx.Tone(60, 1.2f, 1, .4f, -20); CameraRig.Shake(10f);
+        Sfx.Tone(60, 1.2f, 1, .4f, -20, snd: Snd.BossRoar); CameraRig.Shake(10f);
 
         yield return FlyToCenter(.8f);
         yield return LaserGrid(gridSeconds, 1.4f);
@@ -418,7 +418,7 @@ public class DragonBoss : MonoBehaviour
         Color warn = new Color(1f, .3f, .3f, .5f), fire = new Color(1f, .2f, .25f, .8f);
         for (int i = 0; i < vx.Length; i++) { vph[i] = Random.value * 6.28f; vb[i] = LaserBeam.Spawn(pl, new Vector2(vx[i], -12f), new Vector2(vx[i], 12f), .2f, warn, false); }
         for (int i = 0; i < hy.Length; i++) { hph[i] = Random.value * 6.28f; hb[i] = LaserBeam.Spawn(pl, new Vector2(-22f, hy[i]), new Vector2(22f, hy[i]), .2f, warn, false); }
-        Sfx.Tone(250, warnTime, 2, .25f, 400);
+        Sfx.Tone(250, warnTime, 2, .25f, 400, snd: Snd.BossLaserCharge);
         for (float e = 0f; e < warnTime; e += Time.deltaTime)   // cảnh báo
         {
             mouthT = .1f; float wd = .14f + .08f * Mathf.Sin(e * 25f);
@@ -426,7 +426,7 @@ public class DragonBoss : MonoBehaviour
             for (int i = 0; i < hb.Length; i++) hb[i].Set(new Vector2(-22f, hy[i]), new Vector2(22f, hy[i]), wd, warn, false);
             yield return null;
         }
-        Sfx.Tone(170, .9f, 1, .4f, -70); CameraRig.Shake(8f); mgr.ui.FlashRed();
+        Sfx.Tone(170, .9f, 1, .4f, -70, snd: Snd.BossLaserFire); CameraRig.Shake(8f); mgr.ui.FlashRed();
         for (float e = 0f; e < active; e += Time.deltaTime)   // lưới hoạt động đúng "active" giây
         {
             mouthT = .1f; float wd = .9f * (e < .15f ? e / .15f : 1f) * (e > active - .3f ? Mathf.Max(.05f, (active - e) / .3f) : 1f);
@@ -455,7 +455,7 @@ public class DragonBoss : MonoBehaviour
         int need = minionCount - Minion.All.Count; if (need <= 0) yield break;
         if (first) mgr.ui.ShowToast("ĐỆ TỬ XUẤT HIỆN!", "Hạ gục đàn quỷ nhỏ!", new Color(.8f, .5f, 1f));
         else mgr.ui.Float(Position + new Vector2(0f, 3f), "GỌI ĐỆ!", new Color(.8f, .5f, 1f), true);
-        Sfx.Tone(120, .6f, 1, .3f, 60);
+        Sfx.Tone(120, .6f, 1, .3f, 60, snd: Snd.BossSummon);
         var sp = new List<Vector2> { new Vector2(-10f, -1f), new Vector2(10f, -1f), new Vector2(-6f, 4.5f), new Vector2(6f, 4.5f), new Vector2(0f, -6f), new Vector2(0f, 5f) };
         if (!first) for (int i = sp.Count - 1; i > 0; i--) { int j = Random.Range(0, i + 1); var tmp = sp[i]; sp[i] = sp[j]; sp[j] = tmp; }   // lần sau: vị trí ngẫu nhiên
         for (int i = 0; i < Mathf.Min(need, sp.Count); i++) { Minion.Spawn(sp[i], pl); yield return new WaitForSeconds(.15f); }
@@ -472,7 +472,7 @@ public class DragonBoss : MonoBehaviour
 
     IEnumerator DieRoutine()
     {
-        Sfx.Tone(60, 1.5f, 1, .3f, -20); float e = 0f, nb = 0f;
+        Sfx.Tone(60, 1.5f, 1, .3f, -20, snd: Snd.BossDeath); float e = 0f, nb = 0f;
         while (e < 2.4f)
         {
             e += Time.deltaTime; nb -= Time.deltaTime;

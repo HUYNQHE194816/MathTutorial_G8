@@ -1,0 +1,224 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbf6bada174fe894fabc2aadb3ebfa0a, type: 3}
+  m_Name: GameAudioLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::GameAudioLibrary
+  musicVolume: 0.119
+  sfxVolume: 1
+  pitchJitter: 0.05
+  musicFade: 0.8
+  music:
+  - id: 1
+    label: "Nh\u1EA1c n\u1EC1n: \u0110\u0103ng nh\u1EADp / Menu / Dashboard"
+    clip: {fileID: 8300000, guid: c4eea39994b0e714ba82a8a45584e29f, type: 3}
+    volume: 1
+  - id: 2
+    label: "Nh\u1EA1c n\u1EC1n: Ch\u1ECDn m\xF4n / ch\u01B0\u01A1ng / b\xE0i (tr\u1ED1ng
+      = d\xF9ng nh\u1EA1c Menu)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 3
+    label: "Nh\u1EA1c n\u1EC1n: Game L\xFD (m\xEA cung kho b\xE1u)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 4
+    label: "Nh\u1EA1c n\u1EC1n: \u0110\xE1nh boss r\u1ED3ng (Sinh)"
+    clip: {fileID: 0}
+    volume: 1
+  sfx:
+  - id: 10
+    label: "[Menu] R\xEA chu\u1ED9t v\xE0o n\xFAt / th\u1EBB"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 11
+    label: "[Menu] B\u1EA5m n\xFAt"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 12
+    label: "[Menu] B\u1EA5m n\xFAt Quay l\u1EA1i / V\u1EC1"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 13
+    label: "[Ch\u1ECDn m\xF4n] Ch\u1ECDn th\u1EBB m\xF4n h\u1ECDc"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 14
+    label: "[Ch\u1ECDn m\xF4n/ch\u01B0\u01A1ng] Th\u1EBB ch\u01B0a m\u1EDF (S\u1EAFp
+      ra m\u1EAFt)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 15
+    label: "[Ch\u1ECDn ch\u01B0\u01A1ng] Ch\u1ECDn ch\u01B0\u01A1ng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 16
+    label: "[Ch\u1ECDn b\xE0i] Ch\u1ECDn b\xE0i / \xD4n c\u1EA3 ch\u01B0\u01A1ng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 20
+    label: "[C\xE2u h\u1ECFi] Hi\u1EC7n c\xE2u h\u1ECFi (L\xFD + Sinh)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 21
+    label: "[C\xE2u h\u1ECFi] Tr\u1EA3 l\u1EDDi \u0111\xFAng (L\xFD + Sinh)"
+    clip: {fileID: 8300000, guid: 0349c17fef3349243a6bdd9ae5cf5250, type: 3}
+    volume: 1
+  - id: 22
+    label: "[C\xE2u h\u1ECFi] Tr\u1EA3 l\u1EDDi sai (L\xFD + Sinh)"
+    clip: {fileID: 8300000, guid: 576b8f046508e554db06236f01b58c06, type: 3}
+    volume: 1
+  - id: 23
+    label: "[K\u1EBFt th\xFAc] Th\u1EAFng (L\xFD + Sinh)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 24
+    label: "[K\u1EBFt th\xFAc] Thua (L\xFD + Sinh)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 30
+    label: "[Game L\xFD] Nh\xE2n v\u1EADt b\u01B0\u1EDBc sang \xF4 kh\xE1c"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 40
+    label: "[Boss] B\u1EAFt \u0111\u1EA7u tr\u1EADn \u0111\u1EA5u"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 41
+    label: "[Buff] Hi\u1EC7n b\u1EA3ng ch\u1ECDn buff"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 42
+    label: "[Buff] Ch\u1ECDn buff"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 43
+    label: "[Buff] Ki\u1EBFm B\u0103ng tung 3 h\xE0ng b\u0103ng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 44
+    label: "[Buff] S\u1EA5m S\xE9t \u0111\xE1nh r\u1ED3ng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 45
+    label: "[Buff] Ch\xE9m Ph\u1EA3n h\u1EA5t \u0111\u1EA1n l\u1EEDa"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 46
+    label: "[Buff] \u0110\u1EC7 Hi\u1EC7p S\u0129 xu\u1EA5t hi\u1EC7n"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 47
+    label: "[Buff] \u0110\u1EC7 Hi\u1EC7p S\u0129 b\u1EAFn ph\xE9p"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 50
+    label: "[Hi\u1EC7p s\u0129] L\u01B0\u1EDBt (Shift)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 51
+    label: "[Hi\u1EC7p s\u0129] Ki\u1EBFm ch\xE9m"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 52
+    label: "[Hi\u1EC7p s\u0129] Tr\xFAng \u0111\xF2n / m\u1EA5t m\xE1u"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 53
+    label: "[Hi\u1EC7p s\u0129] Khi\xEAn ch\u1EB7n \u0111\xF2n"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 60
+    label: "[Boss] R\u1ED3ng tr\xFAng \u0111\xF2n th\u01B0\u1EDDng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 61
+    label: "[Boss] R\u1ED3ng tr\xFAng \u0111\xF2n ch\xED m\u1EA1ng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 62
+    label: "[Boss] R\u1ED3ng mi\u1EC5n nhi\u1EC5m (l\xFAc n\u1ED5i gi\u1EADn)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 63
+    label: "[Boss] R\u1ED3ng h\u1ED3i m\xE1u (khi tr\u1EA3 l\u1EDDi sai)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 64
+    label: "[Boss] R\u1ED3ng b\u1ECB \u0111\xF3ng b\u0103ng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 65
+    label: "[Boss] R\u1ED3ng tan b\u0103ng"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 66
+    label: "[Boss] G\u1EA7m (th\u1EE9c t\u1EC9nh / cu\u1ED3ng n\u1ED9 / n\u1ED5i
+      gi\u1EADn)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 67
+    label: "[Boss] Phun \u0111\u1EA1n l\u1EEDa (qu\u1EA1t + v\xF2ng l\u1EEDa)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 68
+    label: "[Boss] M\u01B0a thi\xEAn th\u1EA1ch: b\u1EAFt \u0111\u1EA7u"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 69
+    label: "[Boss] B\xE1o tr\u01B0\u1EDBc c\xFA lao"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 70
+    label: "[Boss] Laze g\u1ED3ng n\u0103ng l\u01B0\u1EE3ng (mi\u1EC7ng + l\u01B0\u1EDBi
+      laze)"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 71
+    label: "[Boss] Laze b\u1EAFn"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 72
+    label: "[Boss] V\u1ED7 c\xE1nh"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 73
+    label: "[Boss] S\xF3ng ch\u1EA5n t\u1EEB c\xE1nh"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 74
+    label: "[Boss] G\u1ECDi \u0111\u1EC7 t\u1EED"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 75
+    label: "[Boss] R\u1ED3ng ch\u1EBFt"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 80
+    label: "[\u0110\u1EC7 t\u1EED] Xu\u1EA5t hi\u1EC7n"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 81
+    label: "[\u0110\u1EC7 t\u1EED] B\u1EAFn \u0111\u1EA1n"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 82
+    label: "[\u0110\u1EC7 t\u1EED] Tr\xFAng \u0111\xF2n"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 83
+    label: "[\u0110\u1EC7 t\u1EED] Ch\u1EBFt"
+    clip: {fileID: 0}
+    volume: 1
+  - id: 90
+    label: "[Chung] N\u1ED5 (thi\xEAn th\u1EA1ch, k\u1EF9 n\u0103ng...)"
+    clip: {fileID: 0}
+    volume: 1

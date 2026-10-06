@@ -32,7 +32,7 @@ public class PlayerController : MonoBehaviour
         if (cell.type == CellType.Rock) return;
 
         previousPos = currentPos;
-        currentPos = target;
+        currentPos = target; GameAudio.Play(Snd.LyStep);
         SnapToCell(currentPos);
 
         bool needsQuestion = (cell.type == CellType.Question || cell.type == CellType.Goal) && !cell.isVisited;
