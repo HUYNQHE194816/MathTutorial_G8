@@ -286,9 +286,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossFightManager
   totalQuestions: 15
-  hpPerQuestion: 100
+  hpPerQuestion: 90
   wrongAnswerDamage: 20
-  buffEvery: 2
+  buffEvery: 1
   maxBuffs: 5
   backSceneName: SubjectSelectScene
   sheetUrl: 
