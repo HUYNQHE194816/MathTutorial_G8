@@ -58,6 +58,9 @@ public class MillionaireManager : MonoBehaviour
     public GameObject endPanel;
     public TMP_Text endText;
     public string menuSceneName = "MainMenu";
+    [Tooltip("Nút 'AI GIẢI THÍCH' trong endPanel. Để trống = tự tạo bằng code.")]
+    public Button reviewAIButton;
+    public string reviewSceneName = "ProfessorReviewScene";
 
     [Header("Màu")]
     public Color normalColor = new Color32(11, 26, 107, 255);
@@ -129,7 +132,8 @@ public class MillionaireManager : MonoBehaviour
     }
 
     IEnumerator InitRoutine()
-    {
+    {   
+        ReviewSessionData.Clear();
         endPanel.SetActive(false);
 
         if (csvFile != null)
@@ -548,6 +552,11 @@ public class MillionaireManager : MonoBehaviour
 
         if (!isCorrect)
         {
+            ReviewSessionData.AddWrong(
+                q.text,
+                (string[])q.options.Clone(),
+                chosen,
+                q.correctIndex);
             EndGame($"Rất tiếc! Đáp án đúng là {"ABCD"[q.correctIndex]}.\nBạn ra về với {SafePrize()} đồng.", false);
             yield break;
         }
@@ -601,12 +610,19 @@ public class MillionaireManager : MonoBehaviour
     }
 
     // 14-15: Victory / End Music -> Closing Theme
-    void EndGame(string message, bool won)
-    {
-        endPanel.SetActive(true);
-        endText.text = message;
-        StartCoroutine(EndAudioRoutine(won));
-    }
+void EndGame(string message, bool won)
+{
+    endPanel.SetActive(true);
+    endText.text = message;
+
+    // Thắng thì không có câu sai để giải thích -> ẩn nút
+    if (reviewAIButton != null) reviewAIButton.gameObject.SetActive(!won);
+
+    StartCoroutine(EndAudioRoutine(won));
+}
+
+public void OnClickReviewAI() => SceneManager.LoadScene(reviewSceneName);
+
 
     IEnumerator EndAudioRoutine(bool won)
     {

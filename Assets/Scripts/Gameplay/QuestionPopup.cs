@@ -41,14 +41,10 @@ public class QuestionPopup : MonoBehaviour
     [Tooltip("Số giây để trả lời mỗi câu hỏi")]
     public float secondsPerQuestion = 15f;
 
-<<<<<<< HEAD
-    public struct QuestionData
-=======
     /// <summary>true khi ngân hàng câu hỏi đã sẵn sàng (GameManager chờ cờ này mới cho chơi).</summary>
     public bool IsReady { get; private set; }
 
     private class Q
->>>>>>> origin/main
     {
         public string text; public string[] options; public int correct;
         public Q(string t, string[] o, int c) { text = t; options = o; correct = c; }
@@ -82,7 +78,6 @@ public class QuestionPopup : MonoBehaviour
     private int correctIndex;
     private Coroutine countdownRoutine;
     private bool answered;
-    private QuestionData currentData;
 
     // ------------------------------------------------------------------ tải câu hỏi
     IEnumerator Start()
@@ -152,6 +147,9 @@ public class QuestionPopup : MonoBehaviour
         return deck.Dequeue();
     }
 
+    private string currentQuestionText;
+    private string[] currentDisplayedOptions = new string[4];
+
     // ------------------------------------------------------------------ hiển thị
     public void Show(Action<bool> callback, bool isFinal = false)
     {
@@ -159,34 +157,23 @@ public class QuestionPopup : MonoBehaviour
         answered = false;
         panel.SetActive(true);
 
-<<<<<<< HEAD
-        currentData = Bank[UnityEngine.Random.Range(0, Bank.Length)];
-        correctIndex = currentData.correctIndex;
-=======
         var data = Draw(isFinal);
+        currentQuestionText = data.text;
         // xáo thứ tự đáp án để đáp án đúng không luôn nằm ở nút A
         var order = Enumerable.Range(0, 4).OrderBy(_ => UnityEngine.Random.value).ToArray();
         correctIndex = Array.IndexOf(order, data.correct);
->>>>>>> origin/main
 
         for (int i = 0; i < answerButtons.Length; i++)
         {
             int idx = i;
-<<<<<<< HEAD
-            answerLabels[i].text = currentData.options[i];
-=======
-            answerLabels[i].text = data.options[order[i]];
->>>>>>> origin/main
+            currentDisplayedOptions[i] = data.options[order[i]];
+            answerLabels[i].text = currentDisplayedOptions[i];
             answerButtons[i].onClick.RemoveAllListeners();
             answerButtons[i].onClick.AddListener(() => Answer(idx));
         }
 
         if (countdownRoutine != null) StopCoroutine(countdownRoutine);
-<<<<<<< HEAD
-        countdownRoutine = StartCoroutine(CountdownRoutine(currentData.question));
-=======
         countdownRoutine = StartCoroutine(CountdownRoutine(data.text));
->>>>>>> origin/main
     }
 
     IEnumerator CountdownRoutine(string questionLabel)
@@ -229,16 +216,13 @@ public class QuestionPopup : MonoBehaviour
             countdownRoutine = null;
         }
 
-        bool isCorrect = (index == correctIndex);
-
-        // Lưu câu sai vào danh sách ôn tập AI
-        if (!isCorrect)
+        if (index != correctIndex)
         {
-            ReviewSessionData.AddWrong(currentData.question, currentData.options, index, currentData.correctIndex);
+            ReviewSessionData.AddWrong(currentQuestionText, (string[])currentDisplayedOptions.Clone(), index, correctIndex);
         }
 
         panel.SetActive(false);
-        onAnswered?.Invoke(isCorrect);
+        onAnswered?.Invoke(index == correctIndex);
     }
 
     // ------------------------------------------------------------------ CSV

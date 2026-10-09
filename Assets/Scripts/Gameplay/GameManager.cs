@@ -142,12 +142,15 @@ public class GameManager : MonoBehaviour
         root.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0.1f, 0.75f);
         endGamePanel = root.gameObject;
 
-        var card = NewRect("Card", root, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(760, 520));
+        var card = NewRect("Card", root, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(860, 520));
         card.gameObject.AddComponent<Image>().color = new Color(1f, .97f, .88f);
-        endGameTitleText = NewText("Title", card, 44, new Vector2(700, 200), new Vector2(0, 110), new Color(.13f, .2f, .45f));
-        endGameScoreText = NewText("Score", card, 40, new Vector2(700, 70), new Vector2(0, -40), new Color(.2f, .6f, .33f));
-        NewButton(card, "CHƠI LẠI", new Vector2(-180, -180), new Color(.3f, .78f, .45f), OnClickPlayAgain);
-        NewButton(card, "VỀ MENU", new Vector2(180, -180), new Color(.25f, .55f, 1f), OnClickBackToMenu);
+        endGameTitleText = NewText("Title", card, 40, new Vector2(780, 180), new Vector2(0, 120), new Color(.13f, .2f, .45f));
+        endGameScoreText = NewText("Score", card, 36, new Vector2(780, 60), new Vector2(0, -10), new Color(.2f, .6f, .33f));
+        
+        // 3 nút: CHƠI LẠI, AI GIẢI THÍCH, VỀ MENU
+        NewButton(card, "CHƠI LẠI", new Vector2(-260, -170), new Vector2(230, 80), 24, new Color(.3f, .78f, .45f), OnClickPlayAgain);
+        NewButton(card, "AI GIẢI THÍCH 🤖", new Vector2(0, -170), new Vector2(250, 80), 22, new Color(.55f, .32f, .92f), OnClickReviewAI);
+        NewButton(card, "VỀ MENU", new Vector2(260, -170), new Vector2(230, 80), 24, new Color(.25f, .55f, 1f), OnClickBackToMenu);
     }
 
     RectTransform NewRect(string n, Transform p, Vector2 min, Vector2 max, Vector2 size)
@@ -169,19 +172,19 @@ public class GameManager : MonoBehaviour
         return t;
     }
 
-    void NewButton(Transform p, string label, Vector2 pos, Color c, UnityEngine.Events.UnityAction onClick)
+    void NewButton(Transform p, string label, Vector2 pos, Vector2 size, float fontSize, Color c, UnityEngine.Events.UnityAction onClick)
     {
-        var r = NewRect(label, p, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(300, 90));
+        var r = NewRect(label, p, new Vector2(.5f, .5f), new Vector2(.5f, .5f), size);
         r.anchoredPosition = pos;
         var img = r.gameObject.AddComponent<Image>(); img.color = c;
         r.gameObject.AddComponent<Button>().onClick.AddListener(onClick);
-        NewText("Label", r, 34, new Vector2(300, 90), Vector2.zero, Color.white);
+        NewText("Label", r, fontSize, size, Vector2.zero, Color.white);
         r.GetComponentInChildren<TMP_Text>().text = label;
     }
 
     public void OnClickPlayAgain() => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     public void OnClickBackToMenu() => SceneManager.LoadScene("MainMenu");
-    public void OnClickReviewAI() => SceneManager.LoadScene("AIReviewScene");
+    public void OnClickReviewAI() => SceneManager.LoadScene("ProfessorReviewScene");
 
     void UpdateScoreUI()
     {
