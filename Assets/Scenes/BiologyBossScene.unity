@@ -294,8 +294,8 @@ MonoBehaviour:
   sheetUrl: 
   csvFile: {fileID: 4900000, guid: f27776cac26139c4fba965b318da4a0c, type: 3}
   sheetTimeoutSeconds: 8
-  correctClip: {fileID: 8300000, guid: 0349c17fef3349243a6bdd9ae5cf5250, type: 3}
-  wrongClip: {fileID: 8300000, guid: 576b8f046508e554db06236f01b58c06, type: 3}
+  correctClip: {fileID: 0}
+  wrongClip: {fileID: 0}
   Player: {fileID: 0}
   Boss: {fileID: 0}
   ui: {fileID: 0}

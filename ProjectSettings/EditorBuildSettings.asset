@@ -24,6 +24,12 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: c38a6c3f86f9e7f4aa153b88ae125ad9
   - enabled: 1
+    path: Assets/Scenes/ModeSelectScene.unity
+    guid: 1903004e6ca040aba6de95efdf1db200
+  - enabled: 1
+    path: Assets/Scenes/EssaySubjectSelectScene.unity
+    guid: 542aa21238864eccab78b875cf0eab6f
+  - enabled: 1
     path: Assets/Scenes/BiologyBossScene.unity
     guid: b98f90de5c57bae499588f16f85f91ff
   - enabled: 1
@@ -38,6 +44,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/LessonSelectScene.unity
     guid: e259b8a9e29244c68398f9bce40d47b1
+  - enabled: 1
+    path: Assets/Scenes/PhongAnScene.unity
+    guid: e576e399c9368be4088c67ae9c613fc5
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

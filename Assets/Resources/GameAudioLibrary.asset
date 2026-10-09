@@ -70,11 +70,11 @@ MonoBehaviour:
     volume: 1
   - id: 21
     label: "[C\xE2u h\u1ECFi] Tr\u1EA3 l\u1EDDi \u0111\xFAng (L\xFD + Sinh)"
-    clip: {fileID: 8300000, guid: 0349c17fef3349243a6bdd9ae5cf5250, type: 3}
+    clip: {fileID: 0}
     volume: 1
   - id: 22
     label: "[C\xE2u h\u1ECFi] Tr\u1EA3 l\u1EDDi sai (L\xFD + Sinh)"
-    clip: {fileID: 8300000, guid: 576b8f046508e554db06236f01b58c06, type: 3}
+    clip: {fileID: 0}
     volume: 1
   - id: 23
     label: "[K\u1EBFt th\xFAc] Th\u1EAFng (L\xFD + Sinh)"
