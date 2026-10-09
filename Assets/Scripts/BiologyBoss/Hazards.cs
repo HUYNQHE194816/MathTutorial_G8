@@ -42,7 +42,6 @@ public class LaserBeam : MonoBehaviour
 
     public void Set(Vector2 from, Vector2 to, float width, Color c, bool deadly)
     {
-        if (this == null) return;
         a = from; b = to; Width = width; col = c; Deadly = deadly;
         Vector2 d = to - from;
         transform.position = (from + to) * .5f;
