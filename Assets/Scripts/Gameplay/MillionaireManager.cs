@@ -66,6 +66,9 @@ public class MillionaireManager : MonoBehaviour
     public GameObject endPanel;
     public TMP_Text endText;
     public string menuSceneName = "MainMenu";
+    [Tooltip("Nút 'AI GIẢI THÍCH' trong endPanel. Để trống = tự tạo bằng code.")]
+    public Button reviewAIButton;
+    public string reviewSceneName = "ProfessorReviewScene";
 
     [Header("Màu")]
     public Color normalColor = new Color32(11, 26, 107, 255);
@@ -143,7 +146,8 @@ public class MillionaireManager : MonoBehaviour
     }
 
     IEnumerator InitRoutine()
-    {
+    {   
+        ReviewSessionData.Clear();
         endPanel.SetActive(false);
 
         if (SubjectSession.TryGetCsv(SubjectId.Hoa, out string sessionCsv))
@@ -570,6 +574,11 @@ public class MillionaireManager : MonoBehaviour
 
         if (!isCorrect)
         {
+            ReviewSessionData.AddWrong(
+                q.text,
+                (string[])q.options.Clone(),
+                chosen,
+                q.correctIndex);
             EndGame($"Rất tiếc! Đáp án đúng là {"ABCD"[q.correctIndex]}.\nBạn ra về với {SafePrize()} đồng.", false);
             yield break;
         }
@@ -640,6 +649,9 @@ public class MillionaireManager : MonoBehaviour
         endPanel.SetActive(true);
         endPanel.transform.SetAsLastSibling();
         endText.text = message;
+        SetupReviewButton();
+        if (reviewAIButton != null)
+          reviewAIButton.gameObject.SetActive(ReviewSessionData.wrongQuestions.Count > 0);
         StartCoroutine(EndAudioRoutine(won || (walkedAway && current > 0)));
     }
 
@@ -914,6 +926,26 @@ public class MillionaireManager : MonoBehaviour
     }
 
     public void OnClickBackToMenu() => SceneManager.LoadScene(SubjectSession.BackSceneOr(SubjectId.Hoa, menuSceneName));
+    public void OnClickReviewAI() => SceneManager.LoadScene(reviewSceneName);
+
+// Tạo nút AI GIẢI THÍCH cạnh nút VỀ MENU (chỉ tạo 1 lần, và chỉ khi scene chưa gán sẵn nút)
+void SetupReviewButton()
+{
+    if (reviewAIButton != null) return;
+
+    reviewAIButton = QuizUi.MakeButton("ReviewAIButton", endPanel.transform, questionText,
+        "AI GIẢI THÍCH", new Color32(140, 82, 235, 255), Color.white, 32f, OnClickReviewAI);
+    QuizUi.Anchor((RectTransform)reviewAIButton.transform,
+        new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-210f, -190f), new Vector2(380f, 92f));
+
+    // Dời nút VỀ MENU sang phải để hai nút đứng cạnh nhau
+    foreach (var b in endPanel.GetComponentsInChildren<Button>(true))
+    {
+        if (b == reviewAIButton) continue;
+        var r = (RectTransform)b.transform;
+        r.anchoredPosition = new Vector2(210f, r.anchoredPosition.y);
+    }
+}
 
     // ---------- TIỆN ÍCH ÂM THANH ----------
 

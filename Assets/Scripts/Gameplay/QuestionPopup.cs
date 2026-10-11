@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -150,6 +150,9 @@ public class QuestionPopup : MonoBehaviour
         return deck.Dequeue();
     }
 
+    private string currentQuestionText;
+    private string[] currentDisplayedOptions = new string[4];
+
     // ------------------------------------------------------------------ hiển thị
     public void Show(Action<bool> callback, bool isFinal = false)
     {
@@ -158,6 +161,7 @@ public class QuestionPopup : MonoBehaviour
         panel.SetActive(true);
 
         var data = Draw(isFinal);
+        currentQuestionText = data.text;
         // xáo thứ tự đáp án để đáp án đúng không luôn nằm ở nút A
         var order = Enumerable.Range(0, 4).OrderBy(_ => UnityEngine.Random.value).ToArray();
         correctIndex = Array.IndexOf(order, data.correct);
@@ -165,7 +169,8 @@ public class QuestionPopup : MonoBehaviour
         for (int i = 0; i < answerButtons.Length; i++)
         {
             int idx = i;
-            answerLabels[i].text = data.options[order[i]];
+            currentDisplayedOptions[i] = data.options[order[i]];
+            answerLabels[i].text = currentDisplayedOptions[i];
             answerButtons[i].onClick.RemoveAllListeners();
             answerButtons[i].onClick.AddListener(() => Answer(idx));
         }
@@ -212,6 +217,11 @@ public class QuestionPopup : MonoBehaviour
         {
             StopCoroutine(countdownRoutine);
             countdownRoutine = null;
+        }
+
+        if (index != correctIndex)
+        {
+            ReviewSessionData.AddWrong(currentQuestionText, (string[])currentDisplayedOptions.Clone(), index, correctIndex);
         }
 
         panel.SetActive(false);

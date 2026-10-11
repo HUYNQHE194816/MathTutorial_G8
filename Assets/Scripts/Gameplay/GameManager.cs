@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
@@ -43,6 +43,7 @@ public class GameManager : MonoBehaviour
     private Image endBorder;
     private Button endAgainButton;
     private Button endMenuButton;
+    private Button endReviewButton;
 
     void Awake() => Instance = this;
 
@@ -62,6 +63,7 @@ public class GameManager : MonoBehaviour
         BuildBackButton();
         if (endGamePanel == null) BuildEndPanel();
 
+        ReviewSessionData.Clear(); // Reset danh sách câu sai của lượt chơi trước
         if (endGamePanel != null) endGamePanel.SetActive(false);
         UpdateScoreUI();
     }
@@ -168,6 +170,8 @@ public class GameManager : MonoBehaviour
         if (endBorder != null) endBorder.color = won ? QuizUi.Green : QuizUi.Red;
 
         int secs = Mathf.RoundToInt(startTimeSeconds - timeRemaining);
+        if (endReviewButton != null)
+        endReviewButton.gameObject.SetActive(ReviewSessionData.wrongQuestions.Count > 0);
         string stats = $"Điểm: {score}\nTrả lời đúng: {correctCount}   •   Trả lời sai: {wrongCount}\nThời gian chơi: {secs / 60:00}:{secs % 60:00}";
         if (endStatsText != null) endStatsText.text = stats;
         else if (endGameScoreText != null) endGameScoreText.text = $"Điểm: {score}";
@@ -244,11 +248,14 @@ public class GameManager : MonoBehaviour
         endStatsText = QuizUi.Label("Stats", card, fontRef, "", 34f, QuizUi.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
         QuizUi.Anchor(endStatsText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -50f), new Vector2(820f, 160f));
 
-        endAgainButton = QuizUi.MakeButton("PlayAgainButton", card, fontRef, "CHƠI LẠI", QuizUi.Green, Color.white, 36f, OnClickPlayAgain);
-        QuizUi.Anchor((RectTransform)endAgainButton.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-200f, 70f), new Vector2(340f, 88f));
+        endAgainButton = QuizUi.MakeButton("PlayAgainButton", card, fontRef, "CHƠI LẠI", QuizUi.Green, Color.white, 30f, OnClickPlayAgain);
+        QuizUi.Anchor((RectTransform)endAgainButton.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-300f, 70f), new Vector2(270f, 88f));
 
-        endMenuButton = QuizUi.MakeButton("MenuButton", card, fontRef, "VỀ MENU", QuizUi.Orange, Color.white, 36f, OnClickBackToMenu);
-        QuizUi.Anchor((RectTransform)endMenuButton.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(200f, 70f), new Vector2(340f, 88f));
+        endReviewButton = QuizUi.MakeButton("ReviewAIButton", card, fontRef, "AI GIẢI THÍCH", new Color32(140, 82, 235, 255), Color.white, 30f, OnClickReviewAI);
+        QuizUi.Anchor((RectTransform)endReviewButton.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(270f, 88f));
+
+        endMenuButton = QuizUi.MakeButton("MenuButton", card, fontRef, "VỀ MENU", QuizUi.Orange, Color.white, 30f, OnClickBackToMenu);
+        QuizUi.Anchor((RectTransform)endMenuButton.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(300f, 70f), new Vector2(270f, 88f));
 
         endGamePanel = overlay.gameObject;
         endGamePanel.SetActive(false);
@@ -256,6 +263,7 @@ public class GameManager : MonoBehaviour
 
     public void OnClickPlayAgain() => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     public void OnClickBackToMenu() => SceneManager.LoadScene(SubjectSession.BackSceneOr(SubjectId.Ly, "MainMenu"));
+    public void OnClickReviewAI() => SceneManager.LoadScene("ProfessorReviewScene");
 
     void UpdateScoreUI()
     {
