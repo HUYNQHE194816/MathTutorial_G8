@@ -41,8 +41,6 @@ public class SubjectPickerScreen : MonoBehaviour
     void Awake()
     {
         // Giao diện cũ (nếu có) bị ẩn: tắt manager cũ trước khi nó kịp Start, rồi tắt các canvas cũ.
-        var legacy = FindFirstObjectByType<SubjectSelectManager>();
-        if (legacy != null) legacy.enabled = false;
         foreach (var c in FindObjectsByType<Canvas>(FindObjectsSortMode.None)) c.gameObject.SetActive(false);
     }
 

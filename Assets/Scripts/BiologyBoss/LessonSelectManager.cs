@@ -4,22 +4,22 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Scene "LessonSelectScene" dùng chung cho 3 môn: chọn bài của chương vừa chọn (lấy từ cột "Bài"), hoặc ôn cả chương,
-/// rồi vào game của môn đó với đúng câu hỏi đã chọn. Phong cách khung đổi theo môn.
+/// rồi vào game của môn đó với đúng câu hỏi đã chọn. Giao diện dark fantasy, rune accent đổi theo môn.
 /// Mở trực tiếp scene này để thử (không đi qua Chọn chương) thì dùng Fallback Csv như môn Sinh.
 /// </summary>
 public class LessonSelectManager : MonoBehaviour
 {
+    [Tooltip("Không còn dùng (nền giờ là rừng trăng dùng chung). Giữ lại để không mất dữ liệu scene cũ.")]
     public Sprite background;
     [Header("Chỉ dùng khi mở scene này trực tiếp để thử (môn Sinh)")]
     public TextAsset fallbackCsv;
     public string fallbackTitle = "Chương VII";
 
-    RectTransform root; FlowTheme theme; Text status;
+    FlowScreen screen; FlowTheme theme;
 
     IEnumerator Start()
     {
         Time.timeScale = 1f;
-        SinhMenuKit.EnsureEventSystem();
 
         if (SubjectSession.Chapter == null)
         {
@@ -29,55 +29,49 @@ public class LessonSelectManager : MonoBehaviour
         }
         theme = FlowTheme.Get(SubjectSession.Subject);
 
-        root = SinhMenuKit.BuildCanvas(transform, background);
-        root.Find("Background").GetComponent<Image>().color = theme.BgTint;
-        FlowFx.Create(root, theme.Mode);
-        SinhMenuKit.Label("Title", root, "CHỌN BÀI HỌC", 96, Color.white, TextAnchor.MiddleCenter, new Vector2(0, 410), new Vector2(1400, 130), true);
-        status = SinhMenuKit.Label("Status", root, "", 38, new Color(1f, 1f, 1f, .94f), TextAnchor.MiddleCenter, new Vector2(0, 330), new Vector2(1500, 60), true, FontStyle.Normal);
-        theme.Back(root, "← VỀ CHỌN CHƯƠNG", () => SinhMenuKit.LoadScene(SubjectSession.ChapterScene(SubjectSession.Subject)));
+        screen = FlowScreen.Create(transform, theme, "CHỌN BÀI HỌC", "VỀ CHỌN CHƯƠNG", SubjectSession.ChapterScene(SubjectSession.Subject));
 
         if (SubjectSession.Chapter == null || SubjectSession.Chapter.rows.Count == 0)
         {
-            status.text = "Không đọc được câu hỏi của chương này (kiểm tra file CSV / link Google Sheet).";
+            screen.SetStatus("Không đọc được câu hỏi của chương này (kiểm tra file CSV / link Google Sheet).");
             yield break;
         }
         BuildLessons();
     }
 
-    static void Fit(Text t, int min, int max) { t.resizeTextForBestFit = true; t.resizeTextMinSize = min; t.resizeTextMaxSize = max; t.verticalOverflow = VerticalWrapMode.Truncate; }
-
     void BuildLessons()
     {
         var ch = SubjectSession.Chapter; var lessons = SubjectSession.Lessons(); int total = ch.rows.Count;
-        status.text = $"{theme.Name} • {ch.title} • {lessons.Count} bài • {total} câu hỏi";
+        screen.SetStatus(theme.Name + " • " + ch.title + " • " + lessons.Count + " bài • " + total + " câu hỏi");
 
-        var cell = new Vector2(390, 170); var spacing = new Vector2(36, 30); const float viewH = 580f;
-        var content = SinhMenuKit.MakeScroll(root, new Vector2(0, -5), new Vector2(1700, viewH));
-        SinhMenuKit.SetupGrid(content, lessons.Count, 4, cell, spacing, viewH);
+        var content = screen.Grid(new Vector2(0, -30), new Vector2(1700, 520), lessons.Count, 4,
+            new Vector2(390, 150), new Vector2(36, 28), 30);
 
         for (int i = 0; i < lessons.Count; i++)
         {
             string key = lessons[i].Key; int count = lessons[i].Value;
-            var card = theme.Decorate(content, "Lesson" + i, out RectTransform c);
-            string label = key == SubjectSession.Other ? "Chưa phân bài" : key;
-            var name = SinhMenuKit.Label("Name", c, label, 46, theme.TextMain, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
-            SinhMenuKit.Place(name.rectTransform, new Vector2(0, .42f), Vector2.one, SinhMenuKit.C, Vector2.zero, Vector2.zero); Fit(name, 24, 46);
-            var cnt = SinhMenuKit.Label("Count", c, count + " câu hỏi", 30, theme.TextSub, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, false, FontStyle.Normal);
-            SinhMenuKit.Place(cnt.rectTransform, Vector2.zero, new Vector2(1, .42f), SinhMenuKit.C, Vector2.zero, Vector2.zero);
+            var card = FlowCard.Build(content, "Lesson" + i, theme.Accent, false, .05f + i * .05f, out RectTransform c);
+            card.onClick = () => Play(key);
 
-            var btn = card.gameObject.AddComponent<Button>(); btn.targetGraphic = card.GetComponent<Image>(); btn.transition = Selectable.Transition.None;
-            btn.onClick.AddListener(() => Play(key));
-            var sh = card.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, .35f); sh.effectDistance = new Vector2(0, -6);
-            var ui = card.gameObject.AddComponent<UiCard>(); ui.hoverScale = 1.05f; ui.Intro(.05f + i * .05f);
+            var runePos = new Vector2(-118, 0);
+            card.AddRune(c, runePos, 62f);
+            UIKit.Label("Num", c, (i + 1).ToString(), 30, GameTheme.GoldHi, TextAnchor.MiddleCenter, runePos, new Vector2(60, 48), true, true, FontStyle.Bold);
+
+            string label = key == SubjectSession.Other ? "Chưa phân bài" : key;
+            var name = UIKit.Label("Name", c, label, 34, GameTheme.Bone, TextAnchor.MiddleLeft, new Vector2(40, 16), new Vector2(230, 56), true, true, FontStyle.Bold);
+            FlowCard.Fit(name, 20, 34);
+            UIKit.Label("Count", c, count + " câu hỏi", 24, GameTheme.Fog, TextAnchor.MiddleLeft, new Vector2(40, -24), new Vector2(230, 36));
         }
 
-        SinhMenuKit.MakeButton("AllLessons", root, new Vector2(0, -440), new Vector2(820, 100), theme.Accent,
-            $"ÔN TẬP CẢ CHƯƠNG  •  {total} câu", 40, Color.white, () => Play(""), theme.Frame);
+        UIKit.MakeButton(screen.Ui, "Btn_All", "ÔN TẬP CẢ CHƯƠNG  •  " + total + " câu", new Vector2(0, -385), new Vector2(820, 88),
+            () => Play(""), ButtonStyle.Bronze, 36, .5f);
     }
 
     void Play(string lesson)
     {
-        GameAudio.Play(Snd.LessonSelect); SubjectSession.Lesson = lesson;
-        SinhMenuKit.LoadScene(SubjectSession.GameScene(SubjectSession.Subject));
+        if (screen.Leaving) return;
+        GameAudio.Play(Snd.LessonSelect);
+        SubjectSession.Lesson = lesson;
+        screen.Go(SubjectSession.GameScene(SubjectSession.Subject));
     }
 }
