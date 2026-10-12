@@ -53,21 +53,21 @@ public class QuestionPopup : MonoBehaviour
     // Ngân hàng dự phòng (đáp án đúng ở vị trí 0, sẽ được xáo khi hiển thị)
     private static Q[] Fallback() => new[]
     {
-        new Q("(x + 3)² = ?", new[] { "x² + 6x + 9", "x² + 9", "x² + 3x + 9", "x² - 6x + 9" }, 0),
-        new Q("Phân tích x² - 16 thành nhân tử:", new[] { "(x - 4)(x + 4)", "(x - 4)²", "(x + 4)²", "(x - 8)(x + 2)" }, 0),
-        new Q("Giải phương trình 2x + 6 = 0", new[] { "x = -3", "x = 3", "x = -6", "x = 6" }, 0),
-        new Q("Tổng các góc của một tứ giác bằng:", new[] { "360°", "180°", "270°", "540°" }, 0),
-        new Q("Tam giác vuông có hai cạnh góc vuông 3 cm và 4 cm. Cạnh huyền dài:", new[] { "5 cm", "6 cm", "7 cm", "25 cm" }, 0),
-        new Q("Diện tích hình chữ nhật dài 8 cm, rộng 5 cm là:", new[] { "40 cm²", "26 cm²", "13 cm²", "80 cm²" }, 0),
-        new Q("(a - b)² = ?", new[] { "a² - 2ab + b²", "a² - b²", "a² + 2ab + b²", "a² - 2ab - b²" }, 0),
-        new Q("Trong hình bình hành, hai đường chéo:", new[] { "cắt nhau tại trung điểm mỗi đường", "luôn bằng nhau", "luôn vuông góc", "song song với nhau" }, 0),
-        new Q("Phân tích 2x + 2y thành nhân tử:", new[] { "2(x + y)", "2xy", "x(2 + y)", "4(x + y)" }, 0),
-        new Q("Phương trình 3x - 9 = 0 có nghiệm:", new[] { "x = 3", "x = -3", "x = 9", "x = 6" }, 0),
-        new Q("Tứ giác có ba góc vuông là hình gì?", new[] { "Hình chữ nhật", "Hình thoi", "Hình thang cân", "Hình bình hành" }, 0),
-        new Q("Mỗi góc của lục giác đều bằng:", new[] { "120°", "60°", "108°", "135°" }, 0),
-        new Q("Diện tích tam giác có đáy 10 cm, chiều cao 6 cm là:", new[] { "30 cm²", "60 cm²", "16 cm²", "15 cm²" }, 0),
-        new Q("Phân thức 1/(x - 2) xác định khi:", new[] { "x khác 2", "x khác -2", "x khác 0", "x khác 1" }, 0),
-        new Q("Giá trị của x² - 2x + 1 tại x = 3 là:", new[] { "4", "2", "10", "16" }, 0)
+        new Q("Công thức tính khối lượng riêng của một chất là:", new[] { "D = m / V", "D = m · V", "D = V / m", "D = m + V" }, 0),
+        new Q("Khối lượng riêng của nước xấp xỉ bằng:", new[] { "1000 kg/m³", "100 kg/m³", "10 kg/m³", "10 000 kg/m³" }, 0),
+        new Q("Đơn vị đo áp suất trong hệ SI là:", new[] { "Pascal (Pa)", "Newton (N)", "Jun (J)", "Oát (W)" }, 0),
+        new Q("Áp suất được tính bằng công thức:", new[] { "p = F / S", "p = F · S", "p = S / F", "p = F + S" }, 0),
+        new Q("Lực đẩy Archimedes tác dụng lên vật nhúng trong chất lỏng có phương và chiều:", new[] { "thẳng đứng, từ dưới lên", "thẳng đứng, từ trên xuống", "nằm ngang", "theo phương bất kì" }, 0),
+        new Q("Vật nhúng trong chất lỏng sẽ chìm xuống khi:", new[] { "trọng lượng của vật lớn hơn lực đẩy Archimedes", "trọng lượng của vật nhỏ hơn lực đẩy Archimedes", "trọng lượng của vật bằng lực đẩy Archimedes", "thể tích của vật nhỏ hơn thể tích chất lỏng" }, 0),
+        new Q("Moment của một lực đối với trục quay được tính bằng:", new[] { "tích của lực và cánh tay đòn", "thương của lực và cánh tay đòn", "tổng của lực và cánh tay đòn", "hiệu của lực và cánh tay đòn" }, 0),
+        new Q("Hai vật nhiễm điện cùng loại khi đặt gần nhau sẽ:", new[] { "đẩy nhau", "hút nhau", "không tương tác", "lúc hút lúc đẩy" }, 0),
+        new Q("Dòng điện là:", new[] { "dòng các điện tích dịch chuyển có hướng", "dòng các phân tử chuyển động hỗn loạn", "dòng các nguyên tử đứng yên", "dòng ánh sáng truyền trong dây dẫn" }, 0),
+        new Q("Dụng cụ dùng để đo cường độ dòng điện là:", new[] { "ampe kế", "vôn kế", "nhiệt kế", "lực kế" }, 0),
+        new Q("Đơn vị đo hiệu điện thế là:", new[] { "vôn (V)", "ampe (A)", "ôm (Ω)", "oát (W)" }, 0),
+        new Q("Ampe kế phải được mắc như thế nào với thiết bị cần đo?", new[] { "nối tiếp", "song song", "nối tiếp hoặc song song đều được", "không cần mắc vào mạch" }, 0),
+        new Q("Hình thức truyền nhiệt chủ yếu trong chất rắn là:", new[] { "dẫn nhiệt", "đối lưu", "bức xạ nhiệt", "truyền ánh sáng" }, 0),
+        new Q("Nhiệt từ Mặt Trời truyền tới Trái Đất chủ yếu bằng hình thức:", new[] { "bức xạ nhiệt", "dẫn nhiệt", "đối lưu", "va chạm cơ học" }, 0),
+        new Q("Khi nhiệt độ tăng, thể tích của đa số chất lỏng thường:", new[] { "tăng lên (nở ra)", "giảm đi (co lại)", "không thay đổi", "lúc tăng lúc giảm bất kì" }, 0)
     };
 
     private readonly Queue<Q> deck = new Queue<Q>();
@@ -77,11 +77,15 @@ public class QuestionPopup : MonoBehaviour
     private Action<bool> onAnswered;
     private int correctIndex;
     private Coroutine countdownRoutine;
+    private Coroutine popRoutine;
     private bool answered;
+    private Image timerFill;   // thanh lửa đếm ngược (tự dựng trong BuildTheme)
+    private Image[] answerFills;   // lớp nền đá của 4 nút (đổi màu khi hiện đáp án)
 
     // ------------------------------------------------------------------ tải câu hỏi
     IEnumerator Start()
     {
+        BuildTheme();
         List<Q> loaded = null;
 
         // Vào từ luồng Chọn chương -> Chọn bài: dùng đúng câu hỏi của bài đã chọn.
@@ -158,7 +162,10 @@ public class QuestionPopup : MonoBehaviour
     {
         onAnswered = callback;
         answered = false;
+        ResetAnswerVisuals();
         panel.SetActive(true);
+        if (popRoutine != null) StopCoroutine(popRoutine);
+        popRoutine = StartCoroutine(PopIn());
 
         var data = Draw(isFinal);
         currentQuestionText = data.text;
@@ -206,6 +213,15 @@ public class QuestionPopup : MonoBehaviour
         {
             questionText.text = $"{questionLabel}\n\n⏳ {secs:00}s";
         }
+
+        bool urgent = remaining <= 5f;
+        if (timerText != null) timerText.color = urgent ? GameTheme.Blood : GameTheme.EmberDeep;
+        if (timerFill != null)
+        {
+            UIKit.SetBar(timerFill, secondsPerQuestion > 0f ? remaining / secondsPerQuestion : 0f);
+            Color want = urgent ? GameTheme.Blood : GameTheme.Ember;
+            if (timerFill.color != want) timerFill.color = want;
+        }
     }
 
     void Answer(int index)
@@ -224,8 +240,148 @@ public class QuestionPopup : MonoBehaviour
             ReviewSessionData.AddWrong(currentQuestionText, (string[])currentDisplayedOptions.Clone(), index, correctIndex);
         }
 
+        StartCoroutine(RevealThenClose(index));
+    }
+
+    /// <summary>Tô xanh đáp án đúng, tô đỏ + lắc đáp án đã chọn sai, giữ ~0.5-1s rồi mới đóng popup.</summary>
+    IEnumerator RevealThenClose(int chosen)
+    {
+        bool correct = chosen == correctIndex;
+        if (answerFills != null)
+        {
+            if (correctIndex >= 0 && correctIndex < answerFills.Length && answerFills[correctIndex] != null)
+                answerFills[correctIndex].color = Color.Lerp(GameTheme.Moss, GameTheme.Ink, .35f);
+            if (!correct && chosen >= 0 && chosen < answerFills.Length && answerFills[chosen] != null)
+                answerFills[chosen].color = Color.Lerp(GameTheme.Blood, GameTheme.Ink, .15f);
+        }
+
+        var good = (correctIndex >= 0 && correctIndex < answerButtons.Length) ? (RectTransform)answerButtons[correctIndex].transform : null;
+        RectTransform bad = (!correct && chosen >= 0 && chosen < answerButtons.Length) ? (RectTransform)answerButtons[chosen].transform : null;
+        Vector2 badHome = bad != null ? bad.anchoredPosition : Vector2.zero;
+
+        float dur = correct ? .55f : 1f;
+        for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
+        {
+            float k = t / dur;
+            if (good != null) good.localScale = Vector3.one * (1f + .06f * Mathf.Sin(Mathf.Clamp01(t / .3f) * Mathf.PI));
+            if (bad != null) bad.anchoredPosition = badHome + new Vector2(Mathf.Sin(t * 70f) * 9f * (1f - k), 0f);
+            yield return null;
+        }
+        if (good != null) good.localScale = Vector3.one;
+        if (bad != null) bad.anchoredPosition = badHome;
+
+        ResetAnswerVisuals();
         panel.SetActive(false);
-        onAnswered?.Invoke(index == correctIndex);
+        onAnswered?.Invoke(correct);
+    }
+
+    void ResetAnswerVisuals()
+    {
+        if (answerFills == null) return;
+        for (int i = 0; i < answerFills.Length; i++)
+        {
+            if (answerFills[i] != null) answerFills[i].color = GameTheme.SlateHi;
+            if (answerButtons != null && i < answerButtons.Length && answerButtons[i] != null)
+                answerButtons[i].transform.localScale = Vector3.one;
+        }
+    }
+
+    // ------------------------------------------------------------------ giao diện dark fantasy
+    /// <summary>
+    /// Phủ giao diện lên popup có sẵn trong scene (giữ nguyên mọi tham chiếu Inspector):
+    /// giấy da phía sau, chữ mực đen, 4 nút đáp án kiểu đá phiến có rune A/B/C/D, thanh lửa đếm ngược.
+    /// </summary>
+    void BuildTheme()
+    {
+        if (panel == null) return;
+        var prt = (RectTransform)panel.transform;
+
+        // tấm giấy da nằm sau toàn bộ nội dung popup
+        var card = UIKit.Panel(prt, "Card", Vector2.zero, new Vector2(100f, 100f), PanelStyle.Parchment, out _);
+        card.anchorMin = new Vector2(.04f, .02f); card.anchorMax = new Vector2(.96f, .84f);
+        card.offsetMin = Vector2.zero; card.offsetMax = Vector2.zero;
+        card.GetComponent<Image>().raycastTarget = false;
+        card.SetAsFirstSibling();
+
+        // đề bài
+        if (questionText != null)
+        {
+            questionText.color = GameTheme.PaperInk;
+            questionText.fontStyle = FontStyles.Bold;
+            questionText.alignment = TextAlignmentOptions.Center;
+            questionText.enableAutoSizing = true; questionText.fontSizeMin = 26f; questionText.fontSizeMax = 44f;
+            questionText.margin = new Vector4(24f, 12f, 24f, 12f);
+        }
+
+        // đồng hồ chữ + thanh lửa đếm ngược (nằm giữa đề bài và các nút)
+        if (timerText != null) { timerText.color = GameTheme.EmberDeep; timerText.fontStyle = FontStyles.Bold; }
+        var bar = UIKit.ProgressBar(prt, "TimerBar", Vector2.zero, new Vector2(100f, 14f), GameTheme.Ember, out timerFill);
+        bar.anchorMin = new Vector2(.0822f, .298f); bar.anchorMax = new Vector2(.9178f, .312f);
+        bar.offsetMin = Vector2.zero; bar.offsetMax = Vector2.zero;
+        UIKit.SetBar(timerFill, 1f);
+
+        // 4 nút đáp án
+        string[] runes = { "A", "B", "C", "D" };
+        answerFills = new Image[answerButtons.Length];
+        for (int i = 0; i < answerButtons.Length; i++)
+        {
+            var b = answerButtons[i];
+            if (b == null) continue;
+            var brt = (RectTransform)b.transform;
+
+            var frameImg = b.GetComponent<Image>();
+            if (frameImg != null) { frameImg.sprite = null; frameImg.color = GameTheme.Bronze; }
+
+            var fill = UIKit.CBox("Fill", brt, GameTheme.SlateHi, Vector2.zero, Vector2.zero);
+            UIKit.Stretch(fill, 4f, 4f, 4f, 4f);
+            fill.SetAsFirstSibling();   // nằm dưới chữ của nút
+            answerFills[i] = fill.GetComponent<Image>();
+
+            var rune = UIKit.CBox("Rune", brt, GameTheme.Gold, Vector2.zero, new Vector2(34f, 34f));
+            UIKit.Place(rune, new Vector2(0f, .5f), new Vector2(0f, .5f), UIKit.C, new Vector2(40f, 0f), new Vector2(34f, 34f));
+            rune.localEulerAngles = new Vector3(0f, 0f, 45f);
+            var letter = UIKit.Label("Letter", brt, runes[i % 4], 28, GameTheme.PaperInk, TextAnchor.MiddleCenter,
+                Vector2.zero, new Vector2(40f, 40f), true, false, FontStyle.Bold);
+            UIKit.Place(letter.rectTransform, new Vector2(0f, .5f), new Vector2(0f, .5f), UIKit.C, new Vector2(40f, 0f), new Vector2(40f, 40f));
+
+            // hiệu ứng rê chuột: sáng lên khi hover, tối đi khi bấm
+            b.targetGraphic = fill.GetComponent<Image>();
+            b.transition = Selectable.Transition.ColorTint;
+            var cb = b.colors;
+            cb.normalColor = new Color(.82f, .82f, .82f, 1f);
+            cb.selectedColor = cb.normalColor;
+            cb.highlightedColor = Color.white;
+            cb.pressedColor = new Color(.62f, .62f, .62f, 1f);
+            cb.fadeDuration = .08f;
+            b.colors = cb;
+
+            var lbl = (answerLabels != null && i < answerLabels.Length) ? answerLabels[i] : null;
+            if (lbl != null)
+            {
+                lbl.color = GameTheme.Bone;
+                lbl.alignment = TextAlignmentOptions.MidlineLeft;
+                lbl.enableAutoSizing = true; lbl.fontSizeMin = 20f; lbl.fontSizeMax = 30f;
+                lbl.margin = new Vector4(80f, 6f, 16f, 6f);   // chừa chỗ cho rune bên trái
+            }
+        }
+    }
+
+    IEnumerator PopIn()
+    {
+        var rt = (RectTransform)panel.transform;
+        var cg = panel.GetComponent<CanvasGroup>();
+        if (cg == null) cg = panel.AddComponent<CanvasGroup>();
+        cg.alpha = 0f; rt.localScale = Vector3.one * .94f;
+        const float dur = .18f;
+        for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
+        {
+            if (!panel.activeInHierarchy) break;
+            float k = Mathf.Clamp01(t / dur); k = 1f - (1f - k) * (1f - k);
+            cg.alpha = k; rt.localScale = Vector3.one * Mathf.Lerp(.94f, 1f, k);
+            yield return null;
+        }
+        cg.alpha = 1f; rt.localScale = Vector3.one;
+        popRoutine = null;
     }
 
     // ------------------------------------------------------------------ CSV
