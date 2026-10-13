@@ -56,7 +56,7 @@ public class ModeSelectManager : MonoBehaviour
 
         bool hasEssay = !string.IsNullOrEmpty(essayScene);
         BuildCard(450f, "TỰ LUẬN",
-            "Viết lời giải từng bước\nđể phá phong ấn của boss.",
+            "Chọn độ khó, chiến đấu trong hầm ngục\nvà viết lời giải để mở rương.",
             hasEssay ? "VÀO CHƠI" : "SẮP RA MẮT", hasEssay ? ButtonStyle.Bronze : ButtonStyle.Stone, !hasEssay, OpenEssay);
 
         UIKit.MakeButton(ui, "Btn_Back", "QUAY LẠI", new Vector2(-700, -450), new Vector2(320, 76), Back, ButtonStyle.Stone, 32, .3f);

@@ -46,6 +46,9 @@ public class SubjectPickerScreen : MonoBehaviour
 
     void Start()
     {
+        // Chế độ Tự luận không còn chọn môn: chuyển sang màn Chọn độ khó (EssayDifficultyScreen). Tắt script này, các canvas cũ vẫn bị ẩn ở Awake.
+        if (Essay) { gameObject.AddComponent<EssayDifficultyScreen>(); enabled = false; return; }
+
         Time.timeScale = 1f;
         t0 = Time.unscaledTime;
         var cam = Camera.main;
@@ -404,6 +407,70 @@ static class RuneArt
                 Poly(b, n, hw * .7f, .46f, .45f, .66f, .38f);
                 Poly(b, n, hw * .7f, .56f, .57f, .50f, .74f);
                 Poly(b, n, hw, .16f, .14f, .07f, .05f);
+            });
+        }
+    }
+
+    // ---- Biểu tượng độ khó (màn Chọn độ khó của Tự luận) ----
+    public static Sprite Shield
+    {
+        get
+        {
+            return Get("shield", 256, (b, n) =>
+            {
+                float hw = .03f;
+                Poly(b, n, hw, .50f, .93f, .84f, .80f, .82f, .46f, .50f, .08f, .18f, .46f, .16f, .80f, .50f, .93f);
+                Poly(b, n, hw * .8f, .50f, .80f, .50f, .22f);
+                Poly(b, n, hw * .8f, .30f, .62f, .70f, .62f);
+            });
+        }
+    }
+    public static Sprite Sword
+    {
+        get
+        {
+            return Get("sword", 256, (b, n) =>
+            {
+                float hw = .03f;
+                Poly(b, n, hw, .50f, .96f, .58f, .84f, .58f, .36f, .50f, .34f, .42f, .36f, .42f, .84f, .50f, .96f);
+                Poly(b, n, hw * .8f, .50f, .88f, .50f, .40f);
+                Poly(b, n, hw, .26f, .34f, .74f, .34f);
+                Poly(b, n, hw, .50f, .34f, .50f, .13f);
+                Arc(b, n, .50f, .10f, 0f, 0f, 360f, .045f);
+            });
+        }
+    }
+    public static Sprite Swords
+    {
+        get
+        {
+            return Get("swords", 256, (b, n) =>
+            {
+                float hw = .032f;
+                Poly(b, n, hw, .18f, .90f, .78f, .22f);
+                Poly(b, n, hw, .82f, .90f, .22f, .22f);
+                Poly(b, n, hw, .56f, .286f, .76f, .426f);
+                Poly(b, n, hw, .44f, .286f, .24f, .426f);
+                Arc(b, n, .80f, .20f, 0f, 0f, 360f, .045f);
+                Arc(b, n, .20f, .20f, 0f, 0f, 360f, .045f);
+            });
+        }
+    }
+    public static Sprite Skull
+    {
+        get
+        {
+            return Get("skull", 256, (b, n) =>
+            {
+                float hw = .03f;
+                Arc(b, n, .50f, .56f, .27f, 0f, 360f, hw);
+                Poly(b, n, hw, .36f, .34f, .36f, .14f, .64f, .14f, .64f, .34f);
+                Poly(b, n, hw * .7f, .46f, .14f, .46f, .28f);
+                Poly(b, n, hw * .7f, .54f, .14f, .54f, .28f);
+                Arc(b, n, .40f, .58f, 0f, 0f, 360f, .055f);
+                Arc(b, n, .60f, .58f, 0f, 0f, 360f, .055f);
+                Bezier(b, n, hw, .30f, .74f, .12f, .82f, .14f, .97f);
+                Bezier(b, n, hw, .70f, .74f, .88f, .82f, .86f, .97f);
             });
         }
     }

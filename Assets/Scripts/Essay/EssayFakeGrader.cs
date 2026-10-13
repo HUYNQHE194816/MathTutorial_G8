@@ -11,6 +11,7 @@ public class EssayStepResult
     public EssayStepStatus status;
     public int points;       // điểm bước này đạt được
     public int maxPoints;
+    public int[] lines;      // v3.2: số dòng (bắt đầu từ 1) trong lời giải khớp bước này; null nếu chấm theo từng ô (bản cũ)
 }
 
 public class EssayGradeResult

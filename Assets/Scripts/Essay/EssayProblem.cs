@@ -67,7 +67,8 @@ public class EssayProblem
     public string id;
     public string subject;       // "ly" | "hoa" | "sinh"
     public string concept;       // khái niệm để tính mastery
-    public int level;            // 1 = Thông hiểu, 2 = Vận dụng, 3 = Vận dụng cao
+    public int level;            // 1 = Thông hiểu, 2 = Vận dụng, 3 = Vận dụng cao (bản cũ)
+    public string difficulty;    // v3.2: "easy" | "normal" | "hard" | "expert"; để trống thì suy ra từ level (RoomRules.DifficultyOf)
     public int scaffold;         // bậc Phong Ấn mặc định: 1 điền rune, 2 viết từng bước, 3 giải tự do
     public string statement;     // có {tham_số}
     public EssayParam[] parameters;

@@ -80,55 +80,117 @@ public static class UIKit
         Box("R", p, c, new Vector2(1, 0), Vector2.one, new Vector2(1, .5f), new Vector2(-inset, 0), new Vector2(th, -2 * inset));
     }
 
-    static void Stud(Transform p, Vector2 corner, Color c)
+    static readonly Color Abyss = new Color(.03f, .02f, .05f);   // đen tím sâu nhất, dùng cho viền ngoài các khung
+
+    /// <summary>Ngoặc góc hình chữ L đặt sát một góc khung (corner là (0|1, 0|1)).</summary>
+    static void Bracket(Transform p, Vector2 corner, Color c, float arm, float th, float inset)
     {
-        float ox = corner.x < .5f ? 8f : -8f, oy = corner.y < .5f ? 8f : -8f;
-        var s = Box("Stud", p, c, corner, corner, C, new Vector2(ox, oy), new Vector2(14, 14));
-        s.localEulerAngles = new Vector3(0, 0, 45f);
+        float sx = corner.x < .5f ? 1f : -1f, sy = corner.y < .5f ? 1f : -1f;
+        Box("BrH", p, c, corner, corner, corner, new Vector2(sx * inset, sy * inset), new Vector2(arm, th));
+        Box("BrV", p, c, corner, corner, corner, new Vector2(sx * inset, sy * inset), new Vector2(th, arm));
+    }
+
+    /// <summary>Viên ngọc hình thoi (ô vuông xoay 45 độ) đặt tại điểm neo.</summary>
+    static RectTransform Gem(Transform p, Vector2 anchor, Vector2 pos, float size, Color c)
+    {
+        var g = Box("Gem", p, c, anchor, anchor, C, pos, new Vector2(size, size));
+        g.localEulerAngles = new Vector3(0, 0, 45f);
+        return g;
     }
 
     // ---------- Panel ----------
-    /// <summary>Khung panel: viền sắt, 4 đinh tán góc. Trả về root; vùng đặt nội dung ở content (đã chừa lề 28px).</summary>
+    /// <summary>
+    /// Khung panel dark fantasy: viền đen tím, vành đồng cổ, nền sương tím tối (Dark) hoặc giấy da ố mép (Parchment),
+    /// ngoặc vàng và ngọc máu ở bốn góc, đá chốt giữa cạnh trên, quầng than hồng dưới đáy. Trả về root; vùng đặt nội dung ở content (đã chừa lề 28px).
+    /// </summary>
     public static RectTransform Panel(Transform parent, string name, Vector2 pos, Vector2 size, PanelStyle style, out RectTransform content)
     {
         bool paper = style == PanelStyle.Parchment;
-        var frame = CBox(name, parent, paper ? GameTheme.IronHi : GameTheme.Iron, pos, size, true);
-        var sh = frame.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, .55f); sh.effectDistance = new Vector2(0, -10);
-        var fill = CBox("Fill", frame, paper ? GameTheme.Parchment : GameTheme.Night.WithAlpha(.97f), Vector2.zero, Vector2.zero);
-        Stretch(fill, 6, 6, 6, 6);
-        Outline4(fill, 8, 2, paper ? GameTheme.ParchmentDark : GameTheme.Ember.WithAlpha(.35f));
-        Stud(frame, new Vector2(0, 1), GameTheme.EmberDeep); Stud(frame, new Vector2(1, 1), GameTheme.EmberDeep);
-        Stud(frame, new Vector2(0, 0), GameTheme.EmberDeep); Stud(frame, new Vector2(1, 0), GameTheme.EmberDeep);
+        Color rim = Color.Lerp(GameTheme.Bronze, GameTheme.Ink, paper ? .25f : .45f);
+        Color metal = paper ? GameTheme.Gold : GameTheme.Gold.WithAlpha(.9f);
+
+        var frame = CBox(name, parent, Abyss, pos, size, true);
+        var sh = frame.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, .65f); sh.effectDistance = new Vector2(0, -12);
+        var edge = CBox("Rim", frame, rim, Vector2.zero, Vector2.zero); Stretch(edge, 2, 2, 2, 2);
+
+        var fill = CBox("Fill", frame, Color.white, Vector2.zero, Vector2.zero); Stretch(fill, 6, 6, 6, 6);
+        var fi = fill.GetComponent<Image>();
+        if (paper) fi.color = GameTheme.Parchment;
+        else { fi.sprite = ThemeGfx.Gradient; fi.color = new Color(.92f, .9f, 1f, 1f); }
+
+        Outline4(fill, 8, 2, paper ? GameTheme.Bronze.WithAlpha(.55f) : GameTheme.Gold.WithAlpha(.28f));
+        Outline4(fill, 14, 1, paper ? GameTheme.ParchmentDark : GameTheme.Ember.WithAlpha(.18f));
+        if (!paper && size.x > 300f && size.y > 200f)
+        {
+            var glow = CBox("EmberGlow", fill, GameTheme.EmberDeep.WithAlpha(.14f), new Vector2(0, -size.y / 2f + 76f), new Vector2(size.x - 80f, 140f));
+            glow.GetComponent<Image>().sprite = ThemeGfx.Glow;
+        }
+        var vg = CBox("Vignette", fill, Color.white, Vector2.zero, Vector2.zero); Stretch(vg, 0, 0, 0, 0);
+        var vi = vg.GetComponent<Image>(); vi.sprite = ThemeGfx.Vignette; vi.color = new Color(1, 1, 1, paper ? .4f : .9f);
+
         content = CBox("Content", fill, Color.clear, Vector2.zero, Vector2.zero);
         Stretch(content, 28, 28, 28, 28);
+
+        // ngoặc vàng + ngọc máu ở bốn góc
+        float arm = Mathf.Min(40f, Mathf.Min(size.x, size.y) * .2f);
+        Color gem = paper ? GameTheme.EmberDeep : GameTheme.Blood;
+        foreach (var cn in new[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 0), new Vector2(1, 0) })
+        {
+            Bracket(frame, cn, metal, arm, 3f, 5f);
+            Gem(frame, cn, new Vector2(cn.x < .5f ? 17f : -17f, cn.y < .5f ? 17f : -17f), 11f, gem);
+        }
+        // đá chốt giữa cạnh trên và đáy
+        if (size.x >= 420f)
+        {
+            Box("KeyL", frame, metal, new Vector2(.5f, 1), new Vector2(.5f, 1), C, new Vector2(-46, 0), new Vector2(58, 3));
+            Box("KeyR", frame, metal, new Vector2(.5f, 1), new Vector2(.5f, 1), C, new Vector2(46, 0), new Vector2(58, 3));
+            Gem(frame, new Vector2(.5f, 1), Vector2.zero, 22f, metal);
+            Gem(frame, new Vector2(.5f, 1), Vector2.zero, 9f, gem);
+            Gem(frame, new Vector2(.5f, 0), Vector2.zero, 14f, metal);
+        }
         return frame;
     }
 
     // ---------- Nút ----------
+    /// <summary>
+    /// Nút dark fantasy: viền sắt đen, vành kim loại, mặt đá/than tối vát sáng trên và tối dưới, đường khắc chìm,
+    /// hai cánh nhọn hai bên, quầng sáng bùng lên khi rê chuột. Chữ sáng, có viền đen cho dễ đọc.
+    /// </summary>
     public static Button MakeButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, Action onClick,
         ButtonStyle style = ButtonStyle.Primary, int fontSize = 34, float introDelay = 0f)
     {
-        Color frameC, fillC, hoverC, textC;
+        Color frameC, fillC, hoverC, textC, glowC;
         switch (style)
         {
-            case ButtonStyle.Secondary: frameC = GameTheme.IronHi; fillC = GameTheme.Iron; hoverC = GameTheme.IronHi; textC = GameTheme.Bone; break;
-            case ButtonStyle.Danger: frameC = Color.Lerp(GameTheme.Blood, GameTheme.Ink, .45f); fillC = GameTheme.Blood; hoverC = Color.Lerp(GameTheme.Blood, Color.white, .18f); textC = GameTheme.Bone; break;
-            case ButtonStyle.Bronze: frameC = GameTheme.Bronze; fillC = GameTheme.Gold; hoverC = GameTheme.GoldHi; textC = GameTheme.PaperInk; break;
-            case ButtonStyle.Stone: frameC = GameTheme.Bronze; fillC = GameTheme.Slate; hoverC = GameTheme.SlateHi; textC = GameTheme.Rune; break;
-            default: frameC = GameTheme.EmberDeep; fillC = GameTheme.Ember; hoverC = GameTheme.EmberHi; textC = GameTheme.PaperInk; break;
+            case ButtonStyle.Secondary: frameC = GameTheme.IronHi; fillC = Color.Lerp(GameTheme.Iron, GameTheme.Ink, .4f); hoverC = GameTheme.Iron; textC = GameTheme.Bone; glowC = GameTheme.Fog; break;
+            case ButtonStyle.Danger: frameC = GameTheme.Blood; fillC = Color.Lerp(GameTheme.Blood, GameTheme.Ink, .6f); hoverC = Color.Lerp(GameTheme.Blood, GameTheme.Ink, .25f); textC = new Color(1f, .86f, .84f); glowC = GameTheme.Blood; break;
+            case ButtonStyle.Bronze: frameC = GameTheme.Gold; fillC = Color.Lerp(GameTheme.Bronze, GameTheme.Ink, .5f); hoverC = Color.Lerp(GameTheme.Bronze, GameTheme.Ink, .15f); textC = GameTheme.GoldHi; glowC = GameTheme.Gold; break;
+            case ButtonStyle.Stone: frameC = GameTheme.Bronze; fillC = GameTheme.Slate; hoverC = GameTheme.SlateHi; textC = GameTheme.Rune; glowC = GameTheme.Rune; break;
+            default: frameC = GameTheme.Ember; fillC = Color.Lerp(GameTheme.EmberDeep, GameTheme.Ink, .6f); hoverC = Color.Lerp(GameTheme.EmberDeep, GameTheme.Ink, .25f); textC = GameTheme.EmberHi; glowC = GameTheme.Ember; break;
         }
-        var frame = CBox(name, parent, frameC, pos, size, true);
-        var sh = frame.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, .5f); sh.effectDistance = new Vector2(0, -6);
-        var fill = CBox("Fill", frame, fillC, Vector2.zero, Vector2.zero); Stretch(fill, 4, 4, 4, 4);
-        Box("Shine", fill, new Color(1, 1, 1, .14f), new Vector2(0, 1), Vector2.one, new Vector2(.5f, 1), Vector2.zero, new Vector2(0, 3));
-        var l = Label("Label", frame, label, fontSize, textC, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, true, false, FontStyle.Bold);
-        Stretch(l.rectTransform, 14, 0, 14, 0);
+        var frame = CBox(name, parent, Abyss, pos, size, true);
+        var sh = frame.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, .6f); sh.effectDistance = new Vector2(0, -6);
+        var glow = CBox("Glow", frame, glowC.WithAlpha(0f), Vector2.zero, new Vector2(size.x * 1.3f, size.y * 2.1f));
+        var glowImg = glow.GetComponent<Image>(); glowImg.sprite = ThemeGfx.Glow; glowImg.raycastTarget = false;
+        var border = CBox("Border", frame, frameC, Vector2.zero, Vector2.zero); Stretch(border, 2, 2, 2, 2);
+        var fill = CBox("Fill", frame, fillC, Vector2.zero, Vector2.zero); Stretch(fill, 5, 5, 5, 5);
+        Box("Shade", fill, new Color(0, 0, 0, .28f), Vector2.zero, new Vector2(1, .5f), C, Vector2.zero, Vector2.zero);
+        Box("Shine", fill, new Color(1, 1, 1, .12f), new Vector2(0, 1), Vector2.one, new Vector2(.5f, 1), Vector2.zero, new Vector2(0, 2));
+        Outline4(fill, 4, 1, frameC.WithAlpha(.45f));
+        foreach (var side in new[] { new Vector2(0, .5f), new Vector2(1, .5f) })       // cánh nhọn hai bên
+        {
+            Gem(frame, side, Vector2.zero, 15f, frameC);
+            Gem(frame, side, Vector2.zero, 6f, Abyss);
+        }
+        var l = Label("Label", frame, label, fontSize, textC, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, true, true, FontStyle.Bold);
+        Stretch(l.rectTransform, 18, 0, 18, 0);
 
         var btn = frame.gameObject.AddComponent<Button>();
         btn.targetGraphic = frame.GetComponent<Image>(); btn.transition = Selectable.Transition.None;
         btn.onClick.AddListener(() => { GameAudio.Play(Snd.UiClick); if (onClick != null) onClick(); });
         var tb = frame.gameObject.AddComponent<ThemedButton>();
         tb.Setup(fill.GetComponent<Image>(), fillC, hoverC, l, textC, btn);
+        tb.glow = glowImg; tb.glowColor = glowC;
         tb.Intro(introDelay);
         return btn;
     }
@@ -136,11 +198,13 @@ public static class UIKit
     // ---------- Trang trí ----------
     public static RectTransform Divider(Transform p, Vector2 pos, float width, Color? col = null)
     {
-        var c = col ?? GameTheme.Ember.WithAlpha(.7f);
+        var c = col ?? GameTheme.Gold.WithAlpha(.75f);
         var root = CBox("Divider", p, Color.clear, pos, new Vector2(width, 14));
-        Box("LineL", root, c, new Vector2(0, .5f), new Vector2(.5f, .5f), C, Vector2.zero, new Vector2(-24, 2));
-        Box("LineR", root, c, new Vector2(.5f, .5f), new Vector2(1, .5f), C, Vector2.zero, new Vector2(-24, 2));
-        var d = CBox("Gem", root, c, Vector2.zero, new Vector2(10, 10)); d.localEulerAngles = new Vector3(0, 0, 45f);
+        Box("LineL", root, c, new Vector2(0, .5f), new Vector2(.5f, .5f), C, Vector2.zero, new Vector2(-34, 2));
+        Box("LineR", root, c, new Vector2(.5f, .5f), new Vector2(1, .5f), C, Vector2.zero, new Vector2(-34, 2));
+        Gem(root, C, Vector2.zero, 12f, c);
+        Gem(root, C, new Vector2(-18, 0), 5f, c); Gem(root, C, new Vector2(18, 0), 5f, c);
+        Gem(root, new Vector2(0, .5f), Vector2.zero, 6f, c); Gem(root, new Vector2(1, .5f), Vector2.zero, 6f, c);
         return root;
     }
 
@@ -154,11 +218,13 @@ public static class UIKit
     // ---------- Thanh tiến độ ----------
     public static RectTransform ProgressBar(Transform p, string name, Vector2 pos, Vector2 size, Color fillColor, out Image fill)
     {
-        var frame = CBox(name, p, GameTheme.IronHi, pos, size);
-        var back = CBox("Back", frame, GameTheme.Ink, Vector2.zero, Vector2.zero); Stretch(back, 3, 3, 3, 3);
+        var frame = CBox(name, p, Abyss, pos, size);
+        var rim = CBox("Rim", frame, Color.Lerp(GameTheme.Bronze, GameTheme.Ink, .1f), Vector2.zero, Vector2.zero); Stretch(rim, 2, 2, 2, 2);
+        var back = CBox("Back", frame, GameTheme.Ink, Vector2.zero, Vector2.zero); Stretch(back, 4, 4, 4, 4);
         var f = CBox("Fill", back, fillColor, Vector2.zero, Vector2.zero); Stretch(f, 0, 0, 0, 0);
         fill = f.GetComponent<Image>();
         fill.type = Image.Type.Filled; fill.fillMethod = Image.FillMethod.Horizontal; fill.fillOrigin = 0; fill.fillAmount = 0f;
+        Gem(frame, new Vector2(0, .5f), Vector2.zero, 9f, GameTheme.Gold); Gem(frame, new Vector2(1, .5f), Vector2.zero, 9f, GameTheme.Gold);
         return frame;
     }
 
@@ -167,10 +233,13 @@ public static class UIKit
     // ---------- Thông báo nhỏ ----------
     public static void Toast(Transform root, string msg, float seconds = 1.8f)
     {
-        var box = CBox("Toast", root, GameTheme.Ember, new Vector2(0, -470), new Vector2(760, 80));
-        var inner = CBox("Inner", box, GameTheme.Night, Vector2.zero, Vector2.zero); Stretch(inner, 3, 3, 3, 3);
+        var box = CBox("Toast", root, Abyss, new Vector2(0, -470), new Vector2(760, 80));
+        var border = CBox("Border", box, GameTheme.Gold.WithAlpha(.85f), Vector2.zero, Vector2.zero); Stretch(border, 2, 2, 2, 2);
+        var inner = CBox("Inner", box, GameTheme.Night, Vector2.zero, Vector2.zero); Stretch(inner, 4, 4, 4, 4);
+        Outline4(inner, 5, 1, GameTheme.Gold.WithAlpha(.3f));
+        Gem(box, new Vector2(0, .5f), Vector2.zero, 14f, GameTheme.Gold); Gem(box, new Vector2(1, .5f), Vector2.zero, 14f, GameTheme.Gold);
         var t = Label("T", inner, msg, 34, GameTheme.Bone, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
-        Stretch(t.rectTransform, 16, 0, 16, 0);
+        Stretch(t.rectTransform, 24, 0, 24, 0);
         UnityEngine.Object.Destroy(box.gameObject, seconds);
     }
 }
@@ -179,6 +248,7 @@ public static class UIKit
 public class ThemedButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
     Image fill; Color normal, hover, textColor; Text label; Button btn;
+    public Image glow; public Color glowColor;       // quầng sáng sau nút: sáng lên khi rê chuột/bấm
     RectTransform rt; CanvasGroup cg; bool hot, down, ready;
 
     public void Setup(Image fill, Color normal, Color hover, Text label, Color textColor, Button btn)
@@ -225,6 +295,11 @@ public class ThemedButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
         Color fc = !on ? Color.Lerp(normal, GameTheme.Ink, .6f) : (hot ? hover : normal);
         fill.color = Color.Lerp(fill.color, fc, k);
         if (label != null) label.color = on ? textColor : textColor.WithAlpha(.45f);
+        if (glow != null)
+        {
+            float ga = !on ? 0f : down ? .7f : hot ? .55f : .10f + .05f * Mathf.Sin(Time.unscaledTime * 2f + (GetInstanceID() & 15));
+            var gc = glowColor; gc.a = Mathf.Lerp(glow.color.a, ga, k); glow.color = gc;
+        }
     }
 
     public void OnPointerEnter(PointerEventData e)
