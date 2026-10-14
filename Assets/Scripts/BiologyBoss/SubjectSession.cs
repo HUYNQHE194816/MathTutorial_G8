@@ -92,13 +92,13 @@ public static class SubjectSession
                 }
                 if (string.IsNullOrEmpty(text) && src.csvFile != null) text = src.csvFile.text;
                 if (string.IsNullOrEmpty(text)) { Debug.LogWarning("[Flow] Không có dữ liệu cho '" + src.title + "'."); continue; }
-                list.AddRange(BuildChapters(src, text));
+                list.AddRange(BuildChapters(s, src, text));
             }
         Chapters = list;
         if (list.Any(c => !c.locked)) cache[s] = list;
     }
 
-    static List<FlowChapter> BuildChapters(SubjectSource src, string text)
+    static List<FlowChapter> BuildChapters(SubjectId subject, SubjectSource src, string text)
     {
         var result = new List<FlowChapter>();
         var rows = BioQuestionImporter.ReadRaw(text);
@@ -108,12 +108,14 @@ public static class SubjectSession
         int qc = BioQuestionImporter.Col(head, "cauhoi", "question", "noidungcauhoi"); if (qc < 0) qc = 1;
         int cc = BioQuestionImporter.Col(head, "chuong", "chapter");
         int lc = BioQuestionImporter.Col(head, "bai", "lesson", "baihoc");
+        int mc = BioQuestionImporter.Col(head, "mon", "subject");   // cột "Môn" (tuỳ chọn): 1 file CSV chứa cả Lý/Hóa/Sinh
         var byTitle = new Dictionary<string, FlowChapter>(StringComparer.OrdinalIgnoreCase);
 
         for (int i = 1; i < rows.Count; i++)
         {
             string[] f = rows[i];
             if (f.Length <= qc || string.IsNullOrWhiteSpace(f[qc])) continue;
+            if (mc >= 0 && mc < f.Length && !string.IsNullOrWhiteSpace(f[mc]) && !SubjectMatches(f[mc], subject)) continue;
             bool hasChapter = cc >= 0 && cc < f.Length && !string.IsNullOrWhiteSpace(f[cc]);
             string title = hasChapter ? f[cc].Trim() : src.title;
             if (!byTitle.TryGetValue(title, out var ch))
@@ -125,6 +127,18 @@ public static class SubjectSession
             ch.rows.Add(new FlowRow { lesson = lesson, cells = f });
         }
         return result;
+    }
+
+    /// <summary>Giá trị cột "Môn" (Lý / Hóa / Sinh, có hoặc không dấu, "Vật lí", "Hóa học"...) có thuộc môn <paramref name="s"/> không.</summary>
+    static bool SubjectMatches(string cell, SubjectId s)
+    {
+        string n = BioQuestionImporter.Norm(cell);
+        switch (s)
+        {
+            case SubjectId.Ly: return n == "ly" || n == "vatly" || n == "vatli" || n == "physics";
+            case SubjectId.Hoa: return n == "hoa" || n == "hoahoc" || n == "chemistry";
+            default: return n == "sinh" || n == "sinhhoc" || n == "biology";
+        }
     }
 
     // ---------------------------------------------------------------- bài / lọc

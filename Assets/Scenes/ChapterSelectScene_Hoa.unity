@@ -245,8 +245,8 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 7dcb9e068d425464a6c9b4531f90ccef, type: 3}
   sources:
   - title: Hóa học 8
-    subtitle: Chương trình lớp 8
-    csvFile: {fileID: 4900000, guid: 18640e470c5908246a5a0bb98827dd47, type: 3}
+    subtitle: Khoa học tự nhiên 8
+    csvFile: {fileID: 4900000, guid: e8f36c23d7524a6d9b7866aa266bf804, type: 3}
     sheetUrl: 
   backSceneName: SubjectSelectScene
 --- !u!4 &1705807580

@@ -188,8 +188,8 @@ public class RoomManager : MonoBehaviour
         inkText.text = "Mực: " + RunState.ink;
         hpText.text = "Máu " + Mathf.CeilToInt(RunState.hp) + "/" + (int)PlayerCombat.MaxHp;
         UIKit.SetBar(hpFill, RunState.hp / PlayerCombat.MaxHp);
-        string dash = player != null && player.DashLeft > 0f ? "Lướt " + player.DashLeft.ToString("0.0") + "s" : "Lướt sẵn sàng (Space)";
-        weaponText.text = "Chính: " + RunState.main.Label + "\nPhụ: " + (RunState.sub != null ? RunState.sub.Label + " (Q đổi)" : "chưa có") + "   ·   " + dash;
+        string dash = player != null && player.DashLeft > 0f ? "Lướt " + player.DashLeft.ToString("0.0") + "s" : (TouchControls.Active ? "Lướt sẵn sàng" : "Lướt sẵn sàng (Space)");
+        weaponText.text = "Chính: " + RunState.main.Label + "\nPhụ: " + (RunState.sub != null ? RunState.sub.Label + (TouchControls.Active ? "" : " (Q đổi)") : "chưa có") + "   ·   " + dash;
         buffText.text = RunState.buffLog.Count == 0 ? "Chưa có buff" : "Buff: " + string.Join(", ", RunState.buffLog);
     }
 
@@ -206,6 +206,7 @@ public class RoomManager : MonoBehaviour
         Combat.Now += Combat.Dt;
         if (reactionT > 0f) { reactionT -= Time.deltaTime; if (reactionT <= 0f) reactionText.text = ""; }
         hudT -= Time.deltaTime; if (hudT <= 0f) { hudT = .15f; RefreshHud(); }
+        TouchControls.InteractVisible = false;
         if (Frozen) return;
 
         switch (state)
@@ -218,8 +219,11 @@ public class RoomManager : MonoBehaviour
             case State.ChestReady:
                 var k = Keyboard.current;
                 bool near = Vector2.Distance(player.transform.position, chestPos) <= Reach;
-                SetPrompt(near ? "Nhấn E để mở Rương Câu Đố" : "Rương Câu Đố đã hiện ra giữa phòng. Lại gần và nhấn E.");
-                if (near && k != null && k.eKey.wasPressedThisFrame) OpenChest();
+                bool touch = TouchControls.Active;
+                TouchControls.InteractVisible = near;
+                SetPrompt(near ? (touch ? "Chạm nút MỞ để mở Rương Câu Đố" : "Nhấn E để mở Rương Câu Đố")
+                               : (touch ? "Rương Câu Đố đã hiện ra giữa phòng. Lại gần rồi chạm nút MỞ." : "Rương Câu Đố đã hiện ra giữa phòng. Lại gần và nhấn E."));
+                if (near && ((k != null && k.eKey.wasPressedThisFrame) || TouchControls.InteractPressed)) OpenChest();
                 break;
 
             case State.DoorOpen:

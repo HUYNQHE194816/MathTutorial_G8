@@ -97,7 +97,7 @@ public class BossFightUI : MonoBehaviour
         var ptRt = Box("Trail", pbar, new Color(1f, .93f, .6f, .9f), Vector2.zero, Vector2.one, C, Vector2.zero, Vector2.zero); Stretch(ptRt, 4, 4, 4, 4); playerTrail = ptRt.GetComponent<Image>(); playerTrail.type = Image.Type.Filled; playerTrail.fillMethod = Image.FillMethod.Horizontal; var pf = Box("Fill", pbar, new Color(.3f, .8f, .4f), Vector2.zero, Vector2.one, C, Vector2.zero, Vector2.zero); Stretch(pf, 4, 4, 4, 4);
         playerFill = pf.GetComponent<Image>(); playerFill.sprite = ProcSprites.BarGrad; playerFill.type = Image.Type.Filled; playerFill.fillMethod = Image.FillMethod.Horizontal;
         hpText = Label("Hp", pbar, "100 / 100", 28, Color.white, TextAnchor.MiddleCenter); Stretch(hpText.rectTransform, 0, 0, 0, 0);
-        dashText = Label("Dash", me, "Shift: lướt né", 26, Color.white, TextAnchor.MiddleLeft); Place(dashText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(400, 40));
+        dashText = Label("Dash", me, TouchControls.Active ? "Nút LƯỚT: lướt né" : "Shift: lướt né", 26, Color.white, TextAnchor.MiddleLeft); Place(dashText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(400, 40));
 
         buffBox = Box("Buffs", root, Color.clear, Vector2.one, Vector2.one, Vector2.one, new Vector2(-28, -130), new Vector2(300, 10));
 
@@ -156,7 +156,7 @@ public class BossFightUI : MonoBehaviour
         var mt = Label("Title", menuPanel.transform, "HIỆP SĨ SINH HỌC", 110, Gold, TextAnchor.MiddleCenter); Place(mt.rectTransform, C, C, C, new Vector2(0, 260), new Vector2(1700, 150));
         var ms = menuSub = Label("Sub", menuPanel.transform, "Đánh Rồng Lửa để mở 15 câu hỏi Sinh học 8.\nCứ xong 2 câu được chọn 1 trong 3 buff (tối đa 5, mỗi buff chỉ 1 lần).\nTrả lời sai: rồng hồi máu, mạnh hơn và phun lửa trừng phạt!", 42, Color.white, TextAnchor.MiddleCenter, FontStyle.Normal);
         Place(ms.rectTransform, C, C, C, new Vector2(0, 90), new Vector2(1600, 150));
-        var mc = Label("Controls", menuPanel.transform, "W A S D: di chuyển     Space / Chuột trái: chém (tự ngắm, chém tan đạn lửa)     Shift: lướt né", 34, new Color(.8f, .85f, 1f), TextAnchor.MiddleCenter, FontStyle.Normal);
+        var mc = Label("Controls", menuPanel.transform, TouchControls.Active ? "Joystick trái: di chuyển     Nút ĐÁNH: chém (tự ngắm, chém tan đạn lửa)     Nút LƯỚT: lướt né" : "W A S D: di chuyển     Space / Chuột trái: chém (tự ngắm, chém tan đạn lửa)     Shift: lướt né", 34, new Color(.8f, .85f, 1f), TextAnchor.MiddleCenter, FontStyle.Normal);
         Place(mc.rectTransform, C, C, C, new Vector2(0, -50), new Vector2(1700, 90));
         startBtn = MakeButton("Start", menuPanel.transform, new Vector2(0, -230), new Vector2(560, 130), Gold, new Color(1f, .87f, .45f), "VÀO TRẬN", 56, new Color(.17f, .1f, .05f), onStart);
         startLabel = startBtn.GetComponentInChildren<Text>();
@@ -277,7 +277,7 @@ public class BossFightUI : MonoBehaviour
 
     public void ShowBuffChoice(BuffDef[] opts, int have, int max)
     {
-        buffSub.text = "Buff đã có: " + have + " / " + max + "     Bấm phím 1 / 2 / 3 hoặc click để chọn";
+        buffSub.text = "Buff đã có: " + have + " / " + max + (TouchControls.Active ? "     Chạm vào thẻ để chọn" : "     Bấm phím 1 / 2 / 3 hoặc click để chọn");
         for (int i = 0; i < buffCards.Length; i++)
         {
             bool on = i < opts.Length; buffCards[i].gameObject.SetActive(on); if (!on) continue;

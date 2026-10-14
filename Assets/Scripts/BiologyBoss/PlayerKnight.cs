@@ -40,15 +40,21 @@ public class PlayerKnight : MonoBehaviour
         p.swordGlow = Gfx.Glow(p.swordT, new Vector2(.8f, 0f), 2.4f, new Color(1f, 1f, 1f, 0f), 0); p.swordGlow.enabled = false;   // quầng sáng quanh kiếm (Kiếm Lửa / Kiếm Băng)
         p.shieldSr = NewSr("Shield", go.transform, ProcSprites.Ring); p.shieldSr.transform.localPosition = new Vector3(0, .9f, 0); p.shieldSr.transform.localScale = Vector3.one * .6f;
         p.shieldSr.color = new Color(.43f, .9f, 1f, .7f); p.shieldSr.enabled = false;
+        TouchControls.Create(p, TouchLayout.Melee, () => p != null && p.Alive && p.mgr != null && p.mgr.Playing);   // điện thoại: joystick + nút ĐÁNH / LƯỚT
         return p;
     }
 
     static Vector2 ReadMove()
     {
-        var k = Keyboard.current; if (k == null) return Vector2.zero;
-        float x = ((k.dKey.isPressed || k.rightArrowKey.isPressed) ? 1f : 0f) - ((k.aKey.isPressed || k.leftArrowKey.isPressed) ? 1f : 0f);
-        float y = ((k.wKey.isPressed || k.upArrowKey.isPressed) ? 1f : 0f) - ((k.sKey.isPressed || k.downArrowKey.isPressed) ? 1f : 0f);
-        return new Vector2(x, y).normalized;
+        var k = Keyboard.current; Vector2 v = TouchControls.Move;
+        if (k != null)
+        {
+            float x = ((k.dKey.isPressed || k.rightArrowKey.isPressed) ? 1f : 0f) - ((k.aKey.isPressed || k.leftArrowKey.isPressed) ? 1f : 0f);
+            float y = ((k.wKey.isPressed || k.upArrowKey.isPressed) ? 1f : 0f) - ((k.sKey.isPressed || k.downArrowKey.isPressed) ? 1f : 0f);
+            v += new Vector2(x, y);
+        }
+        if (v.sqrMagnitude <= 0f) return Vector2.zero;
+        return TouchControls.Move == Vector2.zero || v.sqrMagnitude > 1f ? v.normalized : v;   // bàn phím: tốc độ cố định; joystick: nhanh chậm theo độ kéo
     }
 
     void Update()
@@ -58,10 +64,11 @@ public class PlayerKnight : MonoBehaviour
         if (!mgr.Playing || boss == null) return;
         float dt = Time.deltaTime;
         cd -= dt; Invuln -= dt; swing -= dt; dashCd -= dt;
+        TouchControls.DashCooldown01 = Mathf.Clamp01(dashCd / 1.1f);
         Hp = Mathf.Min(MaxHp, Hp + Regen * dt);
 
         var k = Keyboard.current; Vector2 mv = ReadMove(); bool moving = mv.sqrMagnitude > 0f;
-        if (k != null && k.leftShiftKey.wasPressedThisFrame && dashCd <= 0f)
+        if (((k != null && k.leftShiftKey.wasPressedThisFrame) || TouchControls.DashPressed) && dashCd <= 0f)
         {
             dashT = .16f; dashCd = 1.1f; Invuln = Mathf.Max(Invuln, .3f); dashDir = moving ? mv : new Vector2(face, 0f);
             Sfx.Tone(200, .15f, 2, .2f, 300, snd: Snd.PlayerDash);
@@ -74,7 +81,7 @@ public class PlayerKnight : MonoBehaviour
 
         face = boss.Position.x >= pos.x ? 1 : -1; vis.localScale = dashT > 0f ? new Vector3(face * 1.3f, .8f, 1f) : new Vector3(face, 1f, 1f);   // lướt: giãn ngang
 
-        bool want = (k != null && (k.spaceKey.isPressed || k.jKey.isPressed)) || (Mouse.current != null && Mouse.current.leftButton.isPressed);
+        bool want = TouchControls.AttackHeld || (k != null && (k.spaceKey.isPressed || k.jKey.isPressed)) || (Mouse.current != null && Mouse.current.leftButton.isPressed);
         if (want && cd <= 0f) Attack(boss);
 
         if (Thunder > 0) { thunderT -= dt; if (thunderT <= 0f) { thunderT = 3f; boss.Lightning(15f * Thunder); } }

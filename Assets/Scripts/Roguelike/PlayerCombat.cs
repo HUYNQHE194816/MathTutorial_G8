@@ -29,6 +29,7 @@ public class PlayerCombat : MonoBehaviour
         }
         else p.body = Combat.MakeSr("Body", go.transform, ProcSprites.Circle, GameTheme.Gold, new Vector2(.9f, .9f), 10);
         if (RunState.hp <= 0f) RunState.hp = MaxHp;
+        TouchControls.Create(p, TouchLayout.Shooter, () => p != null && !p.Dead && !RoomManager.Frozen, () => RunState.sub != null);   // điện thoại: joystick + nút
         return p;
     }
 
@@ -55,6 +56,7 @@ public class PlayerCombat : MonoBehaviour
     // ------------------------------------------------------------------ vòng lặp
     Vector2 AimDir()
     {
+        if (TouchControls.Aim.sqrMagnitude > .01f) return TouchControls.Aim;          // joystick ngắm bên phải
         var cam = Camera.main;
         if (cam == null || Mouse.current == null) return facing;
         Vector3 m = Mouse.current.position.ReadValue(); m.z = -cam.transform.position.z;
@@ -65,22 +67,29 @@ public class PlayerCombat : MonoBehaviour
     void Update()
     {
         float dt = Combat.Dt; if (dt <= 0f || Dead) return;
-        var k = Keyboard.current; if (k == null) return;
+        var k = Keyboard.current; if (k == null && !TouchControls.Active) return;
         if (invuln > 0f) invuln -= dt; if (cd > 0f) cd -= dt; if (dashCd > 0f) dashCd -= dt;
+        TouchControls.DashCooldown01 = Mathf.Clamp01(dashCd / DashCooldown);
 
-        float x = ((k.dKey.isPressed || k.rightArrowKey.isPressed) ? 1f : 0f) - ((k.aKey.isPressed || k.leftArrowKey.isPressed) ? 1f : 0f);
-        float y = ((k.wKey.isPressed || k.upArrowKey.isPressed) ? 1f : 0f) - ((k.sKey.isPressed || k.downArrowKey.isPressed) ? 1f : 0f);
-        var mv = new Vector2(x, y); if (mv.sqrMagnitude > 1f) mv.Normalize();
-        Vector2 aim = AimDir(); facing = aim;
+        float x = 0f, y = 0f;
+        if (k != null)
+        {
+            x = ((k.dKey.isPressed || k.rightArrowKey.isPressed) ? 1f : 0f) - ((k.aKey.isPressed || k.leftArrowKey.isPressed) ? 1f : 0f);
+            y = ((k.wKey.isPressed || k.upArrowKey.isPressed) ? 1f : 0f) - ((k.sKey.isPressed || k.downArrowKey.isPressed) ? 1f : 0f);
+        }
+        var mv = new Vector2(x, y) + TouchControls.Move; if (mv.sqrMagnitude > 1f) mv.Normalize();
+        Vector2 aim = AimDir();
+        if (TouchControls.Active && !TouchControls.AimHeld && mv.sqrMagnitude > .01f) aim = mv.normalized;   // cảm ứng: không ngắm thì quay mặt theo hướng đi
+        facing = aim;
 
-        if (k.spaceKey.wasPressedThisFrame && dashCd <= 0f && dashT <= 0f)
+        if (((k != null && k.spaceKey.wasPressedThisFrame) || TouchControls.DashPressed) && dashCd <= 0f && dashT <= 0f)
         { dashT = .2f; dashCd = DashCooldown; invuln = Mathf.Max(invuln, .2f); dashDir = mv.sqrMagnitude > .01f ? mv : aim; GameAudio.Play(Snd.PlayerDash); }
 
         if (dashT > 0f) { dashT -= dt; Step(dashDir * 18f * dt); } else Step(mv * Speed * dt);
 
-        if (k.qKey.wasPressedThisFrame && RunState.sub != null) { var t = RunState.main; RunState.main = RunState.sub; RunState.sub = t; GameAudio.Play(Snd.UiClick); }
+        if (((k != null && k.qKey.wasPressedThisFrame) || TouchControls.SwapPressed) && RunState.sub != null) { var t = RunState.main; RunState.main = RunState.sub; RunState.sub = t; GameAudio.Play(Snd.UiClick); }
 
-        bool fire = k.jKey.isPressed || (Mouse.current != null && Mouse.current.leftButton.isPressed &&
+        bool fire = (k != null && k.jKey.isPressed) || TouchControls.AimHeld || (Mouse.current != null && Mouse.current.leftButton.isPressed &&
                                          (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()));
         if (fire && cd <= 0f && RunState.main != null) Attack(aim);
 

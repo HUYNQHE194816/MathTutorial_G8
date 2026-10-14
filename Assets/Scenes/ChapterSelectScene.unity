@@ -244,9 +244,9 @@ MonoBehaviour:
   background: {fileID: 21300000, guid: 73a468aaf12e5454aadcd92e1b242387, type: 3}
   icon: {fileID: 21300000, guid: 9f18782d900951148d691c2dd80d7873, type: 3}
   sources:
-  - title: Chương VII
-    subtitle: Sinh học 8
-    csvFile: {fileID: 4900000, guid: f27776cac26139c4fba965b318da4a0c, type: 3}
+  - title: Sinh học 8
+    subtitle: Khoa học tự nhiên 8
+    csvFile: {fileID: 4900000, guid: e8f36c23d7524a6d9b7866aa266bf804, type: 3}
     sheetUrl: 
   backSceneName: SubjectSelectScene
 --- !u!4 &1705807580

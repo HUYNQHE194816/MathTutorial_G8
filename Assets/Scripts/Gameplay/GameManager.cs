@@ -51,6 +51,7 @@ public class GameManager : MonoBehaviour
 
     // Điều khiển: WASD / phím mũi tên + 4 nút trên màn hình
     private CanvasGroup dpadGroup;
+    private RectTransform dpadPad;
     private Vector2Int heldDir;
     private float repeatTimer;
 
@@ -301,17 +302,22 @@ public class GameManager : MonoBehaviour
         UIKit.Stretch(root, 0f, 0f, 0f, 0f);
         dpadGroup = root.GetComponent<CanvasGroup>();
 
+        // khung chứa 4 nút: được phóng to trên điện thoại (nút chạm cần lớn hơn) và dời ra giữa khi chơi dọc
+        dpadPad = (RectTransform)new GameObject("Pad", typeof(RectTransform)).transform;
+        dpadPad.SetParent(root, false);
+        UIKit.Place(dpadPad, new Vector2(.25f, 0f), new Vector2(.25f, 0f), UIKit.C, Vector2.zero, Vector2.zero);
+
         // bố cục chữ T ngược giống phím WASD, đặt giữa nửa màn hình bên trái, sát đáy
-        MakeDpadButton(root, "Up", new Vector2(0f, 162f), 0f, new Vector2Int(-1, 0));
-        MakeDpadButton(root, "Left", new Vector2(-100f, 62f), 90f, new Vector2Int(0, -1));
-        MakeDpadButton(root, "Down", new Vector2(0f, 62f), 180f, new Vector2Int(1, 0));
-        MakeDpadButton(root, "Right", new Vector2(100f, 62f), -90f, new Vector2Int(0, 1));
+        MakeDpadButton(dpadPad, "Up", new Vector2(0f, 162f), 0f, new Vector2Int(-1, 0));
+        MakeDpadButton(dpadPad, "Left", new Vector2(-100f, 62f), 90f, new Vector2Int(0, -1));
+        MakeDpadButton(dpadPad, "Down", new Vector2(0f, 62f), 180f, new Vector2Int(1, 0));
+        MakeDpadButton(dpadPad, "Right", new Vector2(100f, 62f), -90f, new Vector2Int(0, 1));
     }
 
     void MakeDpadButton(RectTransform parent, string name, Vector2 pos, float rotZ, Vector2Int dir)
     {
         var btn = UIKit.MakeButton(parent, "Dpad_" + name, "", Vector2.zero, new Vector2(90f, 90f), () => Step(dir), ButtonStyle.Stone, 24, .2f);
-        UIKit.Place((RectTransform)btn.transform, new Vector2(.25f, 0f), new Vector2(.25f, 0f), UIKit.C, pos, new Vector2(90f, 90f));
+        UIKit.Place((RectTransform)btn.transform, UIKit.C, UIKit.C, UIKit.C, pos, new Vector2(90f, 90f));
         var arrow = UIKit.CBox("Arrow", btn.transform, Color.white, Vector2.zero, new Vector2(46f, 46f));
         arrow.GetComponent<Image>().sprite = LyGfx.Arrow;
         arrow.localEulerAngles = new Vector3(0f, 0f, rotZ);
@@ -321,6 +327,13 @@ public class GameManager : MonoBehaviour
     void UpdateDpad()
     {
         if (dpadGroup == null) return;
+        if (dpadPad != null)
+        {
+            bool portrait = ScreenFit.IsPortrait;
+            float ax = portrait ? .5f : .25f;
+            dpadPad.anchorMin = new Vector2(ax, 0f); dpadPad.anchorMax = new Vector2(ax, 0f); dpadPad.anchoredPosition = Vector2.zero;
+            dpadPad.localScale = Vector3.one * (portrait ? 1.9f : (TouchControls.Active ? 1.3f : 1f));
+        }
         bool show = !isBusy && !isPaused && !isGameOver;
         dpadGroup.alpha = Mathf.MoveTowards(dpadGroup.alpha, show ? 1f : 0f, Time.unscaledDeltaTime * 6f);
         dpadGroup.blocksRaycasts = show;

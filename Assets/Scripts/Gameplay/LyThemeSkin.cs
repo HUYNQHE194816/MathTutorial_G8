@@ -68,7 +68,7 @@ public static class LyThemeSkin
         if (hint != null)
         {
             hint.color = GameTheme.Fog; hint.fontStyle = FontStyles.Italic;
-            hint.text = "Trả lời đúng để mở đường • WASD / phím mũi tên để di chuyển";
+            hint.text = TouchControls.Active ? "Trả lời đúng để mở đường • Dùng 4 nút mũi tên để di chuyển" : "Trả lời đúng để mở đường • WASD / phím mũi tên để di chuyển";
         }
     }
 

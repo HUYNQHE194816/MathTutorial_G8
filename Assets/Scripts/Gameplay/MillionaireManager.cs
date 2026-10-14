@@ -284,6 +284,7 @@ public class MillionaireManager : MonoBehaviour
         int cCol = FindColumn(header, "c", "answerc", "dapanc");
         int dCol = FindColumn(header, "d", "answerd", "dapand");
         int correctCol = FindColumn(header, "dapan", "dapandung", "correctindex", "correct");
+        int levelCol = FindColumn(header, "mucdo", "level", "difficulty");   // tuỳ chọn: Nhận biết / Thông hiểu / Vận dụng
 
         if (questionCol < 0 || aCol < 0 || bCol < 0 || cCol < 0 || dCol < 0 || correctCol < 0)
         {
@@ -294,6 +295,7 @@ public class MillionaireManager : MonoBehaviour
         int neededCols = Mathf.Max(questionCol, aCol, bCol, cCol, dCol, correctCol) + 1;
 
         var loaded = new List<Question>();
+        var levels = new List<int>();   // song song với loaded: 0 = nhận biết, 1 = thông hiểu, 2 = vận dụng
         for (int i = 1; i < lines.Count; i++) // bỏ dòng header
         {
             string line = lines[i];
@@ -319,7 +321,11 @@ public class MillionaireManager : MonoBehaviour
                 options = new string[] { cols[aCol].Trim(), cols[bCol].Trim(), cols[cCol].Trim(), cols[dCol].Trim() },
                 correctIndex = correct
             });
+            levels.Add(levelCol >= 0 && levelCol < cols.Length ? LevelRank(cols[levelCol]) : 1);
         }
+
+        // Ngân hàng nhiều hơn số câu của ván: bốc ngẫu nhiên đều theo mức độ (5 dễ - 5 vừa - 5 khó), xếp từ dễ đến khó.
+        if (levelCol >= 0 && loaded.Count > Prizes.Length) loaded = PickByLevel(loaded, levels, Prizes.Length);
 
         if (loaded.Count > 0)
         {
@@ -342,6 +348,37 @@ public class MillionaireManager : MonoBehaviour
         }
         else
             Debug.LogWarning("[MillionaireManager] Dữ liệu tải được nhưng không có dòng hợp lệ nào.");
+    }
+
+    static int LevelRank(string cell)
+    {
+        string n = BioQuestionImporter.Norm(cell);
+        if (n.StartsWith("nhanbiet") || n == "de" || n == "easy") return 0;
+        if (n.StartsWith("vandung") || n == "kho" || n == "hard") return 2;
+        return 1;
+    }
+
+    static List<Question> PickByLevel(List<Question> all, List<int> levels, int total)
+    {
+        var groups = new List<Question>[3] { new List<Question>(), new List<Question>(), new List<Question>() };
+        for (int i = 0; i < all.Count; i++) groups[Mathf.Clamp(levels[i], 0, 2)].Add(all[i]);
+        foreach (var g in groups)                       // xáo trộn từng nhóm (Fisher–Yates)
+            for (int i = g.Count - 1; i > 0; i--) { int j = UnityEngine.Random.Range(0, i + 1); var t = g[i]; g[i] = g[j]; g[j] = t; }
+
+        int each = total / 3;
+        var take = new int[3];
+        for (int k = 0; k < 3; k++) take[k] = Mathf.Min(each, groups[k].Count);
+        int need = total - (take[0] + take[1] + take[2]);   // nhóm nào thiếu thì bù từ nhóm còn dư
+        for (int k = 2; k >= 0 && need > 0; k = (k + 2) % 3)
+        {
+            int extra = Mathf.Min(need, groups[k].Count - take[k]);
+            take[k] += extra; need -= extra;
+            if (groups[0].Count - take[0] + groups[1].Count - take[1] + groups[2].Count - take[2] <= 0) break;
+        }
+
+        var result = new List<Question>();
+        for (int k = 0; k < 3; k++) result.AddRange(groups[k].GetRange(0, take[k]));
+        return result;
     }
 
     // Tách CSV thành các bản ghi, không cắt nhầm khi ô có xuống dòng trong ngoặc kép
