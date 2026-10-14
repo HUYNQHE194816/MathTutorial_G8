@@ -62,6 +62,8 @@ ExportedObj/
 *.c
 *.dll
 *.zip
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+*_BurstDebugInformation_DoNotShip/
 
 
 # Unity3D generated meta files
