@@ -1,92 +1,64 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
+using System.Globalization;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// Dashboard tiến độ học tập: 4 thẻ số liệu, thanh bài học + tiến độ từng môn,
-/// lịch sử 5 lượt gần nhất, bộ huy hiệu. Dữ liệu lấy từ ProgressSaveSystem.
-/// Animation: các khối bật ra lần lượt, số đếm lên, thanh chạy đầy, dòng trượt vào,
-/// huy hiệu mới nảy + pháo sáng. Dùng unscaledTime giống các scene UI khác.
+/// Bảng tiến độ học tập (DashboardScene), dựng hoàn toàn bằng code theo phong cách dark fantasy dùng chung:
+/// SceneShell (sương + tàn lửa + fade) + nền rừng trăng của MenuNatureFx + UIKit (panel khung đồng, nút đá, thanh tiến độ).
+/// Nội dung: 4 thẻ số liệu, thanh bài học + tiến độ từng môn, 5 lượt chơi gần nhất, bộ huy hiệu (rune ngọc).
+/// Animation: các khối bật ra lần lượt, số đếm lên, thanh đầy dần, dòng trượt vào, huy hiệu mới nảy + tàn lửa bắn.
+/// Dữ liệu lấy từ ProgressSaveSystem. Scene chỉ cần 1 GameObject gắn script này (không còn tham chiếu kéo thả).
 /// </summary>
 public class DashboardManager : MonoBehaviour
 {
-    private static readonly Color Ink = new Color(0.16f, 0.14f, 0.38f);
-    private static readonly Color Muted = new Color(0.16f, 0.14f, 0.38f, 0.55f);
-    private static readonly Color BarFrame = new Color(0.88f, 0.9f, 0.98f);
-    private static readonly Color WinColor = new Color(0.25f, 0.75f, 0.45f);
-    private static readonly Color LoseColor = new Color(0.9f, 0.42f, 0.42f);
-    private static readonly Color LockedColor = new Color(0.45f, 0.45f, 0.55f, 0.45f);
+    [SerializeField] string backSceneName = "MainMenu";
 
-    [Header("Font & sprite")]
-    [SerializeField] private TMP_FontAsset font;
-    [SerializeField] private Sprite panelSprite;
-    [SerializeField] private Sprite chestSprite;
-    [SerializeField] private Sprite sparkleSprite;
+    const float SceneW = 1920f, SceneH = 1080f;
 
-    [Header("Header")]
-    [SerializeField] private RectTransform titleGroup;
-    [SerializeField] private RectTransform headerGroup;
-    [SerializeField] private RectTransform avatar;
-    [SerializeField] private TMP_Text nameText;
-    [SerializeField] private TMP_Text classText;
-    [SerializeField] private Button backButton;
+    struct BarAnim { public Image fill; public float target; }
+    struct CountAnim { public Text text; public int target; public string format; }
 
-    [Header("Thẻ số liệu (Huy hiệu, Điểm cao, Lượt chơi, Chính xác)")]
-    [SerializeField] private RectTransform[] statCards;
-    [SerializeField] private TMP_Text[] statValues;
+    class RowAnim { public RectTransform rt; public CanvasGroup cg; public Vector2 home; }
 
-    [Header("Khối nội dung")]
-    [SerializeField] private RectTransform subjectPanel;
-    [SerializeField] private RectTransform historyPanel;
-    [SerializeField] private RectTransform badgePanel;
-    [SerializeField] private RectTransform lessonBarFill;
-    [SerializeField] private TMP_Text lessonText;
-    [SerializeField] private RectTransform subjectList;
-    [SerializeField] private RectTransform historyList;
-    [SerializeField] private RectTransform badgeList;
-    [SerializeField] private TMP_Text badgeHeader;
-    [SerializeField] private TMP_Text emptyText;
+    class BadgeTile
+    {
+        public RectTransform tile, icon;
+        public Image glow;
+        public bool unlocked, isNew;
+        public float phase;
+    }
 
-    [Header("Hiệu ứng")]
-    [SerializeField] private Image bgGlow;
-    [SerializeField] private CanvasGroup fadeOverlay;
-    [SerializeField] private RectTransform effectsRoot;
+    RectTransform artRoot, scene, ui, fx;
+    MenuNatureFx nature;
+    Vector2 lastRect;
+    bool leaving, introDone;
+    ProgressData data;
 
-    [Header("Điều hướng")]
-    [SerializeField] private string backSceneName = "MainMenu";
+    Image lessonFill;
+    Text lessonText, badgeHeader, emptyText;
 
-    private struct BarAnim { public RectTransform fill; public float target; }
-    private struct CountAnim { public TMP_Text text; public int target; public string format; }
-
-    private readonly List<BarAnim> bars = new List<BarAnim>();
-    private readonly List<CountAnim> counts = new List<CountAnim>();
-    private readonly List<RectTransform> subjectRows = new List<RectTransform>();
-    private readonly List<RectTransform> historyRows = new List<RectTransform>();
-    private readonly List<RectTransform> badgeTiles = new List<RectTransform>();
-    private readonly List<RectTransform> bobChests = new List<RectTransform>();
-    private readonly List<float> bobPhase = new List<float>();
-    private readonly List<int> newBadgeTileIndex = new List<int>();
-
-    private RectTransform[] introItems;
-    private Vector2 titleBase, avatarBase;
-    private bool introDone, locked;
-    private ProgressData data;
+    RectTransform[] introItems;
+    readonly List<BarAnim> bars = new List<BarAnim>();
+    readonly List<CountAnim> counts = new List<CountAnim>();
+    readonly List<RowAnim> subjectRows = new List<RowAnim>();
+    readonly List<RowAnim> historyRows = new List<RowAnim>();
+    readonly List<BadgeTile> badges = new List<BadgeTile>();
 
     // ---------- Easing / tiện ích ----------
-    private static float EaseOutCubic(float k) { k = 1f - k; return 1f - k * k * k; }
+    static float EaseOutCubic(float k) { k = 1f - k; return 1f - k * k * k; }
 
-    private static float EaseOutBack(float k)
+    static float EaseOutBack(float k)
     {
         const float c1 = 1.70158f, c3 = c1 + 1f;
         float x = k - 1f;
         return 1f + c3 * x * x * x + c1 * x * x;
     }
 
-    private static IEnumerator Tween(float duration, Action<float> step)
+    static IEnumerator Tween(float duration, Action<float> step)
     {
         for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
         {
@@ -96,284 +68,297 @@ public class DashboardManager : MonoBehaviour
         step(1f);
     }
 
-    private static IEnumerator Delayed(float delay, IEnumerator inner)
+    static IEnumerator Delayed(float delay, IEnumerator inner)
     {
         yield return new WaitForSecondsRealtime(delay);
         yield return inner;
     }
 
-    // ---------- Vòng đời ----------
-    private void Awake()
+    static Color SubjectColor(string subject)
     {
-        titleBase = titleGroup.anchoredPosition;
-        avatarBase = avatar.anchoredPosition;
-
-        var list = new List<RectTransform> { titleGroup, headerGroup };
-        list.AddRange(statCards);
-        list.Add(subjectPanel);
-        list.Add(historyPanel);
-        list.Add(badgePanel);
-        introItems = list.ToArray();
-        foreach (var rt in introItems) rt.localScale = Vector3.zero;
-
-        fadeOverlay.alpha = 1f;
-        fadeOverlay.blocksRaycasts = true;
+        if (subject == ProgressSaveSystem.SubjectLy) return GameTheme.Ly;
+        if (subject == ProgressSaveSystem.SubjectHoa) return GameTheme.Hoa;
+        return GameTheme.Sinh;
     }
 
-    private void OnEnable() { if (backButton != null) backButton.onClick.AddListener(OnClickBack); }
-    private void OnDisable() { if (backButton != null) backButton.onClick.RemoveListener(OnClickBack); }
-
-    private void Start()
+    // ---------- Vòng đời ----------
+    void Start()
     {
+        Time.timeScale = 1f;
+        var cam = Camera.main;
+        if (cam != null) { cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = GameTheme.Ink; }
+
+        UIKit.EnsureEventSystem();
+        SceneShell.Create(ShellMood.Hub, null, 1f, true, false);
+
+        artRoot = UIKit.BuildCanvas(transform, "Dashboard Art", -90);
+        scene = UIKit.CBox("Scene", artRoot, Color.clear, Vector2.zero, new Vector2(SceneW, SceneH));
+        nature = new MenuNatureFx();
+        nature.BuildForest(scene, 250f, 20);
+
+        ui = UIKit.BuildCanvas(transform, "Dashboard UI", 10);
         data = ProgressSaveSystem.Current;
-        Populate();
+        BuildUi();
+        FitScene();
         StartCoroutine(IntroRoutine());
     }
 
-    private void Update()
-    {
-        float t = Time.unscaledTime;
+    void OnDestroy() { if (nature != null) nature.Dispose(); }
 
-        if (bgGlow != null)
-        {
-            var c = bgGlow.color;
-            c.a = 0.38f + 0.10f * Mathf.Sin(t * 0.8f);
-            bgGlow.color = c;
-        }
+    void FitScene() { MenuNatureFx.FitCover(artRoot, scene, ref lastRect); }
+
+    void Update()
+    {
+        FitScene();
+        if (nature != null) nature.Tick(Time.unscaledTime, Time.unscaledDeltaTime);
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Back();
 
         if (!introDone) return;
-
-        titleGroup.anchoredPosition = titleBase + new Vector2(0f, Mathf.Sin(t * 1.4f) * 6f);
-        avatar.anchoredPosition = avatarBase + new Vector2(0f, Mathf.Sin(t * 2f) * 6f);
-        avatar.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 1.3f) * 3f);
-
-        for (int i = 0; i < bobChests.Count; i++)
+        float t = Time.unscaledTime;
+        foreach (var b in badges)
         {
-            var rt = bobChests[i];
-            rt.anchoredPosition = new Vector2(0f, 20f + Mathf.Sin(t * 2.2f + bobPhase[i]) * 4f);
+            if (!b.unlocked) continue;
+            b.icon.anchoredPosition = new Vector2(0f, 24f + Mathf.Sin(t * 2.2f + b.phase) * 4f);
+            if (b.glow != null) b.glow.color = b.glow.color.WithAlpha(.26f + .12f * Mathf.Sin(t * 2.2f + b.phase));
         }
     }
 
-    // ---------- Đổ dữ liệu ----------
-    private void Populate()
+    // ---------- Dựng giao diện ----------
+    void BuildUi()
     {
-        nameText.text = "Xin chào, " + StudentProfileData.studentName + "!";
-        classText.text = string.IsNullOrEmpty(StudentProfileData.studentClass)
-            ? "Lớp 8"
-            : "Lớp " + StudentProfileData.studentClass;
+        // lớp tối nhẹ phủ nền rừng để panel nổi bật
+        var dim = UIKit.Box("Dim", ui, GameTheme.Ink.WithAlpha(.38f), Vector2.zero, Vector2.one, UIKit.C, Vector2.zero, Vector2.zero);
+        UIKit.Stretch(dim, 0, 0, 0, 0);
+
+        var intro = new List<RectTransform>();
+
+        // ---- Tiêu đề ----
+        var titleRoot = UIKit.CBox("TitleGroup", ui, Color.clear, new Vector2(0, 420), new Vector2(1700, 160));
+        UIKit.Title(titleRoot, "BẢNG TIẾN ĐỘ", new Vector2(0, 20), 72);
+        intro.Add(titleRoot);
+
+        // ---- Học sinh (góc phải trên) ----
+        var student = UIKit.CBox("StudentGroup", ui, Color.clear, new Vector2(650, 445), new Vector2(560, 100));
+        UIKit.Label("Name", student, "Xin chào, " + StudentProfileData.studentName + "!", 38, GameTheme.Bone,
+            TextAnchor.MiddleRight, new Vector2(0, 20), new Vector2(560, 50), true, true, FontStyle.Bold);
+        UIKit.Label("Class", student, string.IsNullOrEmpty(StudentProfileData.studentClass) ? "Lớp 8" : "Lớp " + StudentProfileData.studentClass,
+            28, GameTheme.Ember, TextAnchor.MiddleRight, new Vector2(0, -24), new Vector2(560, 40), true);
+        intro.Add(student);
+
+        // ---- Nút quay lại (góc trái trên) ----
+        UIKit.MakeButton(ui, "Btn_Back", "QUAY LẠI", new Vector2(-740, 450), new Vector2(300, 72), Back, ButtonStyle.Stone, 30, .3f);
+
+        BuildStatCards(intro);
+        BuildSubjectPanel(intro);
+        BuildHistoryPanel(intro);
+        BuildBadgePanel(intro);
+
+        // lớp hiệu ứng nằm trên cùng
+        fx = UIKit.CBox("Effects", ui, Color.clear, Vector2.zero, Vector2.zero);
+        UIKit.Stretch(fx, 0, 0, 0, 0);
+
+        introItems = intro.ToArray();
+        foreach (var rt in introItems) rt.localScale = Vector3.zero;
+    }
+
+    // ----- 4 thẻ số liệu -----
+    void BuildStatCards(List<RectTransform> intro)
+    {
+        string[] labels = { "HUY HIỆU", "ĐIỂM CAO NHẤT", "LƯỢT CHƠI", "ĐỘ CHÍNH XÁC" };
+        Color[] cols = { GameTheme.GoldHi, GameTheme.Ember, GameTheme.Ly, GameTheme.Moss };
 
         int attempts = ProgressSaveSystem.Attempts(data);
         int best = ProgressSaveSystem.BestScore(data);
         int accuracy = Mathf.RoundToInt(ProgressSaveSystem.Accuracy(data) * 100f);
+        int[] targets = { data.badges.Count, best, attempts, accuracy };
+        string[] formats = { "{0}/" + ProgressSaveSystem.Badges.Length, "{0}", "{0}", "{0}%" };
 
-        AddCount(statValues[0], data.badges.Count, "{0}/" + ProgressSaveSystem.Badges.Length);
-        AddCount(statValues[1], best, "{0}");
-        AddCount(statValues[2], attempts, "{0}");
-        AddCount(statValues[3], accuracy, "{0}%");
+        for (int i = 0; i < 4; i++)
+        {
+            var p = UIKit.Panel(ui, "Stat_" + i, new Vector2(-690 + i * 460, 245), new Vector2(420, 150), PanelStyle.Dark, out var c);
+            UIKit.Label("L", c, labels[i], 24, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 32), new Vector2(360, 30), true);
+            var v = UIKit.Label("V", c, string.Format(formats[i], 0), 58, cols[i], TextAnchor.MiddleCenter,
+                new Vector2(0, -16), new Vector2(360, 64), true, true, FontStyle.Bold);
+            counts.Add(new CountAnim { text = v, target = targets[i], format = formats[i] });
+            intro.Add(p);
+        }
+    }
 
-        // Thanh bài học
+    // ----- Tiến độ học tập + từng môn -----
+    void BuildSubjectPanel(List<RectTransform> intro)
+    {
+        var panel = UIKit.Panel(ui, "SubjectPanel", new Vector2(-450, -50), new Vector2(860, 400), PanelStyle.Dark, out var c);
+        UIKit.Label("H", c, "TIẾN ĐỘ HỌC TẬP", 38, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 146), new Vector2(700, 50), true, true, FontStyle.Bold);
+        UIKit.Divider(c, new Vector2(0, 116), 420);
+
         int done = ProgressSaveSystem.CompletedLessons(data);
         int total = Mathf.Max(1, StudentProfileData.totalLessons);
-        lessonText.text = "Bài học hoàn thành: " + done + "/" + total;
-        SetBar(lessonBarFill, 0f);
-        bars.Add(new BarAnim { fill = lessonBarFill, target = (float)done / total });
-
-        BuildSubjectRows();
-        BuildHistoryRows();
-        BuildBadgeTiles();
-    }
-
-    private void AddCount(TMP_Text text, int target, string format)
-    {
-        text.text = string.Format(format, 0);
-        counts.Add(new CountAnim { text = text, target = target, format = format });
-    }
-
-    private static void SetBar(RectTransform fill, float v)
-    {
-        v = Mathf.Clamp01(v);
-        fill.anchorMin = Vector2.zero;
-        fill.anchorMax = new Vector2(v, 1f);
-        fill.offsetMin = fill.offsetMax = Vector2.zero;
-        fill.gameObject.SetActive(v > 0.02f);
-    }
-
-    // ----- Tiến độ theo môn -----
-    private void BuildSubjectRows()
-    {
-        Color[] colors =
-        {
-            new Color(0.35f, 0.6f, 1f), new Color(0.3f, 0.8f, 0.55f), new Color(0.6f, 0.6f, 0.72f)
-        };
+        lessonText = UIKit.Label("Lesson", c, "Bài học hoàn thành: " + done + "/" + total, 26, GameTheme.Bone,
+            TextAnchor.MiddleLeft, new Vector2(0, 76), new Vector2(780, 34));
+        UIKit.ProgressBar(c, "LessonBar", new Vector2(0, 42), new Vector2(780, 28), GameTheme.Ember, out lessonFill);
+        bars.Add(new BarAnim { fill = lessonFill, target = (float)done / total });
 
         for (int i = 0; i < ProgressSaveSystem.Subjects.Length; i++)
         {
             string subject = ProgressSaveSystem.Subjects[i];
             var stats = ProgressSaveSystem.FindSubject(data, subject);
+            Color col = SubjectColor(subject);
 
-            var row = NewRect("Row_" + subject, subjectList);
-            row.anchorMin = row.anchorMax = new Vector2(0.5f, 1f);
-            row.pivot = new Vector2(0.5f, 0.5f);
-            row.sizeDelta = new Vector2(800f, 56f);
-            row.anchoredPosition = new Vector2(0f, -i * 72f - 28f);
-            row.localScale = new Vector3(1f, 0f, 1f);
+            var row = UIKit.CBox("Row_" + subject, c, Color.clear, new Vector2(0, -10 - i * 62), new Vector2(780, 52));
+            var rune = UIKit.CBox("Rune", row, col, new Vector2(-362, 0), new Vector2(16, 16));
+            rune.localEulerAngles = new Vector3(0, 0, 45f);
+            UIKit.Label("N", row, subject.ToUpperInvariant(), 34, GameTheme.Bone, TextAnchor.MiddleLeft, new Vector2(-290, 0), new Vector2(120, 50), true, true, FontStyle.Bold);
 
-            var label = MakeText("Label", row, subject.ToUpperInvariant(), 34f, Ink, FontStyles.Bold, TextAlignmentOptions.MidlineLeft);
-            Place(label.rectTransform, new Vector2(-325f, 0f), new Vector2(120f, 50f));
+            UIKit.ProgressBar(row, "Bar", new Vector2(-20, 0), new Vector2(340, 26), col, out var fill);
 
-            var frame = NewRect("BarFrame", row);
-            Place(frame, new Vector2(-70f, 0f), new Vector2(330f, 28f));
-            var frameImg = frame.gameObject.AddComponent<Image>();
-            frameImg.sprite = panelSprite; frameImg.type = Image.Type.Sliced;
-            frameImg.color = BarFrame; frameImg.raycastTarget = false;
-
-            var fill = NewRect("Fill", frame);
-            var fillImg = fill.gameObject.AddComponent<Image>();
-            fillImg.sprite = panelSprite; fillImg.type = Image.Type.Sliced;
-            fillImg.color = colors[i]; fillImg.raycastTarget = false;
-            SetBar(fill, 0f);
-
-            string info;
+            string info = "Chưa chơi";
             float target = 0f;
-            if (stats == null || stats.attempts == 0) info = "Chưa chơi";
-            else
+            if (stats != null && stats.attempts > 0)
             {
                 target = ProgressSaveSystem.Accuracy(stats);
                 info = stats.attempts + " lượt · " + Mathf.RoundToInt(target * 100f) + "% đúng";
             }
             bars.Add(new BarAnim { fill = fill, target = target });
+            UIKit.Label("Info", row, info, 22, stats != null && stats.attempts > 0 ? GameTheme.Rune : GameTheme.Fog,
+                TextAnchor.MiddleRight, new Vector2(272, 0), new Vector2(220, 50));
 
-            var infoText = MakeText("Info", row, info, 24f, Ink, FontStyles.Bold, TextAlignmentOptions.MidlineRight);
-            Place(infoText.rectTransform, new Vector2(240f, 0f), new Vector2(290f, 50f));
-
-            subjectRows.Add(row);
+            subjectRows.Add(MakeRow(row));
         }
+        intro.Add(panel);
     }
 
     // ----- Lịch sử gần đây -----
-    private void BuildHistoryRows()
+    void BuildHistoryPanel(List<RectTransform> intro)
     {
+        var panel = UIKit.Panel(ui, "HistoryPanel", new Vector2(450, -50), new Vector2(860, 400), PanelStyle.Dark, out var c);
+        UIKit.Label("H", c, "LƯỢT CHƠI GẦN ĐÂY", 38, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 146), new Vector2(700, 50), true, true, FontStyle.Bold);
+        UIKit.Divider(c, new Vector2(0, 116), 420);
+
         int shown = Mathf.Min(5, data.sessions.Count);
+        emptyText = UIKit.Label("Empty", c, "Chưa có lượt chơi nào.\nHãy thử một màn để bắt đầu nhé!", 30, GameTheme.Fog,
+            TextAnchor.MiddleCenter, new Vector2(0, -20), new Vector2(640, 120), true);
         emptyText.gameObject.SetActive(shown == 0);
 
         for (int i = 0; i < shown; i++)
         {
             var s = data.sessions[data.sessions.Count - 1 - i];
+            Color sc = SubjectColor(s.subject);
+            Color res = s.won ? GameTheme.Moss : GameTheme.Blood;
 
-            var row = NewRect("Session_" + i, historyList);
-            row.anchorMin = row.anchorMax = new Vector2(0.5f, 1f);
-            row.pivot = new Vector2(0.5f, 0.5f);
-            row.sizeDelta = new Vector2(800f, 54f);
-            row.anchoredPosition = new Vector2(0f, -i * 62f - 27f);
-            row.localScale = new Vector3(1f, 0f, 1f);
-
-            var stripe = NewRect("Stripe", row);
-            Stretch(stripe);
-            var stripeImg = stripe.gameObject.AddComponent<Image>();
-            stripeImg.sprite = panelSprite; stripeImg.type = Image.Type.Sliced;
-            stripeImg.color = i % 2 == 0 ? new Color(0.93f, 0.94f, 1f) : new Color(1f, 1f, 1f, 0f);
-            stripeImg.raycastTarget = false;
+            var row = UIKit.CBox("Session_" + i, c, i % 2 == 0 ? GameTheme.Iron.WithAlpha(.32f) : Color.clear, new Vector2(0, 76 - i * 52), new Vector2(780, 46));
 
             string dateStr = s.date;
-            if (DateTime.TryParse(s.date, out var dt)) dateStr = dt.ToString("dd/MM  HH:mm");
+            if (DateTime.TryParseExact(s.date, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+                dateStr = dt.ToString("dd/MM  HH:mm", CultureInfo.InvariantCulture);
 
-            var date = MakeText("Date", row, dateStr, 24f, Muted, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
-            Place(date.rectTransform, new Vector2(-290f, 0f), new Vector2(220f, 50f));
+            UIKit.Label("Date", row, dateStr, 22, GameTheme.Fog, TextAnchor.MiddleLeft, new Vector2(-285, 0), new Vector2(210, 44));
+            UIKit.Label("Subject", row, s.subject.ToUpperInvariant(), 28, sc, TextAnchor.MiddleCenter, new Vector2(-140, 0), new Vector2(80, 44), true, true, FontStyle.Bold);
+            UIKit.Label("Score", row, s.score + " điểm", 26, GameTheme.Bone, TextAnchor.MiddleLeft, new Vector2(-5, 0), new Vector2(160, 44), true);
+            UIKit.Label("Acc", row, s.correct + "/" + (s.correct + s.wrong) + " đúng", 22, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(150, 0), new Vector2(150, 44));
 
-            var subject = MakeText("Subject", row, s.subject, 28f, Ink, FontStyles.Bold, TextAlignmentOptions.Midline);
-            Place(subject.rectTransform, new Vector2(-120f, 0f), new Vector2(90f, 50f));
+            // nhãn kết quả: viền màu + nền tối pha màu
+            var pill = UIKit.CBox("Pill", row, res, new Vector2(310, 0), new Vector2(130, 36));
+            var inner = UIKit.CBox("Inner", pill, Color.Lerp(res, GameTheme.Ink, .7f), Vector2.zero, Vector2.zero);
+            UIKit.Stretch(inner, 2, 2, 2, 2);
+            var pt = UIKit.Label("T", inner, s.won ? "THẮNG" : "THUA", 22, Color.Lerp(res, Color.white, .35f), TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, true, false, FontStyle.Bold);
+            UIKit.Stretch(pt.rectTransform, 0, 0, 0, 0);
 
-            var score = MakeText("Score", row, s.score + " điểm", 28f, Ink, FontStyles.Bold, TextAlignmentOptions.MidlineLeft);
-            Place(score.rectTransform, new Vector2(40f, 0f), new Vector2(170f, 50f));
-
-            var pill = NewRect("Pill", row);
-            Place(pill, new Vector2(290f, 0f), new Vector2(150f, 40f));
-            var pillImg = pill.gameObject.AddComponent<Image>();
-            pillImg.sprite = panelSprite; pillImg.type = Image.Type.Sliced;
-            pillImg.color = s.won ? WinColor : LoseColor;
-            pillImg.raycastTarget = false;
-            var pillText = MakeText("Text", pill, s.won ? "THẮNG" : "THUA", 24f, Color.white, FontStyles.Bold, TextAlignmentOptions.Center);
-            Stretch(pillText.rectTransform);
-
-            historyRows.Add(row);
+            historyRows.Add(MakeRow(row));
         }
+        intro.Add(panel);
     }
 
     // ----- Huy hiệu -----
-    private void BuildBadgeTiles()
+    void BuildBadgePanel(List<RectTransform> intro)
     {
         var defs = ProgressSaveSystem.Badges;
-        badgeHeader.text = "HUY HIỆU  " + data.badges.Count + "/" + defs.Length;
+        var panel = UIKit.Panel(ui, "BadgePanel", new Vector2(0, -385), new Vector2(1780, 230), PanelStyle.Dark, out var c);
+        badgeHeader = UIKit.Label("H", c, "HUY HIỆU  " + data.badges.Count + "/" + defs.Length, 30, GameTheme.GoldHi,
+            TextAnchor.MiddleCenter, new Vector2(0, 62), new Vector2(600, 40), true, true, FontStyle.Bold);
 
         for (int i = 0; i < defs.Length; i++)
         {
             var def = defs[i];
             bool unlocked = data.badges.Contains(def.id);
             bool isNew = unlocked && !data.seenBadges.Contains(def.id);
+            float x = (i - (defs.Length - 1) * .5f) * 240f;
 
-            var tile = NewRect("Badge_" + def.id, badgeList);
-            Place(tile, new Vector2(-720f + i * 240f, 0f), new Vector2(230f, 130f));
-            tile.localScale = Vector3.zero;
-
-            var chest = NewRect("Chest", tile);
-            Place(chest, new Vector2(0f, 20f), new Vector2(72f, 72f));
-            var chestImg = chest.gameObject.AddComponent<Image>();
-            chestImg.sprite = chestSprite;
-            chestImg.preserveAspect = true;
-            chestImg.color = unlocked ? Color.Lerp(Color.white, def.color, 0.55f) : LockedColor;
-            chestImg.raycastTarget = false;
-
-            var title = MakeText("Title", tile, def.title, 23f, unlocked ? Ink : Muted, FontStyles.Bold, TextAlignmentOptions.Center);
-            Place(title.rectTransform, new Vector2(0f, -32f), new Vector2(230f, 30f));
-
-            var desc = MakeText("Desc", tile, def.desc, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Center);
-            Place(desc.rectTransform, new Vector2(0f, -58f), new Vector2(230f, 26f));
+            var tile = UIKit.CBox("Badge_" + def.id, c, Color.clear, new Vector2(x, -14), new Vector2(230, 130));
+            var bt = new BadgeTile { tile = tile, unlocked = unlocked, isNew = isNew, phase = i * .9f };
 
             if (unlocked)
             {
-                bobChests.Add(chest);
-                bobPhase.Add(i * 0.9f);
+                var g = UIKit.CBox("Glow", tile, def.color.WithAlpha(.3f), new Vector2(0, 24), new Vector2(150, 150));
+                bt.glow = g.GetComponent<Image>(); bt.glow.sprite = ThemeGfx.Glow;
             }
+
+            // rune ngọc: hình thoi viền kim loại, lõi màu huy hiệu (khoá = đá phiến tối)
+            var icon = UIKit.CBox("Icon", tile, Color.clear, new Vector2(0, 24), new Vector2(64, 64));
+            Color rim = unlocked ? GameTheme.Gold : GameTheme.Iron;
+            Color core = unlocked ? def.color : GameTheme.Slate;
+            Diamond(icon, 54f, new Color(.03f, .02f, .05f));
+            Diamond(icon, 48f, rim);
+            Diamond(icon, 40f, core);
+            Diamond(icon, 12f, unlocked ? new Color(1, 1, 1, .55f) : GameTheme.IronHi.WithAlpha(.5f));
+            bt.icon = icon;
+
+            UIKit.Label("Title", tile, def.title, 24, unlocked ? GameTheme.GoldHi : GameTheme.Fog, TextAnchor.MiddleCenter,
+                new Vector2(0, -32), new Vector2(230, 30), true, unlocked, FontStyle.Bold);
+            UIKit.Label("Desc", tile, def.desc, 17, unlocked ? GameTheme.Bone : GameTheme.Fog.WithAlpha(.65f), TextAnchor.MiddleCenter,
+                new Vector2(0, -58), new Vector2(230, 26));
 
             if (isNew)
             {
-                var tag = NewRect("NewTag", tile);
-                Place(tag, new Vector2(46f, 52f), new Vector2(70f, 30f));
-                var tagImg = tag.gameObject.AddComponent<Image>();
-                tagImg.sprite = panelSprite; tagImg.type = Image.Type.Sliced;
-                tagImg.color = new Color(1f, 0.45f, 0.35f); tagImg.raycastTarget = false;
-                var tagText = MakeText("Text", tag, "MỚI!", 20f, Color.white, FontStyles.Bold, TextAlignmentOptions.Center);
-                Stretch(tagText.rectTransform);
-                newBadgeTileIndex.Add(i);
+                var tag = UIKit.CBox("NewTag", tile, GameTheme.Gold, new Vector2(60, 52), new Vector2(72, 30));
+                var inner = UIKit.CBox("Inner", tag, GameTheme.Blood, Vector2.zero, Vector2.zero);
+                UIKit.Stretch(inner, 2, 2, 2, 2);
+                var tt = UIKit.Label("T", inner, "MỚI!", 19, GameTheme.Bone, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, true, false, FontStyle.Bold);
+                UIKit.Stretch(tt.rectTransform, 0, 0, 0, 0);
             }
 
-            badgeTiles.Add(tile);
+            tile.localScale = Vector3.zero;
+            badges.Add(bt);
         }
+        intro.Add(panel);
+    }
+
+    static RectTransform Diamond(Transform parent, float size, Color col)
+    {
+        var d = UIKit.CBox("Dia", parent, col, Vector2.zero, new Vector2(size, size));
+        d.localEulerAngles = new Vector3(0, 0, 45f);
+        return d;
+    }
+
+    RowAnim MakeRow(RectTransform row)
+    {
+        var cg = row.gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+        return new RowAnim { rt = row, cg = cg, home = row.anchoredPosition };
     }
 
     // ---------- Animation ----------
-    private IEnumerator IntroRoutine()
+    IEnumerator IntroRoutine()
     {
-        StartCoroutine(FadeOverlay(1f, 0f, 0.5f));
-
-        const float start = 0.15f, step = 0.09f;
+        const float start = .2f, step = .09f;
         for (int i = 0; i < introItems.Length; i++)
-            StartCoroutine(Delayed(start + i * step, Pop(introItems[i], 0.5f)));
+            StartCoroutine(Delayed(start + i * step, Pop(introItems[i], .45f)));
 
-        yield return new WaitForSecondsRealtime(start + introItems.Length * step + 0.3f);
+        yield return new WaitForSecondsRealtime(start + introItems.Length * step + .3f);
 
-        foreach (var c in counts) StartCoroutine(CountUp(c));
+        foreach (var cnt in counts) StartCoroutine(CountUp(cnt));
         foreach (var b in bars) StartCoroutine(FillBar(b));
         StartCoroutine(RevealRows(subjectRows, 0f));
-        StartCoroutine(RevealRows(historyRows, 0.1f));
+        StartCoroutine(RevealRows(historyRows, .1f));
 
-        for (int i = 0; i < badgeTiles.Count; i++)
-            StartCoroutine(Delayed(0.2f + i * 0.08f, Pop(badgeTiles[i], 0.45f)));
+        for (int i = 0; i < badges.Count; i++)
+            StartCoroutine(Delayed(.2f + i * .08f, Pop(badges[i].tile, .45f)));
 
-        yield return new WaitForSecondsRealtime(0.2f + badgeTiles.Count * 0.08f + 0.5f);
+        yield return new WaitForSecondsRealtime(.2f + badges.Count * .08f + .5f);
 
-        foreach (int idx in newBadgeTileIndex)
-            StartCoroutine(SparkleBurst(ToEffectsSpace(badgeTiles[idx])));
+        bool anyNew = false;
+        foreach (var b in badges)
+            if (b.isNew) { anyNew = true; StartCoroutine(EmberBurst(ToFx(b.tile))); }
+        if (anyNew) GameAudio.Play(Snd.BuffPick);
 
         // đánh dấu đã xem để lần sau không hiện "MỚI!" nữa
         bool changed = false;
@@ -384,59 +369,56 @@ public class DashboardManager : MonoBehaviour
         introDone = true;
     }
 
-    private static IEnumerator Pop(RectTransform rt, float duration)
+    static IEnumerator Pop(RectTransform rt, float duration)
     {
         yield return Tween(duration, k => rt.localScale = Vector3.one * EaseOutBack(k));
         rt.localScale = Vector3.one;
     }
 
-    private IEnumerator RevealRows(List<RectTransform> rows, float initialDelay)
+    IEnumerator RevealRows(List<RowAnim> rows, float initialDelay)
     {
         yield return new WaitForSecondsRealtime(initialDelay);
         for (int i = 0; i < rows.Count; i++)
         {
-            StartCoroutine(RowGrow(rows[i]));   // chạy song song, cách nhau một nhịp ngắn
-            yield return new WaitForSecondsRealtime(0.07f);
+            StartCoroutine(RowSlide(rows[i]));
+            yield return new WaitForSecondsRealtime(.07f);
         }
     }
 
-    private static IEnumerator RowGrow(RectTransform rt)
+    static IEnumerator RowSlide(RowAnim r)
     {
-        yield return Tween(0.3f, k => rt.localScale = new Vector3(1f, EaseOutBack(k), 1f));
-        rt.localScale = Vector3.one;
+        yield return Tween(.35f, k =>
+        {
+            float e = EaseOutCubic(k);
+            r.cg.alpha = e;
+            r.rt.anchoredPosition = r.home + new Vector2(-60f * (1f - e), 0f);
+        });
+        r.cg.alpha = 1f;
+        r.rt.anchoredPosition = r.home;
     }
 
-    private static IEnumerator CountUp(CountAnim c)
+    static IEnumerator CountUp(CountAnim c)
     {
-        yield return Tween(0.9f, k =>
-            c.text.text = string.Format(c.format, Mathf.RoundToInt(c.target * EaseOutCubic(k))));
+        yield return Tween(.9f, k => c.text.text = string.Format(c.format, Mathf.RoundToInt(c.target * EaseOutCubic(k))));
         c.text.text = string.Format(c.format, c.target);
     }
 
-    private static IEnumerator FillBar(BarAnim b)
+    static IEnumerator FillBar(BarAnim b)
     {
-        yield return Tween(0.9f, k => SetBar(b.fill, b.target * EaseOutCubic(k)));
-        SetBar(b.fill, b.target);
+        yield return Tween(.9f, k => UIKit.SetBar(b.fill, b.target * EaseOutCubic(k)));
+        UIKit.SetBar(b.fill, b.target);
     }
 
-    private IEnumerator FadeOverlay(float from, float to, float duration)
+    Vector2 ToFx(RectTransform target)
     {
-        fadeOverlay.blocksRaycasts = true;
-        yield return Tween(duration, k => fadeOverlay.alpha = Mathf.Lerp(from, to, k));
-        fadeOverlay.blocksRaycasts = to > 0.5f;
+        Vector3 local = fx.InverseTransformPoint(target.position);
+        return new Vector2(local.x, local.y + 24f);
     }
 
-    private Vector2 ToEffectsSpace(RectTransform target)
+    /// <summary>Tàn lửa vàng-cam bắn toả ra quanh huy hiệu mới (thay cho pháo sáng sprite cũ).</summary>
+    IEnumerator EmberBurst(Vector2 center)
     {
-        Vector3 local = effectsRoot.InverseTransformPoint(target.position);
-        return new Vector2(local.x, local.y + 20f);
-    }
-
-    private IEnumerator SparkleBurst(Vector2 center)
-    {
-        if (sparkleSprite == null || effectsRoot == null) yield break;
-
-        const int n = 16;
+        const int n = 18;
         var rts = new RectTransform[n];
         var imgs = new Image[n];
         var dirs = new Vector2[n];
@@ -444,110 +426,56 @@ public class DashboardManager : MonoBehaviour
 
         for (int i = 0; i < n; i++)
         {
-            var go = new GameObject("Sparkle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            rts[i] = (RectTransform)go.transform;
-            rts[i].SetParent(effectsRoot, false);
-            imgs[i] = go.GetComponent<Image>();
-            imgs[i].sprite = sparkleSprite;
-            imgs[i].raycastTarget = false;
-            imgs[i].color = Color.Lerp(new Color(1f, 0.88f, 0.4f), Color.white, UnityEngine.Random.value);
-            float a = (i / (float)n) * Mathf.PI * 2f + UnityEngine.Random.Range(-0.2f, 0.2f);
+            float s = UnityEngine.Random.Range(6f, 13f);
+            rts[i] = UIKit.CBox("Spark", fx, Color.Lerp(GameTheme.Ember, GameTheme.GoldHi, UnityEngine.Random.value), center, new Vector2(s, s));
+            imgs[i] = rts[i].GetComponent<Image>();
+            float a = i / (float)n * Mathf.PI * 2f + UnityEngine.Random.Range(-.2f, .2f);
             dirs[i] = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
             speeds[i] = UnityEngine.Random.Range(90f, 230f);
-            rts[i].sizeDelta = Vector2.one * UnityEngine.Random.Range(26f, 56f);
-            rts[i].anchoredPosition = center;
         }
 
-        const float dur = 0.85f;
+        const float dur = .9f;
         for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
         {
             float k = t / dur, e = EaseOutCubic(k);
             for (int i = 0; i < n; i++)
             {
-                rts[i].anchoredPosition = center + dirs[i] * speeds[i] * e;
-                rts[i].localScale = Vector3.one * (1f - k * 0.7f);
+                if (rts[i] == null) continue;
+                rts[i].anchoredPosition = center + dirs[i] * speeds[i] * e + new Vector2(0f, -40f * k * k);   // rơi nhẹ như tàn lửa
+                rts[i].localScale = Vector3.one * (1f - k * .7f);
                 rts[i].localRotation = Quaternion.Euler(0f, 0f, k * 180f);
-                var c = imgs[i].color; c.a = 1f - k; imgs[i].color = c;
+                imgs[i].color = imgs[i].color.WithAlpha(1f - k);
             }
             yield return null;
         }
-        for (int i = 0; i < n; i++) Destroy(rts[i].gameObject);
+        for (int i = 0; i < n; i++) if (rts[i] != null) Destroy(rts[i].gameObject);
     }
 
     // ---------- Điều hướng ----------
-    public void OnClickBack()
+    void Back()
     {
-        if (locked) return;
-        locked = true;
-        StartCoroutine(LoadSceneWithFade(backSceneName));
-    }
-
-    private IEnumerator LoadSceneWithFade(string sceneName)
-    {
-        if (!Application.CanStreamedLevelBeLoaded(sceneName))
+        if (leaving) return;
+        if (!Application.CanStreamedLevelBeLoaded(backSceneName))
         {
-            Debug.LogError("[Dashboard] Scene '" + sceneName + "' chưa có trong Build Settings.");
-            locked = false;
-            yield break;
+            Debug.LogError("[Dashboard] Scene '" + backSceneName + "' chưa có trong Build Settings.");
+            return;
         }
-        yield return FadeOverlay(0f, 1f, 0.35f);
-        var op = SceneManager.LoadSceneAsync(sceneName);
-        while (!op.isDone) yield return null;
-    }
-
-    // ---------- Dựng UI nhỏ ----------
-    private static RectTransform NewRect(string name, Transform parent)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        return (RectTransform)go.transform;
-    }
-
-    private static void Place(RectTransform rt, Vector2 pos, Vector2 size)
-    {
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = size;
-    }
-
-    private static void Stretch(RectTransform rt)
-    {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
-    }
-
-    private TextMeshProUGUI MakeText(string name, Transform parent, string text, float size, Color color,
-        FontStyles style, TextAlignmentOptions align)
-    {
-        var rt = NewRect(name, parent);
-        var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
-        if (font != null) t.font = font;
-        t.text = text;
-        t.fontSize = size;
-        t.color = color;
-        t.fontStyle = style;
-        t.alignment = align;
-        t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.overflowMode = TextOverflowModes.Ellipsis;
-        t.raycastTarget = false;
-        return t;
+        leaving = true;
+        SceneRouter.Go(backSceneName);
     }
 
     // ---------- Thử nghiệm trong Editor ----------
     [ContextMenu("Thêm dữ liệu mẫu")]
-    private void DebugAddDemo()
+    void DebugAddDemo()
     {
         ProgressSaveSystem.DebugAddDemoData();
-        if (Application.isPlaying) SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        if (Application.isPlaying) UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
 
     [ContextMenu("Xoá tiến độ học sinh hiện tại")]
-    private void DebugReset()
+    void DebugReset()
     {
         ProgressSaveSystem.ResetCurrent();
-        if (Application.isPlaying) SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        if (Application.isPlaying) UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
 }

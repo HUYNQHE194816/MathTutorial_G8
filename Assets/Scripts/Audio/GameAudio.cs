@@ -30,7 +30,7 @@ public class GameAudio : MonoBehaviour
             lib = ScriptableObject.CreateInstance<GameAudioLibrary>(); lib.Sync();
         }
         var go = new GameObject("GameAudio"); DontDestroyOnLoad(go); inst = go.AddComponent<GameAudio>();
-        AudioListener.volume = PlayerPrefs.GetInt("KHTN_Muted", 0) == 1 ? 0f : 1f;   // cùng khoá với nút Âm thanh ở MainMenu
+        GameSettings.ApplyAudio();   // âm lượng tổng + tắt tiếng lấy từ Cài đặt
     }
 
     void Awake()
@@ -84,7 +84,7 @@ public class GameAudio : MonoBehaviour
         for (int i = 0; i < 2; i++)
         {
             var s = mus[i]; if (s.clip == null) continue;
-            s.volume = Mathf.MoveTowards(s.volume, musTarget[i] * lib.musicVolume, step);
+            s.volume = Mathf.MoveTowards(s.volume, musTarget[i] * lib.musicVolume * GameSettings.Music, step);
             if (musTarget[i] <= 0f && s.volume <= .001f) { s.Stop(); s.clip = null; }
         }
     }
@@ -107,7 +107,7 @@ public class GameAudio : MonoBehaviour
         bool end = id == Snd.Victory || id == Snd.Defeat;
         var s = end ? jingle : pool[next]; if (!end) next = (next + 1) % pool.Length;
         s.pitch = end ? 1f : 1f + Random.Range(-lib.pitchJitter, lib.pitchJitter);
-        s.volume = lib.sfxVolume * slot.volume; s.clip = slot.clip; s.Play();
+        s.volume = lib.sfxVolume * slot.volume * GameSettings.Sfx; s.clip = slot.clip; s.Play();
         return true;
     }
 }

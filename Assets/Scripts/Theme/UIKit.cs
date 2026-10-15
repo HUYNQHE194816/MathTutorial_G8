@@ -62,7 +62,7 @@ public static class UIKit
         var go = new GameObject(n, typeof(RectTransform), typeof(Text)); go.transform.SetParent(p, false);
         var t = go.GetComponent<Text>();
         t.font = display ? GameFont.Display : GameFont.Body;
-        t.fontSize = size; t.fontStyle = st; t.alignment = al; t.color = col; t.text = s;
+        t.fontSize = Mathf.RoundToInt(size * GameFont.Scale); t.fontStyle = st; t.alignment = al; t.color = col; t.text = s;
         t.raycastTarget = false; t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow; t.lineSpacing = 1.15f;
         if (outline)
         {
