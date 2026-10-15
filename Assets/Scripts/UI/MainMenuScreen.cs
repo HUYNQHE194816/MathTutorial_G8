@@ -11,7 +11,6 @@ using UnityEngine.UI;
 /// </summary>
 public class MainMenuScreen : MonoBehaviour
 {
-    const string MutedKey = "KHTN_Muted";
     // Đổi khối lớp hiển thị tại đây (dữ liệu bài học hiện tại của project là KHTN 8).
     const string GradeLabel = "LỚP 6";
     const string Kicker = "KHOA HỌC TỰ NHIÊN  •  " + GradeLabel;
@@ -22,9 +21,8 @@ public class MainMenuScreen : MonoBehaviour
     class Drift { public RectTransform rt; public float amp, speed, phase; }
     class Puff { public RectTransform rt; public Image im; public float age, dur, vx, vy; }
 
-    RectTransform artRoot, scene, ui, settings;
-    Text soundLabel;
-    bool muted;
+    RectTransform artRoot, scene, ui;
+    SettingsWindow settings;
 
     readonly List<Drift> drifts = new List<Drift>();
     readonly List<Puff> puffs = new List<Puff>();
@@ -58,8 +56,6 @@ public class MainMenuScreen : MonoBehaviour
         BuildMenu();
         BuildFooter();
 
-        muted = PlayerPrefs.GetInt(MutedKey, 0) == 1;
-        ApplySound();
         FitScene();
     }
 
@@ -229,42 +225,11 @@ public class MainMenuScreen : MonoBehaviour
 #endif
     }
 
-    // Cửa sổ Cài đặt dựng mới mỗi lần mở và huỷ khi đóng (nút có coroutine xuất hiện dần nên không dùng SetActive).
+    // Cửa sổ Cài đặt (SettingsWindow): âm lượng, độ sáng, font chữ, cấu hình game. Tự xử lý Esc và đóng.
     void OpenSettings()
     {
         if (settings != null) return;
-        var dim = UIKit.Box("SettingsDim", ui, new Color(0, 0, 0, .7f), Vector2.zero, Vector2.one, UIKit.C, Vector2.zero, Vector2.zero, true);
-        UIKit.Stretch(dim, 0, 0, 0, 0);
-        settings = dim;
-
-        UIKit.Panel(dim, "SettingsPanel", Vector2.zero, new Vector2(760, 460), PanelStyle.Dark, out var c);
-        UIKit.Label("T", c, "Cài đặt", 52, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 150), new Vector2(660, 70), true, true, FontStyle.Bold);
-        UIKit.Divider(c, new Vector2(0, 100), 420);
-        var snd = UIKit.MakeButton(c, "Btn_Sound", "", new Vector2(0, 10), new Vector2(520, 84), ToggleSound, ButtonStyle.Stone, 32, 0f);
-        soundLabel = snd.GetComponentInChildren<Text>();
-        UIKit.MakeButton(c, "Btn_Close", "ĐÓNG", new Vector2(0, -110), new Vector2(320, 84), CloseSettings, ButtonStyle.Bronze, 34, .08f);
-        ApplySound();
-    }
-
-    void CloseSettings()
-    {
-        if (settings == null) return;
-        Destroy(settings.gameObject);
-        settings = null; soundLabel = null;
-    }
-
-    void ToggleSound()
-    {
-        muted = !muted;
-        PlayerPrefs.SetInt(MutedKey, muted ? 1 : 0);
-        PlayerPrefs.Save();
-        ApplySound();
-    }
-
-    void ApplySound()
-    {
-        AudioListener.volume = muted ? 0f : 1f;
-        if (soundLabel != null) soundLabel.text = muted ? "ÂM THANH: TẮT" : "ÂM THANH: BẬT";
+        settings = SettingsWindow.Open(ui, () => settings = null);
     }
 
     // ------------------------------------------------------------------ hoạt ảnh
@@ -319,7 +284,6 @@ public class MainMenuScreen : MonoBehaviour
         }
         UpdatePuffs(dt);
 
-        if (settings != null && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) CloseSettings();
     }
 
     void OnDestroy() { if (nature != null) nature.Dispose(); }
