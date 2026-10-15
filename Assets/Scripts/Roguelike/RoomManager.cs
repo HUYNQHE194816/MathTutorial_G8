@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -5,19 +6,17 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// E2 + E3 – Một màn của chặng 1 (mục 3 và 4 của kế hoạch v3.2).
-/// Mỗi màn là một lần nạp RoomScene; tiến trình (màn, máu, vũ khí, buff, Mực) nằm trong RunState nên sống qua các lần nạp.
-/// Vòng lặp: vào phòng, đánh quái theo đợt (2-3 đợt), Rương Câu Đố hiện ra, E mở rương, viết lời giải, nộp, chấm giả.
-/// Độ khó chọn MỘT LẦN ở màn Chọn độ khó (RunState.difficulty): quyết định quái đông/nhanh/mạnh cỡ nào và đề khó cỡ nào. Môn (Lý/Hóa/Sinh) tự xen kẽ theo màn.
-/// Đạt thì nhận vũ khí (thay chính, thay phụ hoặc bỏ) rồi cửa mở; chưa đạt thì làm lại tối đa 3 lần rồi được phá khóa bằng Mực.
-/// Sau màn 2 và 4 chọn 1 trong 3 buff. Hết máu thì về điểm lưu đầu chặng. Màn 5 (boss) làm ở E6, chưa có.
-/// Phòng, HUD và mọi bảng đều dựng bằng code; scene chỉ cần một GameObject gắn script này (menu Tools > KHTN 8 > Tạo RoomScene).
+/// Điều phối toàn bộ chế độ roguelike trong một scene (RoomScene), mỗi lần chuyển màn là một lần nạp lại scene; tiến trình nằm trong RunState.
+/// Các pha (RunState.phase): Room (màn thường: đánh quái theo đợt, Rương Câu Đố, cửa), Boss (màn 5 của mỗi chặng: boss 4 pha + trụ đá),
+/// Rest (phòng nghỉ sau boss: lửa trại, Thầy Cú), Final (màn 16: bệ đá cổ, chọn phần thưởng, nghi lễ), Ending (cảnh kết + credit).
+/// Phòng, HUD và mọi bảng đều dựng bằng code; scene chỉ cần một GameObject gắn script này.
 /// </summary>
 public class RoomManager : MonoBehaviour
 {
     public static RoomManager Instance { get; private set; }
-    /// <summary>true khi viết lời giải hoặc đang mở bảng chọn: mọi thứ trong trận (quái, đạn, người chơi, đồng hồ) đứng yên.</summary>
+    /// <summary>true khi viết lời giải hoặc đang mở bảng: mọi thứ trong trận (quái, đạn, người chơi, đồng hồ) đứng yên.</summary>
     public static bool Frozen { get; private set; }
+    public static bool HazardsOn = true;
 
     public const float MinX = -8f, MaxX = 8f, MinY = -3.9f, WallY = 3.6f, DoorHalf = 1.15f, ExitY = 4.4f, Reach = 2.3f;
     public static Vector2 Clamp(Vector2 p) => new Vector2(Mathf.Clamp(p.x, MinX, MaxX), Mathf.Clamp(p.y, MinY, WallY));
@@ -26,18 +25,24 @@ public class RoomManager : MonoBehaviour
     static int attemptCounter;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() { Frozen = false; Instance = null; usedIds.Clear(); attemptCounter = 0; }
+    static void ResetStatics() { Frozen = false; Instance = null; usedIds.Clear(); attemptCounter = 0; HazardsOn = true; }
 
     [SerializeField] TextAsset problemsJson;                  // Assets/DataBank/Essay/essay_problems.json
-    [SerializeField] string forceSubject = "";                // để trống: môn xen kẽ ngẫu nhiên theo màn (ly, hoa, sinh). Điền để thử riêng một môn
-    [SerializeField] string menuSceneName = "EssaySubjectSelectScene";   // màn Chọn độ khó
-    [SerializeField] int startInk = 100;                      // Mực khởi điểm của lượt chơi mới, để thử phá khóa; E5 lấy từ tiến độ đã lưu
+    [SerializeField] string forceSubject = "";                // để trống: môn xen kẽ ngẫu nhiên theo màn. Điền để thử riêng một môn
+    [SerializeField] string menuSceneName = "EssaySubjectSelectScene";
+    [SerializeField] int startInk = 100;
 
     string Subject => string.IsNullOrEmpty(forceSubject) ? RunState.SubjectOfRoom(RunState.room) : forceSubject;
     string StageLabel => RunState.stage + "-" + RunState.room;
+    int biome;
 
-    // ---- kế hoạch quái: 3-5 quái mỗi màn chia 2-3 đợt; loại quái mở dần theo màn (mục 5.1, 5.2) ----
-    static readonly int[][] WavePlan = { new[] { 2, 1 }, new[] { 2, 2 }, new[] { 2, 1, 1 }, new[] { 2, 2, 1 } };
+    // ---- kế hoạch quái theo chặng (mục 5.1): chặng 1 có 3-5 quái, chặng 2 có 4-6, chặng 3 có 5-8 ----
+    static readonly int[][][] WavePlans =
+    {
+        new[] { new[] { 2, 1 }, new[] { 2, 2 }, new[] { 2, 1, 1 }, new[] { 2, 2, 1 } },
+        new[] { new[] { 2, 2 }, new[] { 3, 2 }, new[] { 2, 2, 2 }, new[] { 3, 2, 1 } },
+        new[] { new[] { 3, 2 }, new[] { 3, 3 }, new[] { 3, 2, 2 }, new[] { 4, 2, 2 } },
+    };
     static readonly MonsterKind[][] Pools =
     {
         new[] { MonsterKind.Gunner, MonsterKind.Charger },
@@ -45,60 +50,81 @@ public class RoomManager : MonoBehaviour
         new[] { MonsterKind.Gunner, MonsterKind.Charger, MonsterKind.Mage, MonsterKind.Robot },
         new[] { MonsterKind.Gunner, MonsterKind.Charger, MonsterKind.Mage, MonsterKind.Robot, MonsterKind.Summoner },
     };
-    static readonly float[] EliteRate = { .10f, .15f, .20f };   // theo chặng
+    static readonly float[] EliteRate = { .10f, .15f, .20f };
 
-    enum State { Fighting, ChestReady, Solving, Panel, DoorOpen, Leaving }
+    enum State { Fighting, ChestReady, Solving, Panel, DoorOpen, Leaving, Boss, Rest, Final, Cutscene }
 
     // ---- thế giới ----
-    Transform world; PlayerCombat player; SpriteRenderer doorSr, doorGlow, chestSr;
+    Transform world; PlayerCombat player; SpriteRenderer doorSr, doorGlow, chestSr, darkSr, weaponBarBg, weaponBarFill; SpriteRenderer[] pips = new SpriteRenderer[8];
     Vector2 chestPos = new Vector2(0, -0.2f);
     public bool DoorOpen { get; private set; }
 
     // ---- UI ----
-    RectTransform hud, panelRoot; Text inkText, promptText, hpText, weaponText, buffText, reactionText; Image hpFill;
-    EssaySolveUI solve; float hudT, reactionT;
+    RectTransform hud, panelRoot, bossRoot; Text inkText, promptText, hpText, weaponText, buffText, reactionText, bannerText, bossName, stageText, shardText;
+    Image hpFill, bossFill, overlayImg, hurtImg, mainIcon, subIcon, mainEl, dashFill, topBar, botBar; Image[] buffIcons = new Image[16];
+    Text introName, introTitle;
+    EssaySolveUI solve; float hudT, reactionT, bannerT, introT, hurtA; Color overlayTarget; float darkCur, darkTarget, darkUntil;
+    StoryDirector story;
 
     // ---- trạng thái ----
     List<EssayProblem> problems = new List<EssayProblem>();
     State state = State.Fighting;
     readonly System.Random rng = new System.Random();
-    int waveIdx = -1; float clearT = .8f;
-    bool unlockedByInk;
+    int waveIdx = -1; float clearT = .8f; bool unlockedByInk;
 
-    // ---- một rương ----
+    // ---- một rương / một trụ đá ----
     EssayProblem prob; EssayVariant variant; EssayDifficulty difficulty;
-    int attemptsUsed, hintLevel, hintsPaid, hintCap;
-    int[] missStreak;
+    int attemptsUsed, hintLevel, hintsPaid, hintCap; int[] missStreak;
+    System.Action<GradeBand, string> bossDone; bool inBossEssay; string essaySubject; string essayTitle;
+    const string StudentCode = "local";
 
-    const string StudentCode = "local";                       // E4 sẽ thay bằng mã học sinh thật
-
-    void OnDestroy()
-    {
-        if (Instance == this) Instance = null;
-        Frozen = false; Monster.Killed = null;
-    }
+    void OnDestroy() { if (Instance == this) Instance = null; Frozen = false; Foe.Killed = null; Cursor.visible = true; Combat.FieldStrength = 0f; Combat.Gravity = Vector2.zero; }
 
     void Start()
     {
-        Instance = this; Frozen = false;
-        Combat.Reset();
+        Instance = this; Frozen = false; HazardsOn = true; inBossEssay = false;
+        Combat.Reset(); CombatBolt.Enemy.Clear();
         if (RunState.ink < 0) RunState.ink = startInk;
         if (RunState.main == null) RunState.ResetAll(true);
-        if (RunState.stage == 1 && RunState.room == 1) usedIds.Clear();
+        if (RunState.stage == 1 && RunState.room == 1 && RunState.phase == RunPhase.Room) usedIds.Clear();
+        biome = RunState.phase == RunPhase.Final || RunState.phase == RunPhase.Ending ? 2 : RunState.Biome;
 
         problems = problemsJson != null ? EssayProblemBank.Parse(problemsJson.text) : new List<EssayProblem>();
+        GameAudio.StopMusic(); RogueAudio.Ensure(); RFxHost.Ensure(transform);
         BuildWorld();
         BuildHud();
         var go = new GameObject("EssaySolveUI"); go.transform.SetParent(transform, false);
         solve = go.AddComponent<EssaySolveUI>(); solve.Init(transform);
+        var sg = new GameObject("Story"); sg.transform.SetParent(transform, false); story = sg.AddComponent<StoryDirector>(); story.Init(transform);
 
         player = PlayerCombat.Create(new Vector2(0, -3f));
         Combat.Player = player; player.Died = OnPlayerDied;
-        Monster.Killed = OnMonsterKilled;
-
+        Foe.Killed = OnFoeKilled;
         if (problems.Count == 0) SetPrompt("Chưa có dữ liệu bài tự luận. Gắn essay_problems.json vào RoomManager.");
-        NextWave();
+
+        if (RunState.introPending)
+        {
+            RunState.introPending = false; Meta.SeenIntro = true; state = State.Cutscene; player.Controllable = false;
+            story.PlayIntro(() => { player.Controllable = true; BeginPhase(); });
+        }
+        else BeginPhase();
         RefreshHud();
+    }
+
+    void BeginPhase()
+    {
+        switch (RunState.phase)
+        {
+            case RunPhase.Room:
+                RogueAudio.PlayTrack(biome == 0 ? RTrack.Lab : biome == 1 ? RTrack.Bio : RTrack.Sky);
+                RoomHazards.Create(transform, biome); state = State.Fighting;
+                if (RunState.room == 1) ShowBanner("CHẶNG " + RunState.stage + " · " + RunState.StageName(RunState.stage), 3.5f);
+                RunSave.Save(); NextWave(); break;
+            case RunPhase.Boss: BeginBoss(); break;
+            case RunPhase.Rest: BeginRest(); break;
+            case RunPhase.Final: BeginFinal(); break;
+            default: BeginEnding(); break;
+        }
     }
 
     // ------------------------------------------------------------------ dựng phòng
@@ -110,50 +136,43 @@ public class RoomManager : MonoBehaviour
             cam.orthographic = true; cam.orthographicSize = 5.4f; cam.transform.position = new Vector3(0, 0, -10f);
             cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = GameTheme.Ink;
         }
+        RFxHost.I.SetCamera(new Vector3(0, 0, -10f), 5.4f);
         world = new GameObject("Room").transform; world.SetParent(transform, false);
-        Color tint = Subject == "ly" ? GameTheme.Ly : Subject == "hoa" ? GameTheme.Hoa : GameTheme.Sinh;
-        var px = ThemeGfx.Pixel;
-        var diffCol = DifficultyTheme.Of(RunState.difficulty);
+        var px = ThemeGfx.Pixel; var diffCol = DifficultyTheme.Of(RunState.difficulty);
+        bool room = RunState.phase == RunPhase.Room;
 
-        // Khung đá tối + viền đồng cổ
         Combat.MakeSr("Frame", world, px, new Color(.03f, .02f, .05f), new Vector2(17.5f, 9.2f), -102, new Vector2(0, -0.15f));
         Combat.MakeSr("FrameRim", world, px, Color.Lerp(GameTheme.Bronze, GameTheme.Ink, .35f), new Vector2(17.15f, 8.85f), -101, new Vector2(0, -0.15f));
 
-        // Sàn gạch đá, ngả nhẹ màu môn đang thử
-        const int cols = 8, rows = 4;
-        float tw = 16.4f / cols, th = 8.1f / rows;
-        var floorCol = Color.Lerp(new Color(.82f, .80f, .92f), tint, .16f);
+        // Sàn: ô 32x32 pixel, bốn biến thể trộn ngẫu nhiên theo từng khu vực
+        const int cols = 8, rows = 4; float tw = 16.4f / cols, th = 8.1f / rows; var floors = RogueArt.FloorTiles(biome); var fr = new System.Random(RunState.stage * 31 + RunState.room * 7 + (int)RunState.phase);
+        Color floorCol = RunState.phase == RunPhase.Rest ? new Color(1f, .9f, .82f) : Color.white;
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-                Combat.MakeSr("Tile", world, ProcSprites.FloorTile, floorCol, new Vector2(tw, th), -99, new Vector2(-8.2f + tw * (c + .5f), -0.15f - 4.05f + th * (r + .5f)));
+                Combat.MakeSr("Tile", world, floors[fr.Next(4)], floorCol, new Vector2(tw, th), -99, new Vector2(-8.2f + tw * (c + .5f), -0.15f - 4.05f + th * (r + .5f)));
 
-        // Vòng ma pháp dưới sàn (màu theo độ khó) quanh vị trí rương
-        Combat.MakeSr("RuneOuter", world, ProcSprites.Ring, diffCol.WithAlpha(.22f), new Vector2(6.4f, 6.4f), -98, chestPos);
-        Combat.MakeSr("RuneInner", world, ProcSprites.Ring, GameTheme.Bronze.WithAlpha(.35f), new Vector2(4.4f, 4.4f), -98, chestPos);
-        for (int i = 0; i < 8; i++)
-        {
-            float ang = i * Mathf.PI / 4f;
-            var m = Combat.MakeSr("RuneMark", world, px, diffCol.WithAlpha(.28f), new Vector2(.22f, .22f), -98, chestPos + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 3.2f);
-            m.transform.localEulerAngles = new Vector3(0, 0, 45f);
+        if (room)
+        {   // vòng rune quanh vị trí rương (màu theo độ khó)
+            Combat.MakeSr("RuneOuter", world, ProcSprites.Ring, diffCol.WithAlpha(.22f), new Vector2(6.4f, 6.4f), -98, chestPos);
+            Combat.MakeSr("RuneInner", world, ProcSprites.Ring, GameTheme.Bronze.WithAlpha(.35f), new Vector2(4.4f, 4.4f), -98, chestPos);
         }
 
-        // Tường trên: gạch đá, cửa là thanh rune đỏ (mở thì xanh)
-        for (int i = 0; i < cols; i++)
-            Combat.MakeSr("Wall" + i, world, ProcSprites.WallTile, Color.white, new Vector2(tw, .55f), -98, new Vector2(-8.2f + tw * (i + .5f), 4.05f));
-        doorGlow = Combat.MakeSr("DoorGlow", world, ThemeGfx.Glow, GameTheme.Blood.WithAlpha(.5f), new Vector2(6f, 2.6f), -96, new Vector2(0, 3.7f));
+        // Tường trên theo khu vực (cao 28 pixel), cửa là thanh rune
+        var walls = RogueArt.WallTiles(biome);
+        for (int i = 0; i < cols; i++) Combat.MakeSr("Wall" + i, world, walls[i % 2], Color.white, new Vector2(tw, tw * 28f / 32f), -98, new Vector2(-8.2f + tw * (i + .5f), 4.0f));
+        bool door = RunState.phase == RunPhase.Room || RunState.phase == RunPhase.Rest;
+        doorGlow = Combat.MakeSr("DoorGlow", world, ThemeGfx.Glow, GameTheme.Blood.WithAlpha(door ? .5f : 0f), new Vector2(6f, 2.6f), -96, new Vector2(0, 3.7f));
         doorSr = Combat.MakeSr("Door", world, px, GameTheme.Blood, new Vector2(DoorHalf * 2f, .55f), -97, new Vector2(0, 4.05f));
         Combat.MakeSr("DoorFrameL", world, px, GameTheme.Gold, new Vector2(.12f, .7f), -96, new Vector2(-DoorHalf - .06f, 4.05f));
         Combat.MakeSr("DoorFrameR", world, px, GameTheme.Gold, new Vector2(.12f, .7f), -96, new Vector2(DoorHalf + .06f, 4.05f));
+        if (!door) { doorSr.color = new Color(.1f, .08f, .14f); }
 
-        // Đuốc ở bốn góc, lửa chập chờn
         Vector2[] torchAt = { new Vector2(-7.75f, 3.2f), new Vector2(7.75f, 3.2f), new Vector2(-7.75f, -3.6f), new Vector2(7.75f, -3.6f) };
         for (int i = 0; i < torchAt.Length; i++) RoomTorch.Create(world, torchAt[i], i * 3.7f);
+        int mist = RunState.phase == RunPhase.Final ? 9 : 5; for (int i = 0; i < mist; i++) RoomMist.Create(world, i);
 
-        // Sương lững lờ trên sàn
-        for (int i = 0; i < 5; i++) RoomMist.Create(world, i);
-
-        // Vignette phủ cả màn hình cho bầu không khí u tối
-        Combat.MakeSr("Vignette", world, ProcSprites.Vignette, Color.white, new Vector2(27f, 14.5f), 50, Vector2.zero);
+        Combat.MakeSr("Vignette", world, ProcSprites.Vignette, Color.white, new Vector2(27f, 14.5f), Combat.OrdVignette, Vector2.zero);
+        darkSr = Combat.MakeSr("Dark", world, RogueArt.DarkMask, new Color(1, 1, 1, 0), new Vector2(26f, 26f), Combat.OrdVignette - 5, Vector2.zero);
     }
 
     // ------------------------------------------------------------------ HUD
@@ -161,97 +180,191 @@ public class RoomManager : MonoBehaviour
     {
         hud = UIKit.BuildCanvas(transform, "Room_HUD", 10);
         UIKit.EnsureEventSystem();
+        overlayImg = UIKit.CBox("Overlay", hud, new Color(0, 0, 0, 0), Vector2.zero, Vector2.zero).GetComponent<Image>(); UIKit.Stretch(overlayImg.rectTransform, 0, 0, 0, 0); overlayImg.raycastTarget = false;
+        hurtImg = UIKit.CBox("Hurt", hud, new Color(.8f, .05f, .1f, 0f), Vector2.zero, Vector2.zero).GetComponent<Image>(); UIKit.Stretch(hurtImg.rectTransform, 0, 0, 0, 0); hurtImg.sprite = ThemeGfx.Vignette; hurtImg.raycastTarget = false;
+
         var banner = UIKit.CBox("BannerShade", hud, new Color(.02f, .01f, .05f, .8f), new Vector2(0, 490), new Vector2(1250, 190));
         banner.GetComponent<Image>().sprite = ThemeGfx.Glow;
-        UIKit.Label("Stage", hud, "Màn " + StageLabel + " · " + SubjectName(Subject), 40, GameTheme.Bone, TextAnchor.MiddleCenter,
-            new Vector2(0, 508), new Vector2(900, 56), true, true, FontStyle.Bold);
-        UIKit.Label("Diff", hud, "◆ Độ khó: " + RoomRules.DifficultyName(RunState.difficulty) + " ◆", 26, DifficultyTheme.Of(RunState.difficulty), TextAnchor.MiddleCenter,
-            new Vector2(0, 470), new Vector2(900, 36), true, true, FontStyle.Bold);
-        reactionText = UIKit.Label("Reaction", hud, "", 26, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 430), new Vector2(1500, 40), false, true);
+        string stg = RunState.phase == RunPhase.Room ? "Màn " + StageLabel + " · " + SubjectName(Subject)
+                   : RunState.phase == RunPhase.Boss ? "Màn " + RunState.stage + "-5 · Boss"
+                   : RunState.phase == RunPhase.Rest ? "Phòng nghỉ" : RunState.phase == RunPhase.Final ? "Màn 16 · Bệ Đá Cổ" : "";
+        stageText = UIKit.Label("Stage", hud, stg, 40, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 508), new Vector2(900, 56), true, true, FontStyle.Bold);
+        UIKit.Label("Diff", hud, "◆ Độ khó: " + RoomRules.DifficultyName(RunState.difficulty) + " ◆", 26, DifficultyTheme.Of(RunState.difficulty), TextAnchor.MiddleCenter, new Vector2(0, 470), new Vector2(900, 36), true, true, FontStyle.Bold);
+        reactionText = UIKit.Label("Reaction", hud, "", 26, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, -395), new Vector2(1700, 40), false, true);
+        bannerText = UIKit.Label("BannerText", hud, "", 34, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 360), new Vector2(1700, 60), true, true, FontStyle.Bold);
         inkText = UIKit.Label("Ink", hud, "", 34, GameTheme.EmberHi, TextAnchor.MiddleRight, new Vector2(780, 500), new Vector2(340, 50));
-        UIKit.MakeButton(hud, "Back", "Về menu", new Vector2(-800, 500), new Vector2(220, 60), () => SceneRouter.Go(menuSceneName), ButtonStyle.Secondary, 26);
+        shardText = UIKit.Label("Shards", hud, "", 26, new Color(.55f, .9f, 1f), TextAnchor.MiddleRight, new Vector2(780, 455), new Vector2(340, 40));
+        UIKit.MakeButton(hud, "Back", "Về menu", new Vector2(-800, 500), new Vector2(220, 60), () => { RunSave.Save(); RogueAudio.Stop(); SceneRouter.Go(menuSceneName); }, ButtonStyle.Secondary, 26);
 
         UIKit.ProgressBar(hud, "HeroHp", new Vector2(-690, 440), new Vector2(420, 26), GameTheme.Blood, out hpFill);
         hpText = UIKit.Label("HpText", hud, "", 24, GameTheme.Bone, TextAnchor.MiddleLeft, new Vector2(-690, 408), new Vector2(420, 30));
+        var dashBg = UIKit.CBox("DashBg", hud, new Color(0, 0, 0, .6f), new Vector2(-940, 440), new Vector2(46, 46)); dashBg.GetComponent<Image>().sprite = RogueArt.Disc;
+        var df = UIKit.CBox("DashFill", hud, new Color(.55f, .85f, 1f, .9f), new Vector2(-940, 440), new Vector2(40, 40)); dashFill = df.GetComponent<Image>(); dashFill.sprite = RogueArt.Disc; dashFill.type = Image.Type.Filled; dashFill.fillMethod = Image.FillMethod.Radial360;
 
-        weaponText = UIKit.Label("Weapons", hud, "", 24, GameTheme.Bone, TextAnchor.LowerLeft, new Vector2(-480, -445), new Vector2(980, 80), false, true);
-        buffText = UIKit.Label("Buffs", hud, "", 22, GameTheme.Fog, TextAnchor.LowerRight, new Vector2(500, -445), new Vector2(880, 80), false, true);
+        // ô vũ khí: chính (to) và phụ (nhỏ), nguyên tố hiện kèm
+        var slot = UIKit.CBox("SlotMain", hud, new Color(.05f, .04f, .09f, .85f), new Vector2(-850, -440), new Vector2(112, 112)); slot.GetComponent<Image>().sprite = ThemeGfx.Glow;
+        mainIcon = Icon("MainIcon", hud, null, new Vector2(-850, -440), new Vector2(104, 104));
+        mainEl = Icon("MainEl", hud, null, new Vector2(-805, -485), new Vector2(34, 34));
+        subIcon = Icon("SubIcon", hud, null, new Vector2(-735, -460), new Vector2(66, 66)); subIcon.color = new Color(1, 1, 1, .6f);
+        weaponText = UIKit.Label("Weapons", hud, "", 24, GameTheme.Bone, TextAnchor.LowerLeft, new Vector2(-230, -445), new Vector2(980, 80), false, true);
+        buffText = UIKit.Label("Buffs", hud, "", 20, GameTheme.Fog, TextAnchor.LowerRight, new Vector2(500, -500), new Vector2(880, 36), false, true);
+        for (int i = 0; i < buffIcons.Length; i++) { buffIcons[i] = Icon("Buff" + i, hud, null, new Vector2(920 - i * 44, -440), new Vector2(40, 40)); buffIcons[i].enabled = false; }
         promptText = UIKit.Label("Prompt", hud, "", 30, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, -510), new Vector2(1500, 44), false, true);
+
+        // thanh máu boss với ba vạch pha (75/50/25)
+        bossRoot = UIKit.CBox("BossBar", hud, new Color(0, 0, 0, 0), new Vector2(0, 425), new Vector2(1000, 80));
+        bossName = UIKit.Label("BossName", bossRoot, "", 34, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 26), new Vector2(1000, 44), true, true, FontStyle.Bold);
+        UIKit.ProgressBar(bossRoot, "BossHp", new Vector2(0, -12), new Vector2(900, 28), new Color(.8f, .2f, .3f), out bossFill);
+        for (int i = 1; i <= 3; i++) UIKit.CBox("Tick" + i, bossRoot, new Color(1, 1, 1, .85f), new Vector2(-450 + 900 * (i * .25f), -12), new Vector2(4, 36));
+        bossRoot.gameObject.SetActive(false);
+
+        // dải đen điện ảnh cho giới thiệu boss
+        topBar = UIKit.CBox("BarTop", hud, Color.black, new Vector2(0, 640), new Vector2(2100, 180)).GetComponent<Image>(); botBar = UIKit.CBox("BarBot", hud, Color.black, new Vector2(0, -640), new Vector2(2100, 180)).GetComponent<Image>();
+        topBar.raycastTarget = false; botBar.raycastTarget = false;
+        introName = UIKit.Label("IntroName", hud, "", 96, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 90), new Vector2(1800, 130), true, true, FontStyle.Bold);
+        introTitle = UIKit.Label("IntroTitle", hud, "", 40, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, -10), new Vector2(1800, 60), true, true, FontStyle.Italic);
+    }
+
+    Image Icon(string name, Transform p, Sprite s, Vector2 pos, Vector2 size)
+    {
+        var r = UIKit.CBox(name, p, Color.white, pos, size); var im = r.GetComponent<Image>(); im.sprite = s; im.preserveAspect = true; im.raycastTarget = false; return im;
     }
 
     static string SubjectName(string s) => s == "ly" ? "Vật lí" : s == "hoa" ? "Hóa học" : "Sinh học";
     void SetPrompt(string s) { if (promptText != null) promptText.text = s; }
 
+    public void ShowBanner(string s, float dur) { if (bannerText == null) return; bannerText.text = s; bannerT = dur; }
+    public void ShowReaction(string name, string note) { if (reactionText == null) return; reactionText.text = name + ": " + note; reactionT = 5f; }
+    public void HurtFlash() { hurtA = .75f; }
+    public void SetOverlay(Color c) { overlayTarget = c; }
+    public void PulseDarkness(float alpha, float dur) { darkTarget = alpha; darkUntil = Time.time + dur; }
+    public void BossBarHide() { if (bossRoot != null) bossRoot.gameObject.SetActive(false); }
+
+    public void BossIntro(string name, string title)
+    {
+        introT = 2.6f; introName.text = name; introTitle.text = title; bossRoot.gameObject.SetActive(true); bossName.text = name;
+    }
+
     void RefreshHud()
     {
         if (inkText == null) return;
         inkText.text = "Mực: " + RunState.ink;
-        hpText.text = "Máu " + Mathf.CeilToInt(RunState.hp) + "/" + (int)PlayerCombat.MaxHp;
+        shardText.text = RunState.shards > 0 ? "Mảnh Ký Ức: " + new string('◆', RunState.shards) + new string('◇', 3 - RunState.shards) : "";
+        hpText.text = "Máu " + Mathf.CeilToInt(RunState.hp) + "/" + (int)PlayerCombat.MaxHp + (player != null && player.Shield > 0f ? "  (+" + Mathf.CeilToInt(player.Shield) + " khiên)" : "");
         UIKit.SetBar(hpFill, RunState.hp / PlayerCombat.MaxHp);
-        string dash = player != null && player.DashLeft > 0f ? "Lướt " + player.DashLeft.ToString("0.0") + "s" : (TouchControls.Active ? "Lướt sẵn sàng" : "Lướt sẵn sàng (Space)");
-        weaponText.text = "Chính: " + RunState.main.Label + "\nPhụ: " + (RunState.sub != null ? RunState.sub.Label + (TouchControls.Active ? "" : " (Q đổi)") : "chưa có") + "   ·   " + dash;
-        buffText.text = RunState.buffLog.Count == 0 ? "Chưa có buff" : "Buff: " + string.Join(", ", RunState.buffLog);
+        if (player != null) { dashFill.fillAmount = 1f - Mathf.Clamp01(player.DashLeft / PlayerCombat.DashCooldown); dashFill.color = player.DashLeft > 0f ? new Color(.5f, .6f, .75f, .8f) : new Color(.6f, 1f, 1f, 1f); }
+        var m = RunState.main; var s = RunState.sub;
+        mainIcon.sprite = m.Icon; mainIcon.enabled = true; mainEl.enabled = m.element != Element.None; if (mainEl.enabled) mainEl.sprite = RogueArt.ElementIcon((int)m.element);
+        subIcon.sprite = s != null ? s.Icon : null; subIcon.enabled = s != null;
+        weaponText.text = m.Label + "\n" + (s != null ? "Phụ: " + s.Label + "  (Q đổi)" : "Chưa có vũ khí phụ") + (RunState.infuse != Element.None ? "   ·   Nhiễm " + Combat.ElementName(RunState.infuse) : "");
+        buffText.text = RunState.buffLog.Count == 0 ? "Chưa có buff" : "";
+        for (int i = 0; i < buffIcons.Length; i++)
+        {
+            if (i < RunState.buffLog.Count) { buffIcons[i].enabled = true; buffIcons[i].sprite = RogueArt.BuffIcon(BuffIndex(RunState.buffLog[i])); } else buffIcons[i].enabled = false;
+        }
     }
 
-    /// <summary>Elements.cs gọi khi xảy ra phản ứng: hiện tên và một dòng giải thích khoa học (mục 5.4).</summary>
-    public void ShowReaction(string name, string note)
-    {
-        if (reactionText == null) return;
-        reactionText.text = name + ": " + note; reactionT = 5f;
-    }
+    static int BuffIndex(string log) { for (int i = 0; i < Buffs.All.Length; i++) if (log.StartsWith(Buffs.All[i].name)) return i; return 0; }
 
     // ------------------------------------------------------------------ vòng lặp
     void Update()
     {
         Combat.Now += Combat.Dt;
-        if (reactionT > 0f) { reactionT -= Time.deltaTime; if (reactionT <= 0f) reactionText.text = ""; }
-        hudT -= Time.deltaTime; if (hudT <= 0f) { hudT = .15f; RefreshHud(); }
-        TouchControls.InteractVisible = false;
+        float rdt = Time.deltaTime;
+        if (reactionT > 0f) { reactionT -= rdt; if (reactionT <= 0f) reactionText.text = ""; }
+        if (bannerT > 0f) { bannerT -= rdt; var c = bannerText.color; c.a = Mathf.Clamp01(bannerT / .5f); bannerText.color = new Color(GameTheme.Bone.r, GameTheme.Bone.g, GameTheme.Bone.b, c.a); if (bannerT <= 0f) bannerText.text = ""; }
+        hudT -= rdt; if (hudT <= 0f) { hudT = .1f; RefreshHud(); }
+        UpdateEffectsUi(rdt);
+        UpdateBossBar();
+        UpdateWeaponBar();
         if (Frozen) return;
 
         switch (state)
         {
             case State.Fighting:
-                if (Combat.Monsters.Count == 0) { clearT -= Time.deltaTime; if (clearT <= 0f) NextWave(); }
-                else { clearT = .8f; SetPrompt("Đợt " + (waveIdx + 1) + "/" + WaveCount + " · còn " + Combat.Monsters.Count + " quái"); }
+                if (Combat.Foes.Count == 0) { clearT -= rdt; if (clearT <= 0f) NextWave(); }
+                else { clearT = .8f; SetPrompt("Đợt " + (waveIdx + 1) + "/" + WaveCount + " · còn " + Combat.Foes.Count + " quái"); }
                 break;
-
             case State.ChestReady:
                 var k = Keyboard.current;
                 bool near = Vector2.Distance(player.transform.position, chestPos) <= Reach;
-                bool touch = TouchControls.Active;
-                TouchControls.InteractVisible = near;
-                SetPrompt(near ? (touch ? "Chạm nút MỞ để mở Rương Câu Đố" : "Nhấn E để mở Rương Câu Đố")
-                               : (touch ? "Rương Câu Đố đã hiện ra giữa phòng. Lại gần rồi chạm nút MỞ." : "Rương Câu Đố đã hiện ra giữa phòng. Lại gần và nhấn E."));
-                if (near && ((k != null && k.eKey.wasPressedThisFrame) || TouchControls.InteractPressed)) OpenChest();
+                SetPrompt(near ? "Nhấn E để mở Rương Câu Đố" : "Rương Câu Đố đã hiện ra giữa phòng. Lại gần và nhấn E.");
+                if (near && k != null && k.eKey.wasPressedThisFrame) OpenChest();
                 break;
-
-            case State.DoorOpen:
-                if (player.transform.position.y >= ExitY) LeaveRoom();
-                break;
+            case State.DoorOpen: if (player.transform.position.y >= ExitY) LeaveRoom(); break;
+            case State.Boss: SetPrompt(BossBase.Current != null && BossBase.Current.bstate == BState.Fight ? "Di chuyển WASD · bắn chuột · lướt Space · đổi vũ khí Q" : ""); break;
+            case State.Rest: RestUpdate(); break;
+            case State.Final: FinalUpdate(); break;
         }
     }
 
-    int PlanIndex => Mathf.Clamp(RunState.room, 1, WavePlan.Length) - 1;
-    int WaveCount => WavePlan[PlanIndex].Length + RoomRules.ExtraWaveCount(RunState.difficulty);       // Siêu khó: thêm một đợt
-    int WaveSize(int idx) { var plan = WavePlan[PlanIndex]; return plan[Mathf.Min(idx, plan.Length - 1)]; }
+    void UpdateEffectsUi(float dt)
+    {
+        overlayImg.color = Color.Lerp(overlayImg.color, overlayTarget, 1f - Mathf.Exp(-3f * dt));
+        hurtA = Mathf.MoveTowards(hurtA, 0f, dt * 1.6f); float low = RunState.hp / PlayerCombat.MaxHp < .3f ? .18f + .12f * Mathf.Sin(Time.time * 5f) : 0f;
+        hurtImg.color = new Color(.8f, .05f, .1f, Mathf.Max(hurtA * .6f, low));
+        if (introT > 0f)
+        {
+            introT -= dt; float k = Mathf.Clamp01(Mathf.Min((2.6f - introT) / .4f, introT / .5f));
+            topBar.rectTransform.anchoredPosition = new Vector2(0, Mathf.Lerp(640f, 458f, k)); botBar.rectTransform.anchoredPosition = new Vector2(0, Mathf.Lerp(-640f, -458f, k));
+            introName.color = new Color(GameTheme.Bone.r, GameTheme.Bone.g, GameTheme.Bone.b, k); introTitle.color = new Color(GameTheme.EmberHi.r, GameTheme.EmberHi.g, GameTheme.EmberHi.b, k);
+            introName.transform.localScale = Vector3.one * Mathf.Lerp(1.15f, 1f, k);
+            if (introT <= 0f) { introName.text = ""; introTitle.text = ""; }
+        }
+        else { topBar.rectTransform.anchoredPosition = new Vector2(0, 640); botBar.rectTransform.anchoredPosition = new Vector2(0, -640); }
+        // bóng tối của Ảo Cảnh đi theo người chơi
+        darkCur = Mathf.MoveTowards(darkCur, Time.time < darkUntil ? darkTarget : 0f, dt * .6f);
+        if (darkSr != null) { darkSr.color = new Color(1, 1, 1, darkCur); if (player != null) darkSr.transform.position = player.transform.position; }
+    }
 
-    // ------------------------------------------------------------------ quái theo đợt
+    void UpdateBossBar()
+    {
+        var b = BossBase.Current; if (b == null || bossRoot == null || !bossRoot.gameObject.activeSelf) return;
+        float v = b.hp / Mathf.Max(1f, b.maxHp); bossFill.fillAmount = Mathf.MoveTowards(bossFill.fillAmount, v, Time.deltaTime * 1.5f);
+        bossFill.color = !b.vulnerable ? new Color(.6f, .6f, .7f) : Color.Lerp(new Color(.9f, .25f, .3f), new Color(1f, .55f, .3f), Mathf.PingPong(Time.time * 2f, 1f) * (v < .26f ? 1f : 0f));
+        bossName.text = b.bossName + "  ·  pha " + Mathf.Min(4, b.phaseIdx + 1) + "/4" + (!b.vulnerable && b.bstate == BState.Transition ? "  ·  ĐANG NẠP TUYỆT KỸ" : "");
+    }
+
+    void UpdateWeaponBar()
+    {   // thanh nhiệt (laze), lực kéo (cung), đạn (tên lửa) bám dưới chân người chơi
+        if (player == null || weaponBarBg == null && !MakeWeaponBar()) return;
+        var w = RunState.main; float v = 0f; Color c = Color.white; bool show = false; int pipN = 0;
+        if (w.id == WeaponId.Laser && (player.HeatFrac > .01f || player.Overheated)) { v = player.HeatFrac; c = player.Overheated ? new Color(1f, .3f, .2f) : Color.Lerp(new Color(.4f, .9f, 1f), new Color(1f, .5f, .2f), v); show = true; }
+        else if (w.id == WeaponId.Bow && player.Charge > .02f) { v = player.Charge; c = Color.Lerp(new Color(1f, .9f, .5f), Color.white, v); show = true; }
+        else if (w.id == WeaponId.Rocket) { pipN = player.Reloading ? 0 : Mathf.Max(0, player.Ammo); if (player.Ammo < 0) pipN = 4 + RunState.extraShots; show = true; v = player.Reloading ? .5f + .5f * Mathf.PingPong(Time.time * 3f, 1f) : 0f; c = new Color(1f, .6f, .3f); if (!player.Reloading) v = 0f; }
+        var pos = (Vector2)player.transform.position + new Vector2(0, -1.45f);
+        weaponBarBg.enabled = show && w.id != WeaponId.Rocket || (w.id == WeaponId.Rocket && player.Reloading); weaponBarFill.enabled = weaponBarBg.enabled; weaponBarBg.transform.position = pos; weaponBarFill.transform.position = pos - new Vector2((1f - v) * .6f, 0f);
+        weaponBarFill.transform.localScale = new Vector3(Mathf.Max(.001f, 1.2f * v / weaponBarFill.sprite.bounds.size.x), .1f / weaponBarFill.sprite.bounds.size.y, 1f); weaponBarFill.color = c;
+        for (int i = 0; i < pips.Length; i++) { pips[i].enabled = show && w.id == WeaponId.Rocket && !player.Reloading && i < pipN; pips[i].transform.position = pos + new Vector2((i - (pipN - 1) * .5f) * .22f, 0f); }
+    }
+
+    bool MakeWeaponBar()
+    {
+        weaponBarBg = Combat.MakeSr("WBarBg", world, ThemeGfx.Pixel, new Color(0, 0, 0, .7f), new Vector2(1.3f, .16f), Combat.OrdFx + 30); weaponBarFill = Combat.MakeSr("WBarFill", world, ThemeGfx.Pixel, Color.white, new Vector2(1.2f, .1f), Combat.OrdFx + 31);
+        for (int i = 0; i < pips.Length; i++) pips[i] = Combat.MakeSr("Pip", world, RogueArt.Rocket, Color.white, new Vector2(.28f, .14f), Combat.OrdFx + 32);
+        return true;
+    }
+
+    // ------------------------------------------------------------------ màn thường
+    int PlanIndex => Mathf.Clamp(RunState.room, 1, RunState.RoomsPerStage) - 1;
+    int[] CurPlan => WavePlans[Mathf.Clamp(RunState.stage, 1, 3) - 1][PlanIndex];
+    int WaveCount => CurPlan.Length + RoomRules.ExtraWaveCount(RunState.difficulty);
+    int WaveSize(int idx) { var plan = CurPlan; return plan[Mathf.Min(idx, plan.Length - 1)]; }
+
     void NextWave()
     {
         waveIdx++; clearT = .8f;
         if (waveIdx >= WaveCount) { SpawnChest(); return; }
-
         var diff = RunState.difficulty;
-        var pool = Pools[Mathf.Min(Pools.Length - 1, PlanIndex + RoomRules.PoolBonus(diff))];                 // khó hơn: quái mạnh xuất hiện sớm hơn
+        int poolIdx = Mathf.Min(Pools.Length - 1, (RunState.stage - 1) + PlanIndex + RoomRules.PoolBonus(diff)); var pool = Pools[poolIdx];
         float eliteRate = EliteRate[Mathf.Clamp(RunState.stage, 1, 3) - 1] + RoomRules.EliteRateBonus(diff);
-        int count = Mathf.CeilToInt(WaveSize(waveIdx) * RoomRules.CountMul(diff) - .01f);                    // khó hơn: quái đông hơn
+        int count = Mathf.CeilToInt(WaveSize(waveIdx) * RoomRules.CountMul(diff) - .01f);
         for (int i = 0; i < count; i++)
         {
-            // Đợt đầu của mỗi màn luôn có ít nhất một con thuộc loại mới mở của màn đó.
-            var kind = (waveIdx == 0 && i == 0 && RunState.room > 1) ? pool[pool.Length - 1] : pool[rng.Next(pool.Length)];
+            var kind = (waveIdx == 0 && i == 0 && (RunState.room > 1 || RunState.stage > 1)) ? pool[pool.Length - 1] : pool[rng.Next(pool.Length)];
             Monster.Create(kind, SpawnPoint(), rng.NextDouble() < eliteRate);
         }
+        if (waveIdx > 0) RogueAudio.Play(RSfx.Warn, .4f, 1.5f);
     }
 
     Vector2 SpawnPoint()
@@ -264,43 +377,32 @@ public class RoomManager : MonoBehaviour
         return new Vector2(0, 2.5f);
     }
 
-    void OnMonsterKilled(Monster m)
+    void OnFoeKilled(Foe f)
     {
-        RunState.ink += m.kind == MonsterKind.Minion ? 1 : m.elite ? 25 : 5;          // Mực hạ quái; tinh anh thưởng nhiều hơn (mục 5.2)
+        var m = f as Monster; if (m == null) { if (f is BossBase) return; if (player != null) player.OnKill(); return; }
+        RunState.ink += m.kind == MonsterKind.Minion ? 1 : m.elite ? 25 : 5;
         if (m.kind != MonsterKind.Minion && (m.elite || Random.value < .15f)) CombatPickup.SpawnHeal(m.transform.position, 15f);
         if (player != null) player.OnKill();
     }
 
+    GameObject chestRoot; SpriteRenderer chestSpr;
     void SpawnChest()
     {
         state = State.ChestReady;
-        var px = ThemeGfx.Pixel;
-        Combat.MakeSr("ChestGlow", world, ThemeGfx.Glow, GameTheme.Gold.WithAlpha(.38f), new Vector2(3.8f, 3.2f), 5, chestPos);
-        chestSr = Combat.MakeSr("Chest", world, px, new Color(.30f, .17f, .10f), new Vector2(1.5f, 1.0f), 6, chestPos);
-        Combat.MakeSr("ChestLid", world, px, GameTheme.Bronze, new Vector2(1.5f, .28f), 7, chestPos + new Vector2(0, .36f));
-        Combat.MakeSr("StrapL", world, px, GameTheme.Gold, new Vector2(.12f, 1.0f), 7, chestPos + new Vector2(-.45f, 0));
-        Combat.MakeSr("StrapR", world, px, GameTheme.Gold, new Vector2(.12f, 1.0f), 7, chestPos + new Vector2(.45f, 0));
-        var gem = Combat.MakeSr("Lock", world, px, GameTheme.Blood, new Vector2(.26f, .26f), 8, chestPos + new Vector2(0, .08f));
-        gem.transform.localEulerAngles = new Vector3(0, 0, 45f);
-        CombatFx.Pulse(chestPos, 1.6f, GameTheme.Gold);
-        GameAudio.Play(Snd.BuffOpen);
+        chestRoot = new GameObject("Chest"); chestRoot.transform.SetParent(world, false); chestRoot.transform.localPosition = chestPos + new Vector2(0, -.55f);
+        var glow = Combat.MakeSr("ChestGlow", chestRoot.transform, ThemeGfx.Glow, GameTheme.Gold.WithAlpha(.4f), new Vector2(4.2f, 3.4f), 5, new Vector2(0, .5f)); glow.sharedMaterial = Gfx.Additive;
+        chestSpr = Combat.MakePx("Spr", chestRoot.transform, RogueArt.Chest(false), 6, null, 1.4f);
+        RFx.Ring(chestPos, 1.8f, GameTheme.Gold, .5f); RFx.Burst(chestPos, GameTheme.GoldHi, 14, 4f, .7f, .16f, 1f); RogueAudio.Play(RSfx.Chest, .8f); GameAudio.Play(Snd.BuffOpen);
     }
 
-    // ------------------------------------------------------------------ rương và giải bài (E2)
     void OpenChest()
     {
         if (problems.Count == 0) { UIKit.Toast(hud, "Chưa có dữ liệu bài tự luận."); return; }
-        state = State.Solving; Frozen = true;
-        OnPickDifficulty(RunState.difficulty);              // độ khó đã chọn từ đầu lượt chơi, không hỏi lại ở rương
-    }
-
-    void OnPickDifficulty(EssayDifficulty d)
-    {
-        var p = RoomRules.PickProblem(problems, Subject, d, usedIds, rng);
+        state = State.Solving; Frozen = true; RogueAudio.Play(RSfx.Select, .7f);
+        var p = RoomRules.PickProblem(problems, Subject, RunState.difficulty, usedIds, rng);
         if (p == null) { UIKit.Toast(hud, "Môn này chưa có bài."); Frozen = false; state = State.ChestReady; return; }
-        difficulty = d; prob = p; usedIds.Add(p.id);
-        attemptsUsed = 0; missStreak = new int[p.rubric.Length];
-        Debug.Log("[Room " + StageLabel + "] bài " + p.id + " (mức bài: " + RoomRules.DifficultyOf(p) + ", người chơi chọn: " + d + ")");
+        difficulty = RunState.difficulty; prob = p; usedIds.Add(p.id); attemptsUsed = 0; missStreak = new int[p.rubric.Length]; inBossEssay = false; essaySubject = Subject;
+        essayTitle = "Rương Câu Đố · Màn " + StageLabel + " · " + SubjectName(Subject) + " · " + RoomRules.DifficultyName(difficulty);
         StartAttempt();
     }
 
@@ -310,32 +412,25 @@ public class RoomManager : MonoBehaviour
         for (int t = 0; t < 12; t++)
         {
             variant = EssayVariantGenerator.Generate(prob, EssayVariantGenerator.SeedFor(StudentCode, prob.id, attemptCounter++));
-            if (variant.statement != prev) break;                // bài lời (không tham số) không đổi đề được
+            if (variant.statement != prev) break;
         }
     }
 
     void StartAttempt()
     {
         NewVariant();
-        int have = prob.hints != null ? prob.hints.Length : 0;
-        hintCap = Mathf.Min(RoomRules.MaxHints(difficulty), have);
-        hintLevel = 0; hintsPaid = 0;
-
-        // Gợi ý đầu tự hiện (miễn phí): mức Dễ ngay từ đầu; hoặc khi sai cùng một bước hai lần liên tiếp (mục 4.4).
+        int have = prob.hints != null ? prob.hints.Length : 0; hintCap = Mathf.Min(RoomRules.MaxHints(difficulty), have); hintLevel = 0; hintsPaid = 0;
         bool streak = false; foreach (var m in missStreak) if (m >= 2) streak = true;
         if (hintCap > 0 && (RoomRules.AutoFirstHint(difficulty) || streak)) hintLevel = 1;
-
         ShowWriting("");
     }
 
     void ShowWriting(string draft)
     {
-        state = State.Solving; Frozen = true;
+        Frozen = true; if (!inBossEssay) state = State.Solving;
         var a = new SolveWritingArgs
         {
-            title = "Rương Câu Đố · Màn " + StageLabel + " · " + SubjectName(Subject) + " · " + RoomRules.DifficultyName(difficulty) +
-                    " · Lần " + (attemptsUsed + 1),
-            subjectId = Subject, statement = variant.statement, draft = draft,
+            title = essayTitle + (inBossEssay ? " · một lần duy nhất" : " · Lần " + (attemptsUsed + 1)), subjectId = essaySubject, statement = variant.statement, draft = draft,
             hintText = HintText(), showHintButton = hintCap > 0, hintButtonLabel = HintButtonLabel(), hintEnabled = hintLevel < hintCap,
             onSubmit = OnSubmit, onHint = OnHint, onExit = OnExitEssay,
         };
@@ -348,16 +443,14 @@ public class RoomManager : MonoBehaviour
     void OnHint(string draft)
     {
         if (hintLevel >= hintCap) return;
-        hintLevel++; hintsPaid++;
-        solve.SetHint(HintText(), HintButtonLabel(), hintLevel < hintCap);
+        hintLevel++; hintsPaid++; solve.SetHint(HintText(), HintButtonLabel(), hintLevel < hintCap);
     }
 
-    // Thoát giữa chừng: đề đang làm bị hủy và không tính lần làm (mục 3.2). Mở lại rương sẽ bốc đề mới.
     void OnExitEssay(string draft)
     {
+        if (inBossEssay) { solve.Hide(); Frozen = false; inBossEssay = false; var d = bossDone; bossDone = null; UIKit.Toast(hud, "Bỏ trụ đá: tính là chưa đạt."); d?.Invoke(GradeBand.Fail, null); return; }
         if (prob != null) usedIds.Remove(prob.id);
-        solve.Hide(); Frozen = false; state = State.ChestReady;
-        UIKit.Toast(hud, "Đã thoát đề, không tính lần làm.");
+        solve.Hide(); Frozen = false; state = State.ChestReady; UIKit.Toast(hud, "Đã thoát đề, không tính lần làm.");
     }
 
     void OnSubmit(string raw)
@@ -367,40 +460,37 @@ public class RoomManager : MonoBehaviour
         if (check == SubmitCheck.TooShort) { UIKit.Toast(solve.Root, "Lời giải còn quá ngắn, em viết thêm nhé."); return; }
         if (check == SubmitCheck.TooLong) { UIKit.Toast(solve.Root, "Lời giải dài quá " + EssaySymbols.MaxChars + " ký tự."); return; }
 
-        var res = EssayFreeformGrader.Grade(prob, variant, lines);
-        attemptsUsed++;
-        for (int i = 0; i < missStreak.Length; i++)
-            missStreak[i] = res.steps[i].status == EssayStepStatus.Missing ? missStreak[i] + 1 : 0;
-
+        var res = EssayFreeformGrader.Grade(prob, variant, lines); attemptsUsed++;
+        for (int i = 0; i < missStreak.Length; i++) missStreak[i] = res.steps[i].status == EssayStepStatus.Missing ? missStreak[i] + 1 : 0;
         var band = RoomRules.Band(res.score, res.maxScore);
-        int earned = RoomRules.InkFor(res.score, difficulty, hintsPaid);
-        RunState.ink += earned; RefreshHud();
-        Debug.Log("[Room " + StageLabel + "] " + prob.id + " lần " + attemptsUsed + ": " + res.score + "/" + res.maxScore + " (" + band + "), +" + earned + " Mực, gợi ý trả phí " + hintsPaid);
+        int earned = RoomRules.InkFor(res.score, difficulty, hintsPaid); RunState.ink += earned; RefreshHud();
+        var r = new SolveResultArgs { subjectId = essaySubject, problem = prob, variant = variant, grade = res, band = band, lines = lines };
 
-        var r = new SolveResultArgs { subjectId = Subject, problem = prob, variant = variant, grade = res, band = band, lines = lines };
+        if (inBossEssay)
+        {   // trụ đá của boss: một lần duy nhất, kết quả đi thẳng vào hiệu ứng tuyệt kỹ (mục 6.1)
+            r.revealDesc = true; r.title = band == GradeBand.Good ? "Đạt tốt" : band == GradeBand.Pass ? "Đạt" : "Chưa đạt";
+            r.footer = BossEffectText(band) + "\n+" + earned + " Mực";
+            string note = band == GradeBand.Pass ? MissingNoteFor(res) : null;
+            r.buttons.Add(new SolveResultButton { label = "Tiếp tục trận đấu", onClick = () => { solve.Hide(); Frozen = false; inBossEssay = false; var d = bossDone; bossDone = null; d?.Invoke(band, note); } });
+            GameAudio.Play(band == GradeBand.Fail ? Snd.QuizWrong : Snd.QuizCorrect); solve.ShowResult(r); return;
+        }
+
         if (RoomRules.DoorOpens(band))
         {
             int rarity = RoomRules.RollRarity(difficulty, band, rng);
-            r.title = band == GradeBand.Good ? "Đạt tốt" : "Đạt";
-            r.revealDesc = true;
-            r.footer = "Rương mở ra một vũ khí độ hiếm " + RoomRules.RarityNames[rarity] + (band == GradeBand.Pass ? " (giảm một bậc vì mới đạt)" : "") +
-                       ".\n+" + earned + " Mực" + (hintsPaid > 0 ? " (đã trừ " + Mathf.RoundToInt(hintsPaid * RoomRules.HintInkPenalty * 100) + "% vì gợi ý)" : "");
+            r.title = band == GradeBand.Good ? "Đạt tốt" : "Đạt"; r.revealDesc = true;
+            r.footer = "Rương mở ra một vũ khí độ hiếm " + RoomRules.RarityNames[rarity] + (band == GradeBand.Pass ? " (giảm một bậc vì mới đạt)" : "") + ".\n+" + earned + " Mực" + (hintsPaid > 0 ? " (đã trừ " + Mathf.RoundToInt(hintsPaid * RoomRules.HintInkPenalty * 100) + "% vì gợi ý)" : "");
             r.buttons.Add(new SolveResultButton { label = "Nhận vũ khí", onClick = () => OnSolvePassed(rarity) });
             GameAudio.Play(Snd.QuizCorrect);
         }
         else
         {
-            r.title = "Chưa đạt";
-            r.revealDesc = false;
-            bool canUnlock = attemptsUsed >= RoomRules.MaxAttempts;
-            int left = RoomRules.MaxAttempts - attemptsUsed;
-            r.footer = (canUnlock ? "Em đã làm " + attemptsUsed + " lần. Có thể phá khóa bằng " + RoomRules.UnlockInkCost + " Mực (rương không cho vũ khí, bài này vào hàng ôn lại)."
-                                  : "Còn " + left + " lần làm lại, mỗi lần có số liệu mới.") + "\n+" + earned + " Mực. Không mất máu, không mất vũ khí.";
+            r.title = "Chưa đạt"; r.revealDesc = false; bool canUnlock = attemptsUsed >= RoomRules.MaxAttempts; int left = RoomRules.MaxAttempts - attemptsUsed;
+            r.footer = (canUnlock ? "Em đã làm " + attemptsUsed + " lần. Có thể phá khóa bằng " + RoomRules.UnlockInkCost + " Mực (rương không cho vũ khí, bài này vào hàng ôn lại)." : "Còn " + left + " lần làm lại, mỗi lần có số liệu mới.") + "\n+" + earned + " Mực. Không mất máu, không mất vũ khí.";
             r.buttons.Add(new SolveResultButton { label = "Làm lại (số liệu mới)", onClick = StartAttempt, style = ButtonStyle.Primary });
             if (canUnlock)
             {
-                if (RunState.ink >= RoomRules.UnlockInkCost)
-                    r.buttons.Add(new SolveResultButton { label = "Phá khóa (-" + RoomRules.UnlockInkCost + " Mực)", onClick = OnUnlockWithInk, style = ButtonStyle.Danger });
+                if (RunState.ink >= RoomRules.UnlockInkCost) r.buttons.Add(new SolveResultButton { label = "Phá khóa (-" + RoomRules.UnlockInkCost + " Mực)", onClick = OnUnlockWithInk, style = ButtonStyle.Danger });
                 else r.footer += "\nChưa đủ Mực để phá khóa, em cứ làm lại để kiếm thêm.";
             }
             GameAudio.Play(Snd.QuizWrong);
@@ -408,113 +498,294 @@ public class RoomManager : MonoBehaviour
         solve.ShowResult(r);
     }
 
+    string BossEffectText(GradeBand band)
+    {
+        int bi = RunState.stage;
+        if (bi == 1) return band == GradeBand.Good ? "Khiên chặn trọn tuyệt kỹ gai độc." : band == GradeBand.Pass ? "Khiên chặn khoảng 60% sát thương gai độc." : "Không có khiên. Sát thương của tuyệt kỹ bị chặn trần ở 30% máu tối đa.";
+        if (bi == 2) return band == GradeBand.Fail ? "Không có bùa chỉ đường: bản thể ẩn giữa các bóng giả." : band == GradeBand.Good ? "Bùa hiện ra chỉ đúng bản thể, Cáo choáng 6 giây và chịu thêm sát thương." : "Bùa hiện ra chỉ đúng bản thể, Cáo choáng 6 giây.";
+        return band == GradeBand.Good ? "Máy biến áp phản đòn trọn vẹn: tia hủy diệt dội ngược về boss." : band == GradeBand.Pass ? "Tia bị chuyển hướng, boss chịu sát thương vừa." : "Không phản đòn được: tia quét ngang, sát thương bị chặn trần ở 30% máu tối đa.";
+    }
+
+    string MissingNoteFor(EssayGradeResult res)
+    {
+        var miss = new List<string>();
+        for (int i = 0; i < res.steps.Length; i++) if (res.steps[i].status != EssayStepStatus.Correct) miss.Add(prob.rubric[i].label);
+        if (miss.Count == 0) return null;
+        return SubjectName(essaySubject) + (string.IsNullOrEmpty(prob.concept) ? "" : " · " + prob.concept) + ": em còn thiếu phần " + string.Join(", ", miss) + ".";
+    }
+
     void OnUnlockWithInk()
     {
-        RunState.ink -= RoomRules.UnlockInkCost; unlockedByInk = true; RefreshHud();
-        Debug.Log("[Room " + StageLabel + "] phá khóa bằng Mực, bài " + prob.id + " vào hàng ôn lại, không tính mastery.");
-        solve.Hide();
-        UIKit.Toast(hud, "Đã phá khóa: rương không có vũ khí.");
-        OpenDoor();
+        RunState.ink -= RoomRules.UnlockInkCost; unlockedByInk = true; RefreshHud(); solve.Hide(); UIKit.Toast(hud, "Đã phá khóa: rương không có vũ khí."); OpenDoor();
+    }
+
+    // ------------------------------------------------------------------ Trụ đá của boss: giải đề một lần
+    public void StartBossEssay(EssayDifficulty d, string subject, System.Action<GradeBand, string> done)
+    {
+        bossDone = done; inBossEssay = true; essaySubject = subject; difficulty = d; Frozen = true;
+        var p = RoomRules.PickProblem(problems, subject, d, usedIds, rng);
+        if (p == null) { foreach (var s in new[] { "ly", "hoa", "sinh" }) { p = RoomRules.PickProblem(problems, s, d, usedIds, rng); if (p != null) { essaySubject = s; break; } } }
+        if (p == null) { Frozen = false; inBossEssay = false; UIKit.Toast(hud, "Chưa có đề cho trụ đá."); done?.Invoke(GradeBand.Pass, null); return; }
+        prob = p; usedIds.Add(p.id); attemptsUsed = 0; missStreak = new int[p.rubric.Length];
+        essayTitle = (BossBase.Current != null ? BossBase.Current.bossName : "Boss") + " · Trụ đá · " + SubjectName(essaySubject) + " · " + RoomRules.DifficultyName(d);
+        NewVariant(); int have = prob.hints != null ? prob.hints.Length : 0; hintCap = Mathf.Min(RoomRules.MaxHints(d), have); hintLevel = 0; hintsPaid = 0;
+        if (hintCap > 0 && RoomRules.AutoFirstHint(d)) hintLevel = 1;
+        ShowWriting("");
     }
 
     // ------------------------------------------------------------------ phần thưởng và cửa
-    void OnSolvePassed(int rarity)
-    {
-        solve.Hide();
-        ShowWeaponPanel(Weapons.Roll(rarity, rng));
-    }
+    void OnSolvePassed(int rarity) { solve.Hide(); ShowWeaponPanel(Weapons.Roll(rarity, rng)); }
 
     RectTransform OpenPanel(Vector2 size, out RectTransform content)
     {
         ClosePanel(); Frozen = true; state = State.Panel;
-        panelRoot = UIKit.CBox("PanelRoot", hud, new Color(0, 0, 0, .72f), Vector2.zero, Vector2.zero, true);
-        UIKit.Stretch(panelRoot, 0, 0, 0, 0);
-        UIKit.Panel(panelRoot, "Panel", Vector2.zero, size, PanelStyle.Dark, out content);
-        return panelRoot;
+        panelRoot = UIKit.CBox("PanelRoot", hud, new Color(0, 0, 0, .72f), Vector2.zero, Vector2.zero, true); UIKit.Stretch(panelRoot, 0, 0, 0, 0);
+        UIKit.Panel(panelRoot, "Panel", Vector2.zero, size, PanelStyle.Dark, out content); return panelRoot;
     }
 
     void ClosePanel() { if (panelRoot != null) { Destroy(panelRoot.gameObject); panelRoot = null; } }
 
     void ShowWeaponPanel(WeaponInstance w)
     {
-        OpenPanel(new Vector2(1300, 640), out var c);
-        var d = w.Def;
-        UIKit.Label("T", c, "Rương mở ra", 60, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 230), new Vector2(1100, 80), true, true, FontStyle.Bold);
-        UIKit.Label("W", c, w.Label, 46, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 150), new Vector2(1200, 70), true);
-        UIKit.Label("S", c, "Sát thương " + w.Damage.ToString("0.#") + "   ·   " + (1f / d.cooldown).ToString("0.0") + " đòn/giây   ·   " + (d.melee ? "cận chiến" : "tầm xa"),
-            30, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 90), new Vector2(1200, 44));
-        UIKit.Label("Cur", c, "Đang cầm  ·  Chính: " + RunState.main.Label + "   ·   Phụ: " + (RunState.sub != null ? RunState.sub.Label : "chưa có"),
-            26, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 30), new Vector2(1200, 60));
-        UIKit.MakeButton(c, "Main", "Thay vũ khí chính", new Vector2(-400, -120), new Vector2(380, 80), () => { RunState.main = w; AfterWeapon(); }, ButtonStyle.Primary, 30);
-        UIKit.MakeButton(c, "Sub", RunState.sub == null ? "Làm vũ khí phụ" : "Thay vũ khí phụ", new Vector2(0, -120), new Vector2(380, 80), () => { RunState.sub = w; AfterWeapon(); }, ButtonStyle.Bronze, 30, .1f);
-        UIKit.MakeButton(c, "Skip", "Bỏ qua", new Vector2(400, -120), new Vector2(380, 80), AfterWeapon, ButtonStyle.Secondary, 30, .2f);
+        OpenPanel(new Vector2(1300, 680), out var c); var d = w.Def;
+        UIKit.Label("T", c, "Rương mở ra", 60, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 260), new Vector2(1100, 80), true, true, FontStyle.Bold);
+        var ic = Icon("WIcon", c, w.Icon, new Vector2(-480, 120), new Vector2(240, 150)); ic.color = Color.white;
+        UIKit.Label("W", c, w.Label, 46, RogueArt.RarityCols[w.rarity], TextAnchor.MiddleLeft, new Vector2(120, 160), new Vector2(900, 70), true);
+        UIKit.Label("S", c, "Sát thương " + w.Damage.ToString("0.#") + "   ·   " + (1f / d.cooldown).ToString("0.0") + " đòn/giây   ·   " + d.group, 28, GameTheme.Fog, TextAnchor.MiddleLeft, new Vector2(120, 100), new Vector2(900, 44));
+        UIKit.Label("D", c, d.desc, 26, GameTheme.Bone, TextAnchor.MiddleLeft, new Vector2(120, 50), new Vector2(900, 44));
+        UIKit.Label("Cur", c, "Đang cầm  ·  Chính: " + RunState.main.Label + "   ·   Phụ: " + (RunState.sub != null ? RunState.sub.Label : "chưa có"), 26, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, -40), new Vector2(1200, 60));
+        UIKit.MakeButton(c, "Main", "Thay vũ khí chính", new Vector2(-400, -170), new Vector2(380, 80), () => { RunState.main = w; AfterWeapon(); }, ButtonStyle.Primary, 30);
+        UIKit.MakeButton(c, "Sub", RunState.sub == null ? "Làm vũ khí phụ" : "Thay vũ khí phụ", new Vector2(0, -170), new Vector2(380, 80), () => { RunState.sub = w; AfterWeapon(); }, ButtonStyle.Bronze, 30, .1f);
+        UIKit.MakeButton(c, "Skip", "Bỏ qua", new Vector2(400, -170), new Vector2(380, 80), AfterWeapon, ButtonStyle.Secondary, 30, .2f);
     }
 
     void AfterWeapon() { ClosePanel(); RefreshHud(); OpenDoor(); }
 
     void OpenDoor()
     {
-        state = State.DoorOpen; Frozen = false; DoorOpen = true;
-        doorSr.color = GameTheme.Moss;
+        state = State.DoorOpen; Frozen = false; DoorOpen = true; doorSr.color = GameTheme.Moss;
         if (doorGlow != null) doorGlow.color = GameTheme.Moss.WithAlpha(.5f);
-        if (chestSr != null) chestSr.color = GameTheme.Fog;
-        GameAudio.Play(Snd.BuffPick);
+        if (chestSpr != null) { chestSpr.sprite = RogueArt.Chest(true); }
+        RogueAudio.Play(RSfx.Door, .8f); GameAudio.Play(Snd.BuffPick);
         SetPrompt("Cửa đã mở. Đi lên cửa phía trên để sang màn kế tiếp.");
     }
 
-    // ------------------------------------------------------------------ rời phòng, buff, sang màn kế
-    void LeaveRoom()
-    {
-        state = State.Leaving; Frozen = true;
-        if (RunState.room % 2 == 0) ShowBuffPanel(); else GoNext();      // buff mỗi 2 màn: sau màn 2, 4 (mục 3.1)
-    }
+    void LeaveRoom() { state = State.Leaving; Frozen = true; if (RunState.room % 2 == 0) ShowBuffPanel(); else GoNext(); }
 
     void ShowBuffPanel()
     {
-        OpenPanel(new Vector2(1600, 640), out var c);
-        UIKit.Label("T", c, "Chọn một buff", 60, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 230), new Vector2(1300, 80), true, true, FontStyle.Bold);
-        UIKit.Label("S", c, "Đã qua " + RunState.room + " màn. Ít nhất một buff hợp với vũ khí đang cầm (" + RunState.main.Def.name + ").",
-            26, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 170), new Vector2(1400, 40));
-        var offer = Buffs.Offer(RunState.main.Def.melee, rng);
+        OpenPanel(new Vector2(1600, 700), out var c);
+        UIKit.Label("T", c, "Chọn một buff", 60, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 260), new Vector2(1300, 80), true, true, FontStyle.Bold);
+        UIKit.Label("S", c, "Đã qua " + RunState.room + " màn. Ít nhất một buff hợp với vũ khí đang cầm (" + RunState.main.Def.name + ").", 26, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 200), new Vector2(1400, 40));
+        var offer = Buffs.Offer(RunState.main.Def, rng);
         for (int i = 0; i < offer.Count; i++)
         {
             var b = offer[i]; float x = (i - 1) * 490f;
-            UIKit.MakeButton(c, "Buff" + i, b.name, new Vector2(x, 40), new Vector2(450, 120), () => { RunState.AddBuff(b, rng); ClosePanel(); GoNext(); },
-                ButtonStyle.Bronze, 32, .1f * i);
-            UIKit.Label("Desc" + i, c, b.desc, 26, GameTheme.Bone, TextAnchor.UpperCenter, new Vector2(x, -90), new Vector2(450, 110));
+            UIKit.MakeButton(c, "Buff" + i, b.name, new Vector2(x, 20), new Vector2(450, 120), () => { RunState.AddBuff(b, rng); ClosePanel(); GoNext(); }, ButtonStyle.Bronze, 32, .1f * i);
+            Icon("BI" + i, c, RogueArt.BuffIcon((int)b.id), new Vector2(x, 130), new Vector2(72, 72));
+            UIKit.Label("Desc" + i, c, b.desc + (Buffs.Suits(b, RunState.main.Def) ? "" : ""), 26, GameTheme.Bone, TextAnchor.UpperCenter, new Vector2(x, -110), new Vector2(450, 110));
         }
     }
 
     void GoNext()
     {
         RunState.room++;
-        if (RunState.room > RunState.RoomsPerStage) ShowChapterEnd(); else Reload();
+        if (RunState.room > RunState.RoomsPerStage) { RunState.room = 5; RunState.phase = RunPhase.Boss; }
+        RunSave.Save(); Reload();
     }
 
-    void ShowChapterEnd()
+    // ------------------------------------------------------------------ BOSS
+    BossBase boss;
+    void BeginBoss()
     {
-        GameAudio.Play(Snd.Victory);
-        OpenPanel(new Vector2(1000, 600), out var c);
-        UIKit.Label("T", c, "Xong 4 màn thường", 58, GameTheme.Moss, TextAnchor.MiddleCenter, new Vector2(0, 210), new Vector2(900, 90), true, true, FontStyle.Bold);
-        UIKit.Label("B", c, "Em đã qua cả 4 màn thường của chặng 1.\nMực hiện có: " + RunState.ink +
-                    (unlockedByInk ? "\nCó bài đã phá khóa bằng Mực, sẽ được ôn lại." : "") +
-                    "\n\n(E3: màn 1-5 là boss Chuột Bạch Biến Dị, làm ở E6.)", 30, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 40), new Vector2(900, 280));
-        UIKit.MakeButton(c, "Again", "Chơi lượt mới", new Vector2(-220, -200), new Vector2(380, 80), () => { RunState.ResetAll(true); Reload(); }, ButtonStyle.Primary, 32);
-        UIKit.MakeButton(c, "Menu", "Về menu", new Vector2(220, -200), new Vector2(380, 80), () => SceneRouter.Go(menuSceneName), ButtonStyle.Secondary, 32);
+        state = State.Boss; HazardsOn = true; RogueAudio.PlayTrack(RTrack.Altar);
+        Vector2 at = new Vector2(0, 1.5f);
+        if (RunState.stage == 1) boss = BossBase.Create<BossRat>(at); else if (RunState.stage == 2) boss = BossBase.Create<BossFox>(at); else boss = BossBase.Create<BossScientist>(at);
+        boss.Defeated = OnBossDefeated; RunSave.Save();
     }
 
+    void OnBossDefeated()
+    {
+        RunState.bossesDown++; RunState.shards = Mathf.Min(3, RunState.shards + 1); RunState.ink += 120; RefreshHud(); RogueAudio.Duck(.5f);
+        state = State.Cutscene; Frozen = false; player.Controllable = false; RogueAudio.PlayTrack(RTrack.None);
+        story.PlayFlashback(RunState.stage, () =>
+        {
+            player.Controllable = true; OpenBossReward();
+        });
+    }
+
+    void OpenBossReward()
+    {
+        OpenPanel(new Vector2(1800, 760), out var c);
+        UIKit.Label("T", c, "Chiến lợi phẩm của " + (RunState.stage == 1 ? "Chuột Bạch" : RunState.stage == 2 ? "Cáo Chín Đuôi" : "Nhà Khoa Học Điên"), 56, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 310), new Vector2(1600, 80), true, true, FontStyle.Bold);
+        UIKit.Label("S", c, "Chọn một trong ba vũ khí (độ hiếm cao, thường kèm nguyên tố). Em nhặt thêm Mảnh Ký Ức " + RunState.shards + "/3 và 120 Mực.", 26, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 250), new Vector2(1600, 40));
+        int lo = RunState.stage == 1 ? 1 : 2, hi = RunState.stage == 3 ? 3 : 2; var offers = Weapons.RollChoices(lo, hi, rng);
+        for (int i = 0; i < 3; i++)
+        {
+            var w = offers[i]; float x = (i - 1) * 560f; var d = w.Def;
+            var card = UIKit.CBox("Card" + i, c, new Color(.07f, .05f, .12f, .9f), new Vector2(x, 20), new Vector2(520, 440)); card.GetComponent<Image>().sprite = ThemeGfx.Glow;
+            var ic = Icon("WI" + i, c, w.Icon, new Vector2(x, 150), new Vector2(300, 150));
+            UIKit.Label("N" + i, c, w.Label, 34, RogueArt.RarityCols[w.rarity], TextAnchor.MiddleCenter, new Vector2(x, 50), new Vector2(500, 60), true);
+            UIKit.Label("D" + i, c, "Sát thương " + w.Damage.ToString("0.#") + " · " + (1f / d.cooldown).ToString("0.0") + "/s\n" + d.desc, 24, GameTheme.Bone, TextAnchor.UpperCenter, new Vector2(x, -40), new Vector2(480, 110));
+            UIKit.MakeButton(c, "Main" + i, "Làm vũ khí chính", new Vector2(x, -170), new Vector2(430, 64), () => { RunState.main = w; ClaimBoss(); }, ButtonStyle.Primary, 26, .1f * i);
+            UIKit.MakeButton(c, "Sub" + i, RunState.sub == null ? "Làm vũ khí phụ" : "Thay vũ khí phụ", new Vector2(x, -245), new Vector2(430, 54), () => { RunState.sub = w; ClaimBoss(); }, ButtonStyle.Bronze, 24, .1f * i + .05f);
+        }
+    }
+
+    void ClaimBoss()
+    {
+        ClosePanel(); RogueAudio.Play(RSfx.Pickup, .9f);
+        RunState.phase = RunPhase.Rest; RunState.room = 1; RunState.SaveCheckpoint(); RunSave.Save(); Reload();
+    }
+
+    // ------------------------------------------------------------------ PHÒNG NGHỈ
+    SpriteRenderer fireSr, owlSr; Vector2 firePos = new Vector2(1.6f, -.6f), owlPos = new Vector2(-2.4f, -.5f); bool rested; Sprite[] fireFr, owlFr; float restT;
+    void BeginRest()
+    {
+        state = State.Rest; HazardsOn = false; DoorOpen = true; rested = false; RogueAudio.PlayTrack(RTrack.Rest);
+        doorSr.color = GameTheme.Moss; doorGlow.color = GameTheme.Moss.WithAlpha(.5f);
+        fireFr = RogueArt.Campfire; owlFr = RogueArt.Owl;
+        var fg = Combat.MakeSr("FireGlow", world, ThemeGfx.Glow, GameTheme.Ember.WithAlpha(.3f), new Vector2(8f, 6f), -95, firePos + new Vector2(0, .6f)); fg.sharedMaterial = Gfx.Additive;
+        fireSr = Combat.MakePx("Fire", world, fireFr[0], Combat.Order(firePos.y), firePos, 1.6f);
+        owlSr = Combat.MakePx("Owl", world, owlFr[0], Combat.Order(owlPos.y), owlPos, 1.5f);
+        ShowBanner("Phòng nghỉ · đến bên lửa trại (E) để hồi sức, trò chuyện với Thầy Cú rồi đi tiếp", 5f);
+        RunSave.Save();
+    }
+
+    void RestUpdate()
+    {
+        restT += Time.deltaTime; fireSr.sprite = fireFr[(int)(restT * 8f) % fireFr.Length]; owlSr.sprite = owlFr[(restT % 4f) > 3.6f ? 2 : (int)(restT * 1.5f) % 2]; owlSr.sortingOrder = Combat.Order(owlPos.y);
+        if (Random.value < Time.deltaTime * 8f) RFx.Burst(firePos + new Vector2(Random.Range(-.3f, .3f), .8f), GameTheme.EmberHi, 1, 1.5f, .8f, .1f, -2f);
+        var k = Keyboard.current; var pp = (Vector2)player.transform.position;
+        bool nearFire = Vector2.Distance(pp, firePos + Vector2.up) < 2.4f, nearOwl = Vector2.Distance(pp, owlPos + Vector2.up) < 2.2f;
+        if (nearFire && !rested) SetPrompt("Nhấn E · nghỉ bên lửa trại (hồi 50% máu)");
+        else if (nearFire) SetPrompt("Em đã nghỉ ngơi. Đi lên cửa phía trên để sang chặng sau.");
+        else if (nearOwl) SetPrompt("Nhấn E · trò chuyện với Thầy Cú");
+        else SetPrompt(rested ? "Cửa đã mở. Đi lên cửa phía trên để sang chặng sau." : "Lại gần lửa trại hoặc Thầy Cú. Cửa phía trên đã mở.");
+        if (k != null && k.eKey.wasPressedThisFrame)
+        {
+            if (nearFire && !rested) { rested = true; float h = PlayerCombat.MaxHp * .5f; player.Heal(h); RFx.Burst(player.transform.position, GameTheme.Moss, 14, 3f, .8f, .16f, -2f); RFx.Ring(player.transform.position, 1.8f, GameTheme.Moss, .5f); RogueAudio.Play(RSfx.Heal, .9f); RunState.hp = Mathf.Min(PlayerCombat.MaxHp, RunState.hp); RunSave.Save(); }
+            else if (nearOwl) ShowOwlTalk();
+        }
+        if (pp.y >= ExitY) LeaveRest();
+    }
+
+    void ShowOwlTalk()
+    {
+        OpenPanel(new Vector2(1500, 720), out var c);
+        var oi = Icon("Owl", c, RogueArt.Owl[0], new Vector2(-560, 60), new Vector2(240, 300));
+        UIKit.Label("T", c, "Thầy Cú", 52, GameTheme.EmberHi, TextAnchor.MiddleLeft, new Vector2(-380, 270), new Vector2(900, 70), true, true, FontStyle.Bold);
+        string line;
+        if (RunState.stage == 1) line = "Giỏi lắm! Chuột Bạch từng là bạn của một cô trợ giảng hóa học. Em vừa lấy lại được một mảnh ký ức. Đừng quên rằng mỗi bài giải em viết ra đều là một ký ức được gọi trở về.";
+        else if (RunState.stage == 2) line = "Cáo Chín Đuôi đã quên mất mình là ai. Khi em đặt tên cho từng cơ quan, từng quá trình sống, sương mù lùi lại một chút. Chặng cuối sẽ cần tới cả sức mạnh vật lí của em.";
+        else line = "Em đã đi qua cả ba nỗi nhớ. Phía trước là bệ đá cổ, nơi màn sương được phong ấn. Hãy mang theo cả ba mảnh ký ức.";
+        UIKit.Label("L", c, "\"" + line + "\"", 30, GameTheme.Bone, TextAnchor.UpperLeft, new Vector2(110, 140), new Vector2(920, 220));
+        string note = RunState.notes.Count > 0 ? "Thầy ghi chú cho em:\n• " + string.Join("\n• ", RunState.notes.GetRange(Mathf.Max(0, RunState.notes.Count - 3), Mathf.Min(3, RunState.notes.Count))) : "Em chưa có phần nào cần ôn lại ở các trụ đá. Rất tốt!";
+        UIKit.Label("N", c, note, 26, GameTheme.Fog, TextAnchor.UpperLeft, new Vector2(110, -90), new Vector2(920, 220));
+        UIKit.MakeButton(c, "Close", "Cảm ơn Thầy", new Vector2(0, -290), new Vector2(380, 76), () => { ClosePanel(); Frozen = false; state = State.Rest; }, ButtonStyle.Primary, 30);
+    }
+
+    void LeaveRest()
+    {
+        state = State.Leaving;
+        if (RunState.stage < 3) { RunState.stage++; RunState.room = 1; RunState.phase = RunPhase.Room; RunState.SaveCheckpoint(); }
+        else { RunState.phase = RunPhase.Final; RunState.room = 1; RunState.SaveCheckpoint(); }
+        RunSave.Save(); RogueAudio.Play(RSfx.Door, .8f); Reload();
+    }
+
+    // ------------------------------------------------------------------ MÀN 16: BỆ ĐÁ CỔ
+    SpriteRenderer altarSr; SpriteRenderer[] runeGlow = new SpriteRenderer[3]; bool ritualStarted; bool rewardChosen; Vector2 altarPos = new Vector2(0, -.6f);
+    void BeginFinal()
+    {
+        state = State.Final; HazardsOn = false; DoorOpen = false; RogueAudio.PlayTrack(RTrack.Altar); ritualStarted = false; rewardChosen = false;
+        var ag = Combat.MakeSr("AltarGlow", world, ThemeGfx.Glow, new Color(.6f, .8f, 1f, .18f), new Vector2(11f, 7f), -95, altarPos + new Vector2(0, 1f)); ag.sharedMaterial = Gfx.Additive;
+        altarSr = Combat.MakePx("Altar", world, RogueArt.Altar, Combat.Order(altarPos.y) - 5, altarPos, 1.5f);
+        Color[] cols = { GameTheme.Ly, GameTheme.Hoa, GameTheme.Sinh }; Vector2[] sp = { new Vector2(-4.2f, 1.3f), new Vector2(0f, 2.6f), new Vector2(4.2f, 1.3f) };
+        for (int i = 0; i < 3; i++)
+        {
+            var st = Combat.MakePx("Stone" + i, world, RogueArt.RuneStone, Combat.Order(sp[i].y), sp[i], 1.6f);
+            var gl = Combat.MakePx("Glyph" + i, world, RogueArt.RuneGlyph(i), Combat.Order(sp[i].y) + 1, sp[i] + new Vector2(0, 1.1f), 1.6f); gl.color = new Color(cols[i].r, cols[i].g, cols[i].b, .25f); gl.sharedMaterial = Gfx.Additive; runeGlow[i] = gl;
+        }
+        owlFr = RogueArt.Owl; owlSr = Combat.MakePx("Owl", world, owlFr[0], Combat.Order(-1.5f), new Vector2(-6.4f, -1.8f), 1.5f);
+        ShowBanner("Màn 16 · Bệ Đá Cổ — hãy đặt tay lên bệ đá (E)", 6f); RunSave.Save();
+    }
+
+    void FinalUpdate()
+    {
+        restT += Time.deltaTime; owlSr.sprite = owlFr[(int)(restT * 1.5f) % 2];
+        for (int i = 0; i < 3; i++) { var c = runeGlow[i].color; if (!ritualStarted) { c.a = .3f + .2f * Mathf.Sin(restT * 2f + i); runeGlow[i].color = c; } }
+        if (ritualStarted) return;
+        var k = Keyboard.current; bool near = Vector2.Distance(player.transform.position, altarPos + Vector2.up * 1.2f) < 2.8f;
+        SetPrompt(near ? "Nhấn E · đặt tay lên bệ đá" : "Đến bên bệ đá cổ ở giữa phòng.");
+        if (near && k != null && k.eKey.wasPressedThisFrame) ShowFinalReward();
+    }
+
+    void ShowFinalReward()
+    {
+        OpenPanel(new Vector2(1700, 720), out var c);
+        UIKit.Label("T", c, "Phần thưởng cuối hành trình", 56, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(1500, 80), true, true, FontStyle.Bold);
+        UIKit.Label("S", c, "Chọn một thứ để mang theo cho những chuyến đi sau.", 28, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 232), new Vector2(1500, 44));
+        int legendId = rng.Next(Weapons.Count); var legend = new WeaponInstance((WeaponId)legendId, 3, Weapons.Elems[legendId % Weapons.Elems.Length]);
+        int title = 1 + rng.Next(3);
+        var opts = new[]
+        {
+            new { name = "Vũ khí Huyền thoại", desc = legend.Label + "\nLượt sau, em xuất phát với nó làm vũ khí phụ.", icon = legend.Icon, act = (System.Action)(() => Meta.LegendId = legendId) },
+            new { name = "Danh hiệu", desc = "\"" + Meta.Titles[title] + "\"\nHiện bên cạnh tên em ở các lượt sau.", icon = RogueArt.MemoryShard, act = (System.Action)(() => Meta.TitleIdx = title) },
+            new { name = "Cường hóa vĩnh viễn", desc = "+10 máu tối đa mỗi lượt chơi\n(cộng dồn, tối đa +50).", icon = RogueArt.Heart, act = (System.Action)(() => Meta.PermHp = Mathf.Min(5, Meta.PermHp + 1)) },
+        };
+        for (int i = 0; i < 3; i++)
+        {
+            var o = opts[i]; float x = (i - 1) * 540f;
+            var card = UIKit.CBox("Card" + i, c, new Color(.07f, .05f, .12f, .9f), new Vector2(x, 20), new Vector2(500, 420)); card.GetComponent<Image>().sprite = ThemeGfx.Glow;
+            Icon("RI" + i, c, o.icon, new Vector2(x, 140), new Vector2(240, 140));
+            UIKit.Label("N" + i, c, o.name, 34, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(x, 40), new Vector2(480, 50), true);
+            UIKit.Label("D" + i, c, o.desc, 25, GameTheme.Bone, TextAnchor.UpperCenter, new Vector2(x, -30), new Vector2(460, 120));
+            UIKit.MakeButton(c, "Pick" + i, "Chọn", new Vector2(x, -170), new Vector2(300, 70), () => { o.act(); ClosePanel(); StartCoroutine(Ritual()); }, ButtonStyle.Primary, 30, .1f * i);
+        }
+    }
+
+    IEnumerator Ritual()
+    {
+        ritualStarted = true; Frozen = false; player.Controllable = false; state = State.Cutscene; RogueAudio.Duck(.35f);
+        Color[] cols = { GameTheme.Ly, GameTheme.Hoa, GameTheme.Sinh };
+        yield return new WaitForSeconds(.6f);
+        for (int i = 0; i < 3; i++)
+        {
+            RogueAudio.Play(RSfx.Rune, 1f, 1f); runeGlow[i].color = new Color(cols[i].r, cols[i].g, cols[i].b, 1f); RFx.Ring(runeGlow[i].transform.position, 2.4f, cols[i], .7f); RFx.Burst(runeGlow[i].transform.position, cols[i], 20, 5f, 1f, .2f, -1f); RFx.Shake(.25f);
+            ShowBanner(i == 0 ? "Mảnh ký ức thứ nhất — Vật lí" : i == 1 ? "Mảnh ký ức thứ hai — Hóa học" : "Mảnh ký ức thứ ba — Sinh học", 1.8f);
+            yield return new WaitForSeconds(1.5f);
+        }
+        RogueAudio.Play(RSfx.Stinger, 1f); RFx.Flash(altarPos + Vector2.up * 1.5f, 16f, Color.white, .8f); RFx.Shake(.8f);
+        for (int i = 0; i < 12; i++) { RFx.Lightning(altarPos + Vector2.up * 1f, altarPos + Vector2.up * 1f + Random.insideUnitCircle.normalized * Random.Range(3f, 6f), Color.white, .4f, .14f); yield return new WaitForSeconds(.08f); }
+        yield return new WaitForSeconds(.8f);
+        RunState.phase = RunPhase.Ending; RunSave.Save(); BeginEnding();
+    }
+
+    // ------------------------------------------------------------------ KẾT THÚC + CREDIT
+    void BeginEnding()
+    {
+        state = State.Cutscene; HazardsOn = false; player.Controllable = false; if (stageText != null) stageText.text = "";
+        story.PlayEnding(FinishRun);
+    }
+
+    void FinishRun()
+    {
+        Meta.Clears = Meta.Clears + 1; RunSave.Clear(); RunState.ResetAll(true); RogueAudio.Stop(); SceneRouter.Go(menuSceneName);
+    }
+
+    // ------------------------------------------------------------------ chết
     void OnPlayerDied()
     {
-        GameAudio.Play(Snd.Defeat);
-        OpenPanel(new Vector2(1000, 560), out var c);
-        UIKit.Label("T", c, "Hiệp sĩ gục ngã", 60, GameTheme.Blood, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(900, 90), true, true, FontStyle.Bold);
-        UIKit.Label("B", c, "Bóng tối nuốt lấy em, nhưng tri thức thì không mất.\nEm quay về điểm lưu đầu chặng (màn 1-1). Mực vẫn giữ nguyên: " + RunState.ink + ".",
-            30, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 30), new Vector2(900, 200));
-        UIKit.MakeButton(c, "Back", "Về điểm lưu", new Vector2(-220, -190), new Vector2(380, 80), () => { RunState.ResetToStageStart(); Reload(); }, ButtonStyle.Primary, 32);
-        UIKit.MakeButton(c, "Menu", "Về menu", new Vector2(220, -190), new Vector2(380, 80), () => SceneRouter.Go(menuSceneName), ButtonStyle.Secondary, 32);
+        GameAudio.Play(Snd.Defeat); RogueAudio.Duck(.2f);
+        OpenPanel(new Vector2(1000, 600), out var c);
+        string where = RunState.checkpoint.phase == RunPhase.Rest ? "phòng nghỉ sau boss của chặng " + (RunState.checkpoint.stage - 1) : "màn " + RunState.checkpoint.stage + "-1";
+        UIKit.Label("T", c, "Hiệp sĩ gục ngã", 60, GameTheme.Blood, TextAnchor.MiddleCenter, new Vector2(0, 210), new Vector2(900, 90), true, true, FontStyle.Bold);
+        UIKit.Label("B", c, "Bóng tối nuốt lấy em, nhưng tri thức thì không mất.\nEm quay về điểm lưu đầu chặng (" + where + "), giữ vũ khí và buff lúc đó, mất các vật nhặt trong chặng.\nMực và Mảnh Ký Ức vẫn giữ nguyên: " + RunState.ink + " Mực.", 28, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 30), new Vector2(900, 240));
+        UIKit.MakeButton(c, "Back", "Về điểm lưu", new Vector2(-220, -210), new Vector2(380, 80), () => { RunState.ResetToStageStart(); Reload(); }, ButtonStyle.Primary, 32);
+        UIKit.MakeButton(c, "Menu", "Về menu", new Vector2(220, -210), new Vector2(380, 80), () => { RunState.ResetToStageStart(); RogueAudio.Stop(); SceneRouter.Go(menuSceneName); }, ButtonStyle.Secondary, 32);
     }
 
-    void Reload() { SceneRouter.Go(SceneManager.GetActiveScene().name); }
+    void Reload() { Frozen = false; SceneRouter.Go(SceneManager.GetActiveScene().name); }
 }
 
 /// <summary>Đuốc tường: lửa chập chờn và quầng sáng cam hắt lên sàn.</summary>

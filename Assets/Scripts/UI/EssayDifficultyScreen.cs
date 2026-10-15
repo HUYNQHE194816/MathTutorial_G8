@@ -79,6 +79,7 @@ public class EssayDifficultyScreen : MonoBehaviour
             cards.Add(DifficultyCard.Build(this, i, (EssayDifficulty)i, x, ui));
         }
         UIKit.MakeButton(ui, "Btn_Back", "QUAY LẠI", new Vector2(-750f, -456f), new Vector2(300f, 72f), Back, ButtonStyle.Stone, 32, .6f);
+        if (RunSave.Exists) UIKit.MakeButton(ui, "Btn_Continue", "TIẾP TỤC LƯỢT DỞ", new Vector2(700f, -456f), new Vector2(420f, 72f), Continue, ButtonStyle.Primary, 32, .7f);
         MenuNatureFx.FitCover(artRoot, scene, ref lastRect);
     }
 
@@ -108,7 +109,7 @@ public class EssayDifficultyScreen : MonoBehaviour
         }
         locked = true;
         RunState.difficulty = card.diff;     // độ khó của cả lượt chơi
-        RunState.ResetAll(true);             // lượt mới: màn 1-1, đầy máu, súng ngắn, Mực giữ nguyên
+        RunState.NewRun();                   // lượt mới: màn 1-1, đầy máu, súng ngắn (hoặc vũ khí huyền thoại làm vũ khí phụ), Mực giữ nguyên
         GameAudio.Play(Snd.CardSelect);
         StartCoroutine(SelectRoutine(card));
     }
@@ -124,6 +125,22 @@ public class EssayDifficultyScreen : MonoBehaviour
         }
         chosen.chosen = 1f;
         yield return new WaitForSecondsRealtime(.15f);
+        SceneRouter.Go(targetScene);
+    }
+
+    /// <summary>Tiếp tục lượt chơi đã lưu (màn, máu, vũ khí, buff, Mực, Mảnh Ký Ức) từ điểm đã lưu gần nhất.</summary>
+    void Continue()
+    {
+        if (locked) return;
+        if (!Application.CanStreamedLevelBeLoaded(targetScene)) { UIKit.Toast(ui, "Không tìm thấy scene: " + targetScene); return; }
+        if (!RunSave.Load()) { UIKit.Toast(ui, "Không đọc được lượt đã lưu."); return; }
+        locked = true; RunState.introPending = false; GameAudio.Play(Snd.CardSelect);
+        StartCoroutine(ContinueRoutine());
+    }
+
+    IEnumerator ContinueRoutine()
+    {
+        yield return new WaitForSecondsRealtime(.35f);
         SceneRouter.Go(targetScene);
     }
 
