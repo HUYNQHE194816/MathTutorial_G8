@@ -13,6 +13,7 @@ public class WrongQuestionItem
 public static class ReviewSessionData
 {
     public static List<WrongQuestionItem> wrongQuestions = new List<WrongQuestionItem>();
+    public static string returnScene = "";
 
     public static void Clear() => wrongQuestions.Clear();
     public static void AddWrong(string qText, string[] opts, int chosen, int correct)
