@@ -963,26 +963,16 @@ public class MillionaireManager : MonoBehaviour
     }
 
     public void OnClickBackToMenu() => SceneManager.LoadScene(SubjectSession.BackSceneOr(SubjectId.Hoa, menuSceneName));
-    public void OnClickReviewAI() => SceneManager.LoadScene(reviewSceneName);
+    public void OnClickReviewAI() { ReviewSessionData.returnScene = SceneManager.GetActiveScene().name; SceneManager.LoadScene(reviewSceneName); }
 
-// Tạo nút AI GIẢI THÍCH cạnh nút VỀ MENU (chỉ tạo 1 lần, và chỉ khi scene chưa gán sẵn nút)
-void SetupReviewButton()
-{
-    if (reviewAIButton != null) return;
-
-    reviewAIButton = QuizUi.MakeButton("ReviewAIButton", endPanel.transform, questionText,
-        "AI GIẢI THÍCH", new Color32(140, 82, 235, 255), Color.white, 32f, OnClickReviewAI);
-    QuizUi.Anchor((RectTransform)reviewAIButton.transform,
-        new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-210f, -190f), new Vector2(380f, 92f));
-
-    // Dời nút VỀ MENU sang phải để hai nút đứng cạnh nhau
-    foreach (var b in endPanel.GetComponentsInChildren<Button>(true))
+    // Nút AI GIẢI THÍCH đã có sẵn trong endPanel (scene). Không tự tạo thêm nút thứ hai nữa.
+    // Nếu scene chưa gán field reviewAIButton thì tìm nút có onClick/tên "AI" trong endPanel.
+    void SetupReviewButton()
     {
-        if (b == reviewAIButton) continue;
-        var r = (RectTransform)b.transform;
-        r.anchoredPosition = new Vector2(210f, r.anchoredPosition.y);
+        if (reviewAIButton != null) return;
+        foreach (var b in endPanel.GetComponentsInChildren<Button>(true))
+            if (b.gameObject.name == "AI" || b.gameObject.name == "ReviewAIButton") { reviewAIButton = b; return; }
     }
-}
 
     // ---------- TIỆN ÍCH ÂM THANH ----------
 
