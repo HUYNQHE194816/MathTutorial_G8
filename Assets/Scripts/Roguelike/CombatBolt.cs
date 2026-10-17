@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum BoltStyle { Orb, Arrow, Rocket, Cannon, Vial, Thorn, Leaf, Fire, Shard, Spit }
+public enum BoltStyle { Orb, Arrow, Rocket, Cannon, Vial, Thorn, Leaf, Fire, Shard, Spit, Knife, Star, Grenade }
 
 /// <summary>Mô tả một viên đạn: tốc độ, sát thương, kiểu vẽ, nảy, xuyên, tự dẫn, uốn cong, nổ khi hết...</summary>
 public class BoltSpec
@@ -10,6 +10,7 @@ public class BoltSpec
     public Element el = Element.None; public bool friendly; public int pierce, bounce; public BoltStyle style = BoltStyle.Orb; public Color col = Color.white;
     public bool lob; public Vector2 lobTo; public float lobTime = 1f, lobHeight = 2f;   // ném parabol: bay qua đầu, chỉ có tác dụng khi rơi xuống
     public System.Action<Vector2> onLand;                                                // gọi tại điểm rơi/nổ (đặt vũng độc, gai...)
+    public bool returning;       // phi tiêu: bay đi rồi quay về người chơi, trúng cả hai lượt
     public bool silentTrail; public float slowPlayer;   // làm chậm người chơi khi trúng (axit)
 }
 
@@ -18,10 +19,11 @@ public class CombatBolt : MonoBehaviour
 {
     public static readonly List<CombatBolt> Enemy = new List<CombatBolt>();
     public BoltSpec s; public Vector2 vel; float t, trailT, spin, hp0; Vector2 start; float yOff;
-    readonly HashSet<Foe> hit = new HashSet<Foe>(); Transform vis; bool dead;
+    readonly HashSet<Foe> hit = new HashSet<Foe>(); Transform vis; bool dead, turned;
 
     public static CombatBolt Fire(Vector2 pos, BoltSpec s)
     {
+        s.radius *= .65f;                                  // đạn nhỏ gọn theo tỉ lệ nhân vật mới
         var go = new GameObject(s.friendly ? "Bolt" : "EnemyBolt"); go.transform.position = pos;
         var b = go.AddComponent<CombatBolt>(); b.s = s; b.start = pos;
         b.vel = s.dir.normalized * s.speed; if (s.lob) b.vel = Vector2.zero;
@@ -50,13 +52,17 @@ public class CombatBolt : MonoBehaviour
             case BoltStyle.Thorn: spr = RogueArt.Thorn; rot = true; break;
             case BoltStyle.Leaf: spr = RogueArt.Leaf; break;
             case BoltStyle.Shard: spr = RogueArt.Shard; rot = true; break;
+            case BoltStyle.Knife: spr = RogueArt.Knife; rot = true; break;
+            case BoltStyle.Star: spr = RogueArt.Star; break;
+            case BoltStyle.Grenade: spr = RogueArt.GrenadeSprite; sc *= 1.2f; break;
         }
+        sc *= 1.5f;
         var glow = Combat.MakeSr("Glow", vis, RogueArt.Glow, new Color(c.r, c.g, c.b, s.style == BoltStyle.Cannon ? .0f : .55f), new Vector2(s.radius * 5f, s.radius * 5f), o);
         glow.sharedMaterial = Gfx.Additive;
         if (spr != null)
         {
             var sr = Combat.MakePx("Spr", vis, spr, o + 2, null, sc);
-            if (s.style == BoltStyle.Shard || s.style == BoltStyle.Leaf) sr.color = c;
+            if (s.style == BoltStyle.Shard || s.style == BoltStyle.Leaf || s.style == BoltStyle.Star) sr.color = s.style == BoltStyle.Star ? Color.Lerp(Color.white, c, .4f) : c;
             if (s.style == BoltStyle.Arrow && s.el != Element.None) sr.color = Color.Lerp(Color.white, c, .35f);
         }
         else
@@ -89,6 +95,15 @@ public class CombatBolt : MonoBehaviour
             else if (Combat.Player != null && !Combat.Player.Dead) { target = Combat.Player.transform.position; has = true; }
             if (has && t > .15f) { float cur = Combat.Ang(vel), want = Combat.Ang(target - p); float na = Mathf.MoveTowardsAngle(cur, want, s.homing * Mathf.Rad2Deg * dt); vel = Combat.FromAng(na) * vel.magnitude; }
         }
+        if (s.returning)
+        {   // phi tiêu: quá nửa đường thì quay về người chơi, trúng thêm một lượt
+            if (!turned && t > s.life * .42f) { turned = true; hit.Clear(); RFx.Ring(p, .5f, s.col, .2f); }
+            if (turned && Combat.Player != null)
+            {
+                Vector2 back = (Vector2)Combat.Player.transform.position - p; vel = back.normalized * Mathf.Max(vel.magnitude, 14f);
+                if (back.magnitude < .55f) { Die(false); return; }
+            }
+        }
         if (s.accel != 0f) { float sp = Mathf.Max(1f, vel.magnitude + s.accel * dt); vel = vel.normalized * sp; }
         if (s.curve != 0f) vel = Combat.Rot(vel, s.curve * dt);
         if (s.gravity != 0f) vel.y -= s.gravity * dt;
@@ -103,7 +118,8 @@ public class CombatBolt : MonoBehaviour
         if (p.y < RoomManager.MinY || p.y > RoomManager.WallY) { wall = true; if (s.bounce > 0) { s.bounce--; vel.y = -vel.y; p.y = Mathf.Clamp(p.y, RoomManager.MinY, RoomManager.WallY); Bounced(p); } else { transform.position = p; Die(true); return; } }
         transform.position = p; if (wall) { }
         if (s.style == BoltStyle.Arrow || s.style == BoltStyle.Rocket || s.style == BoltStyle.Thorn) vis.AimTo(vel, s.style == BoltStyle.Thorn);
-        else if (s.style == BoltStyle.Leaf || s.style == BoltStyle.Cannon) vis.Rotate(0, 0, 360f * dt);
+        else if (s.style == BoltStyle.Knife) vis.Rotate(0, 0, 1080f * dt);
+        else if (s.style == BoltStyle.Leaf || s.style == BoltStyle.Cannon || s.style == BoltStyle.Star) vis.Rotate(0, 0, (s.style == BoltStyle.Star ? 900f : 360f) * dt);
         if (t >= s.life) { Die(false); return; }
         Trail(dt, p);
 
@@ -119,16 +135,29 @@ public class CombatBolt : MonoBehaviour
                 hit.Add(f);
                 float d = s.dmg; bool crit = Combat.Roll(ref d);
                 f.TakeHit(d, s.el, p - vel.normalized * .5f, s.knock, crit);
+                if (!f.Dead || true) PlayerCombat.Extra(f, p);
                 if (s.pierce <= 0) { Die(true); return; }
                 s.pierce--; RFx.Sparks(p, vel, s.col, 3);
             }
         }
         else
         {
+            foreach (var pr in RoomProp.All)
+            {   // vật cản chắn đạn địch
+                if (pr == null || pr.Dead || Vector2.Distance(p, pr.Pos) > s.radius + pr.radius) continue;
+                pr.TakeHit(s.dmg * .6f, s.el, p, 0f, false, false); Die(true); return;
+            }
             var pl = Combat.Player;
             if (pl != null && !pl.Dead && Vector2.Distance(p, pl.transform.position) < s.radius + pl.radius * .8f)
             { pl.Hurt(s.dmg, s.el, p); if (s.slowPlayer > 0f) pl.Slow(2.2f, s.slowPlayer); Die(true); }
         }
+    }
+
+    /// <summary>Chém Phản: đạn địch bị chém bật ngược, thành đạn của người chơi và mạnh hơn.</summary>
+    public void Reflect(Vector2 dir)
+    {
+        if (!s.friendly) { Enemy.Remove(this); s.friendly = true; s.dmg *= 1.6f; hit.Clear(); s.homing = 0f; }
+        vel = dir * Mathf.Max(10f, vel.magnitude * 1.3f); s.life = Mathf.Max(s.life, t + 2f); s.col = Color.Lerp(s.col, new Color(1f, .9f, .5f), .5f);
     }
 
     void Bounced(Vector2 p) { RFx.Sparks(p, -vel, s.col, 4, 5f); RFx.Ring(p, .3f, s.col, .15f); }
@@ -175,6 +204,7 @@ public class CombatBolt : MonoBehaviour
         else
         {
             var pl = Combat.Player; if (pl != null && !pl.Dead && Vector2.Distance(pos, pl.transform.position) < radius + pl.radius * .5f) pl.Hurt(dmg, el, pos);
+            foreach (var f in new List<Foe>(Combat.Foes)) if (f != null && f.isProp && !f.Dead && Vector2.Distance(pos, f.Pos) - f.radius <= radius) f.TakeHit(dmg * .8f, Element.None, pos, 0f, false, true);
         }
     }
 
@@ -263,8 +293,8 @@ public class CombatPickup : MonoBehaviour
     public static void SpawnHeal(Vector2 pos, float heal)
     {
         var go = new GameObject("HealPickup"); go.transform.position = pos;
-        var g = Combat.MakeSr("Glow", go.transform, RogueArt.Glow, new Color(1f, .35f, .4f, .6f), new Vector2(1.5f, 1.5f), Combat.OrdFx - 30); g.sharedMaterial = Gfx.Additive;
-        var h = Combat.MakePx("Heart", go.transform, RogueArt.Heart, Combat.OrdFx - 29, null, 1f);
+        var g = Combat.MakeSr("Glow", go.transform, RogueArt.Glow, new Color(1f, .35f, .4f, .6f), new Vector2(1.1f, 1.1f), Combat.OrdFx - 30); g.sharedMaterial = Gfx.Additive;
+        var h = Combat.MakePx("Heart", go.transform, RogueArt.Heart, Combat.OrdFx - 29, null, 1.4f);
         go.AddComponent<CombatPickup>().heal = heal;
         RFx.Burst(pos, new Color(1f, .4f, .5f), 6, 2f, .4f, .12f);
     }

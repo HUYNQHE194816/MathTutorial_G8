@@ -33,12 +33,12 @@ public class Monster : Foe
         frames = RogueArt.MonsterFrames(biome, (int)kind);
         switch (kind)
         {
-            case MonsterKind.Gunner: hp0 = 30f; speed = 2.6f; rad = .5f; break;
-            case MonsterKind.Charger: hp0 = 40f; speed = 3.4f; rad = .62f; break;
-            case MonsterKind.Mage: hp0 = 25f; speed = 2.2f; rad = .5f; break;
-            case MonsterKind.Robot: hp0 = 60f; speed = 2.8f; rad = .8f; metal = true; break;
-            case MonsterKind.Summoner: hp0 = 35f; speed = 2.4f; rad = .55f; break;
-            default: hp0 = 8f; speed = 3.9f; rad = .3f; break;
+            case MonsterKind.Gunner: hp0 = 30f; speed = 2.6f; rad = .34f; break;
+            case MonsterKind.Charger: hp0 = 40f; speed = 3.4f; rad = .42f; break;
+            case MonsterKind.Mage: hp0 = 25f; speed = 2.2f; rad = .34f; break;
+            case MonsterKind.Robot: hp0 = 60f; speed = 2.8f; rad = .52f; metal = true; break;
+            case MonsterKind.Summoner: hp0 = 35f; speed = 2.4f; rad = .37f; break;
+            default: hp0 = 8f; speed = 3.9f; rad = .22f; break;
         }
         flying = (biome == 2 && (kind == MonsterKind.Gunner || kind == MonsterKind.Minion));
         if (biome == 2 && kind != MonsterKind.Minion && kind != MonsterKind.Summoner) metal = true;
@@ -51,11 +51,11 @@ public class Monster : Foe
         if (metal) bloodCol = new Color(1f, .8f, .4f);
 
         speed *= speedMul;
-        scale = elite ? 1.4f : 1f; if (elite) { hp0 *= 4f; dmgMul *= 1.5f; rad *= 1.4f; }
+        scale = elite ? 1.5f : 1f; if (elite) { hp0 *= 4f; dmgMul *= 1.5f; rad *= 1.4f; }
         hp0 *= hpMul; maxHp = hp = hp0; radius = rad;
         atkT = (kind == MonsterKind.Summoner ? 1.5f : kind == MonsterKind.Minion ? 0f : Random.Range(.6f, 1.6f)) / rate;
 
-        float h = frames[0].bounds.size.y * scale; footY = -Mathf.Min(h * .5f, rad * 1.15f + (flying ? .15f : 0f)); if (flying) footY = -.4f * scale;
+        float h = frames[0].bounds.size.y * scale * Combat.PxScale; footY = -Mathf.Min(h * .5f, rad * 1.15f + (flying ? .1f : 0f)); if (flying) footY = -.28f * scale;
         baseFoot = footY;
         shadow = Combat.MakeSr("Shade", transform, RogueArt.Disc, new Color(0, 0, 0, .4f), new Vector2(rad * 2f, rad * .75f), 4, new Vector2(0, footY + (flying ? -.45f : .05f)));
         body = Combat.MakePx("Body", transform, frames[0], Combat.Order(transform.position.y), new Vector2(0, footY), scale);
@@ -66,12 +66,12 @@ public class Monster : Foe
             eliteRing = Combat.MakeSr("EliteRing", transform, RogueArt.Ring, new Color(1f, .85f, .35f, .9f), new Vector2(rad * 2.8f, rad * 1.1f), 5, new Vector2(0, footY + .05f)); eliteRing.sharedMaterial = Gfx.Additive;
         }
         marker = Combat.MakeSr("Marker", transform, ThemeGfx.Pixel, new Color(1f, .3f, .3f, 0f), new Vector2(.1f, .1f), 3);
-        Vector2 barPos = new Vector2(0, -footY * .0f + frames[0].bounds.size.y * scale * .5f + footY + .35f);
-        barBg = Combat.MakeSr("BarBg", transform, ThemeGfx.Pixel, new Color(0, 0, 0, .0f), new Vector2(1.1f, .15f), Combat.OrdFx - 40, barPos);
-        barFill = Combat.MakeSr("BarFill", transform, ThemeGfx.Pixel, new Color(.9f, .35f, .35f, 0f), new Vector2(1f, .08f), Combat.OrdFx - 39, barPos);
+        Vector2 barPos = new Vector2(0, h + footY + .2f);
+        barBg = Combat.MakeSr("BarBg", transform, ThemeGfx.Pixel, new Color(0, 0, 0, .0f), new Vector2(.75f, .1f), Combat.OrdFx - 40, barPos);
+        barFill = Combat.MakeSr("BarFill", transform, ThemeGfx.Pixel, new Color(.9f, .35f, .35f, 0f), new Vector2(.68f, .055f), Combat.OrdFx - 39, barPos);
         barW = barFill.transform.localScale.x;
         body.color = new Color(1, 1, 1, 0f);
-        RFx.Ring(transform.position, .9f * scale, new Color(.75f, .55f, 1f), .6f); RFx.Burst(transform.position, new Color(.75f, .55f, 1f), 8, 2f, .6f, .16f, -1f);
+        RFx.Ring(transform.position, .6f * scale, new Color(.75f, .55f, 1f), .6f); RFx.Burst(transform.position, new Color(.75f, .55f, 1f), 8, 2f, .6f, .16f, -1f);
     }
 
     protected override float DamageTakenMul() => 1f;
@@ -92,7 +92,7 @@ public class Monster : Foe
         riderFrames = RogueArt.RiderFrames(biome); radius *= .65f; frames = riderFrames; body.sprite = frames[0];
         stunUntil = freezeUntil = 0f; auraEl = Element.None; innate = Element.None; for (int i = 0; i < resist.Length; i++) resist[i] = 0f;
         footY = -radius * 1.1f; body.transform.localPosition = new Vector2(0, footY); shadow.transform.localScale *= .7f;
-        RFx.Blast(transform.position, 1.6f, new Color(.9f, .8f, .5f), true); RFx.Burst(transform.position, new Color(.7f, .75f, .85f), 14, 5f, .7f, .16f, 8f, false);
+        RFx.Blast(transform.position, 1.2f, new Color(.9f, .8f, .5f), true); RFx.Burst(transform.position, new Color(.7f, .75f, .85f), 14, 5f, .7f, .16f, 8f, false);
         RFx.Text(transform.position + Vector3.up * 1.2f, "Quái lộ diện", GameTheme.EmberHi, .15f); RogueAudio.Play(RSfx.HitMetal, .8f); Combat.HitStop(.06f);
     }
 
@@ -233,41 +233,54 @@ public class Monster : Foe
         CombatTelegraph.Spawn(at, 1.8f, warn, dmg, el, fire);
     }
 
-    void Move(Vector2 v) { if (IsRooted) return; transform.position = RoomManager.Clamp((Vector2)transform.position + v * step); }
+    void Move(Vector2 v)
+    {
+        if (IsRooted) return; var np = RoomManager.Clamp((Vector2)transform.position + v * step);
+        if (!flying) np = RoomProp.Resolve(np, radius);               // quái đi bộ bị vật cản chặn đường, quái bay thì không
+        transform.position = np;
+    }
 
     // ------------------------------------------------------------------ hoạt họa
+    static readonly int[] WalkCycle = { 0, 3, 1, 3 };
+    float stepDust;
+
     void Animate(float dt)
     {
-        bool moving = state != 1 && !IsStunned && !IsRooted && spawnT <= 0f;
+        bool moving = state != 1 && !IsStunned && !IsRooted && spawnT <= 0f && (kind != MonsterKind.Charger || state != 0 || true);
         animT += dt; bobT += dt; poseT -= dt;
-        int f;
-        if (poseT > 0f || (kind == MonsterKind.Charger && state == 1) || (kind == MonsterKind.Mage && state == 1) || (kind == MonsterKind.Summoner && state == 1)) f = 2 < frames.Length && phase == 0 ? 2 : 0;
-        else f = moving ? ((int)(animT / .2f) % 2) : 0;
-        if (phase == 1 && frames.Length == 2 && f == 2) f = 0;
+        int f; bool atkPose = poseT > 0f || (kind == MonsterKind.Charger && state == 1) || (kind == MonsterKind.Mage && state == 1) || (kind == MonsterKind.Summoner && state == 1);
+        float fps = kind == MonsterKind.Minion ? 13f : kind == MonsterKind.Charger && state == 2 ? 16f : 9f;
+        if (atkPose && phase == 0 && frames.Length > 2) f = 2;
+        else if (moving && frames.Length >= 4) f = WalkCycle[(int)(animT * fps) % 4];
+        else f = moving ? ((int)(animT / .2f) % 2) : (frames.Length >= 4 ? 3 : 0);
         body.sprite = frames[Mathf.Min(f, frames.Length - 1)];
         body.flipX = faceLeft;
-        float bob = flying ? Mathf.Sin(bobT * 5f) * .12f : (moving ? Mathf.Abs(Mathf.Sin(animT * 12f)) * .05f : 0f);
-        body.transform.localPosition = new Vector2(0f, baseFootY() + bob + (kind == MonsterKind.Charger && state == 1 ? Mathf.Sin(animT * 60f) * .03f : 0f));
-        float sx = scale * (kind == MonsterKind.Charger && state == 1 ? 1.06f : 1f), sy = scale * (kind == MonsterKind.Charger && state == 1 ? .94f : 1f);
-        body.transform.localScale = new Vector3(sx, sy, 1f);
+        // nhún nhảy, nghiêng và co giãn khi đi để bước chân bớt cứng
+        float ph = animT * (kind == MonsterKind.Minion ? 18f : 11f);
+        float bob = flying ? Mathf.Sin(bobT * 5f) * .08f : (moving ? Mathf.Abs(Mathf.Sin(ph)) * .06f : Mathf.Sin(bobT * 2.5f) * .012f);
+        float tilt = moving && !flying ? Mathf.Sin(ph) * (kind == MonsterKind.Charger ? 3f : 5f) : (flying ? Mathf.Sin(bobT * 3f) * 4f : 0f);
+        float squash = moving && !flying ? 1f + .04f * Mathf.Sin(ph * 2f) : 1f + .015f * Mathf.Sin(bobT * 5f);
+        if (kind == MonsterKind.Charger && state == 1) squash = 1f - .08f + Mathf.Sin(animT * 60f) * .02f;
+        body.transform.localPosition = new Vector2(0f, baseFootY() + bob);
+        body.transform.localEulerAngles = new Vector3(0f, 0f, tilt);
+        body.transform.localScale = new Vector3(scale * Combat.PxScale / squash, scale * Combat.PxScale * squash, 1f);
         body.sortingOrder = Combat.Order(transform.position.y);
+        if (moving && !flying && spawnT <= 0f) { stepDust -= dt; if (stepDust <= 0f) { stepDust = kind == MonsterKind.Minion ? .35f : .28f; RFx.Puff((Vector2)transform.position + new Vector2(0, baseFootY() + .04f), new Color(.5f, .48f, .56f), 1, .16f * scale); } }
         if (eliteRing != null) { eliteRing.color = new Color(1f, .85f, .35f, .6f + .35f * Mathf.Sin(Time.time * 6f)); }
         float a = spawnT > 0f ? .35f + .3f * Mathf.Sin(Combat.Now * 25f) : 1f;
         Color baseC = new Color(1f, 1f, 1f, a);
-        // đỏ dần khi gồng lao
         if (kind == MonsterKind.Charger && state == 1) baseC = Color.Lerp(baseC, new Color(1f, .45f, .45f, a), .5f + .5f * Mathf.Sin(Combat.Now * 30f));
         SyncVisual(baseC);
-        // vạch báo hướng lao khi đang gồng
         if (kind == MonsterKind.Charger && state == 1)
         {
-            float len = 4.2f; marker.transform.position = (Vector2)transform.position + dashDir * len * .5f; marker.transform.eulerAngles = new Vector3(0, 0, Combat.Ang(dashDir));
-            marker.transform.localScale = new Vector3(len / marker.sprite.bounds.size.x, .55f / marker.sprite.bounds.size.y, 1f); marker.color = new Color(1f, .25f, .25f, .12f + .18f * Mathf.Sin(Combat.Now * 30f));
+            float len = 3.6f; marker.transform.position = (Vector2)transform.position + dashDir * len * .5f; marker.transform.eulerAngles = new Vector3(0, 0, Combat.Ang(dashDir));
+            marker.transform.localScale = new Vector3(len / marker.sprite.bounds.size.x, .4f / marker.sprite.bounds.size.y, 1f); marker.color = new Color(1f, .25f, .25f, .12f + .18f * Mathf.Sin(Combat.Now * 30f));
         }
         else marker.color = new Color(1, 0, 0, 0);
         if (hp < maxHp)
         {
             barBg.color = new Color(0, 0, 0, .7f); barFill.color = elite ? new Color(1f, .78f, .3f) : new Color(.9f, .35f, .35f);
-            float r = Mathf.Clamp01(hp / Mathf.Max(1f, maxHp)); var t = barFill.transform; t.localScale = new Vector3(barW * r, t.localScale.y, 1f); t.localPosition = new Vector3(-(1f - r) * .5f, t.localPosition.y, 0f);
+            float r = Mathf.Clamp01(hp / Mathf.Max(1f, maxHp)); var t = barFill.transform; t.localScale = new Vector3(barW * r, t.localScale.y, 1f); t.localPosition = new Vector3(-(1f - r) * .34f * scale * 0f - (1f - r) * barW * barFill.sprite.bounds.size.x * .5f, t.localPosition.y, 0f);
         }
     }
 

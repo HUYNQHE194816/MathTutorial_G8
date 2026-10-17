@@ -15,6 +15,15 @@ public class SolveWritingArgs
     public Action<string> onSubmit;      // tham số: văn bản thô trong ô nhập
     public Action<string> onHint;        // tham số: văn bản thô (để giữ bản nháp)
     public Action<string> onExit;        // thoát đề: bản nháp bị hủy, không tính lần làm
+    public Action<string> onPickImage;   // E5: bấm "Tải ảnh" (null = ẩn nút); tham số: bản nháp đang gõ
+}
+
+/// <summary>Dữ liệu dựng màn xác nhận bản chép từ ảnh (E5).</summary>
+public class SolveTranscriptArgs
+{
+    public string title, subjectId; public Texture2D preview; public System.Collections.Generic.List<TranscriptLine> lines;
+    public Action<string> onConfirm;     // văn bản đã xác nhận/sửa
+    public Action onOtherImage, onCancel;
 }
 
 public class SolveResultButton
@@ -28,6 +37,9 @@ public class SolveResultArgs
     public string title, footer, subjectId;
     public EssayProblem problem; public EssayVariant variant; public EssayGradeResult grade; public GradeBand band;
     public string[] lines;                 // lời giải đã chuẩn hóa, mỗi phần tử là một dòng (đánh số từ 1)
+    public string analysis;                // E4: phần "Thầy Cú nhận xét" do AI viết (null = chấm bằng bộ chấm tạm)
+    public string[] stepWhy;               // E4: lời giải thích từng bước (theo thứ tự barem), có thể null
+    public string note;                    // dòng nhắn nhỏ trên tiêu đề (ví dụ: AI chưa phản hồi nên dùng bộ chấm tạm)
     public bool revealDesc;                // true: hiện mô tả barem đã thế số cho mọi bước (khi đã qua cửa hoặc đã phá khóa)
     public List<SolveResultButton> buttons = new List<SolveResultButton>();
 }
@@ -61,7 +73,7 @@ public class EssaySolveUI : MonoBehaviour
     public void Hide()
     {
         if (screen != null) { screen.gameObject.SetActive(false); Destroy(screen.gameObject); screen = null; }
-        input = null; paletteHost = null; tipHost = null; sugBox = null;
+        input = null; paletteHost = null; tipHost = null; sugBox = null; busyLabel = null;
     }
 
     RectTransform NewScreen()
@@ -158,6 +170,9 @@ public class EssaySolveUI : MonoBehaviour
         UIKit.MakeButton(pc, "SymBtn", "Ký hiệu (F2)", new Vector2(-400, -372), new Vector2(220, 70), TogglePalette, ButtonStyle.Secondary, 26);
         UIKit.MakeButton(pc, "ExitBtn", "Thoát đề", new Vector2(-130, -372), new Vector2(260, 70),
             () => a.onExit?.Invoke(input != null ? input.text : ""), ButtonStyle.Secondary, 28);
+        if (a.onPickImage != null)
+            UIKit.MakeButton(pc, "ImgBtn", "Tải ảnh bài viết tay", new Vector2(240, -372), new Vector2(390, 70),
+                () => a.onPickImage?.Invoke(input != null ? input.text : ""), ButtonStyle.Bronze, 26);
         UIKit.MakeButton(pc, "SubmitBtn", "Nộp bài", new Vector2(620, -372), new Vector2(340, 70),
             () => a.onSubmit?.Invoke(input != null ? input.text : ""), ButtonStyle.Primary, 34);
 
@@ -285,6 +300,7 @@ public class EssaySolveUI : MonoBehaviour
 
     void Update()
     {
+        if (busyLabel != null) { busyT += Time.unscaledDeltaTime; busyLabel.text = busyBase + new string('.', 1 + (int)(busyT * 2f) % 3); }
         if (input == null) return;
         var k = Keyboard.current;
         if (k != null && k.f2Key.wasPressedThisFrame) TogglePalette();
@@ -313,6 +329,55 @@ public class EssaySolveUI : MonoBehaviour
             Debug.LogWarning("[EssaySolveUI] Font thân thiếu glyph cho các ký hiệu: " + missing + ". Thêm font phụ hoặc đổi font trong GameFont.Body (mục rủi ro 'Font game thiếu glyph' của kế hoạch).");
     }
 
+    // ================================================================== chờ AI
+    Text busyLabel; float busyT;
+
+    /// <summary>Màn chờ khi AI đang chấm hoặc đọc ảnh. onSkip (tùy chọn) cho phép bỏ chờ và dùng bộ chấm tạm.</summary>
+    public void ShowBusy(string title, string message, Action onSkip = null, string skipLabel = "Dùng bộ chấm tạm")
+    {
+        var s = NewScreen(); Dim(s);
+        UIKit.Panel(s, "BusyPanel", Vector2.zero, new Vector2(1100, 460), PanelStyle.Dark, out var c);
+        UIKit.Label("T", c, title, 52, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 140), new Vector2(980, 80), true, true, FontStyle.Bold);
+        busyLabel = UIKit.Label("M", c, message, 30, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 20), new Vector2(980, 120)); busyT = 0f;
+        UIKit.Label("W", c, "Thời gian trong trận vẫn đang đóng băng, em cứ yên tâm chờ.", 24, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, -80), new Vector2(980, 40), false, false, FontStyle.Italic);
+        if (onSkip != null) UIKit.MakeButton(c, "Skip", skipLabel, new Vector2(0, -170), new Vector2(420, 70), onSkip, ButtonStyle.Secondary, 28, 8f);
+        busyBase = message;
+    }
+    string busyBase;
+
+    // ================================================================== xác nhận bản chép từ ảnh (E5, mục 9 B4)
+    public void ShowTranscript(SolveTranscriptArgs a)
+    {
+        busyLabel = null; var s = NewScreen(); Dim(s);
+        UIKit.Label("Title", s, a.title, 46, SubjectColor(a.subjectId), TextAnchor.MiddleCenter, new Vector2(0, 492), new Vector2(1700, 60), true, true, FontStyle.Bold);
+        UIKit.Panel(s, "ImgPanel", new Vector2(-560, -30), new Vector2(620, 900), PanelStyle.Dark, out var ic);
+        UIKit.Label("IT", ic, "Ảnh của em", 30, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 395), new Vector2(560, 40), false, false, FontStyle.Bold);
+        if (a.preview != null)
+        {
+            var go = new GameObject("Preview", typeof(RectTransform), typeof(RawImage)); var rt = (RectTransform)go.transform; rt.SetParent(ic, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(.5f, .5f); rt.anchoredPosition = new Vector2(0, -10);
+            float k = Mathf.Min(560f / a.preview.width, 740f / a.preview.height); rt.sizeDelta = new Vector2(a.preview.width * k, a.preview.height * k);
+            var ri = go.GetComponent<RawImage>(); ri.texture = a.preview; ri.raycastTarget = false;
+        }
+        UIKit.Panel(s, "TextPanel", new Vector2(330, -30), new Vector2(1160, 900), PanelStyle.Parchment, out var pc);
+        UIKit.Label("TT", pc, "Bản chép của AI: em đọc lại và sửa chỗ nào sai rồi mới nộp chấm", 30, GameTheme.PaperInk, TextAnchor.MiddleLeft, new Vector2(0, 385), new Vector2(1080, 44), false, false, FontStyle.Bold);
+        var sbText = new StringBuilder(); var low = new List<int>();
+        for (int i = 0; i < a.lines.Count; i++) { sbText.Append(a.lines[i].text); if (i + 1 < a.lines.Count) sbText.Append('\n'); if (a.lines[i].conf < .6f || a.lines[i].text.Contains("[không đọc được]")) low.Add(i + 1); }
+        var frame = UIKit.CBox("InputFrame", pc, GameTheme.Bronze, new Vector2(0, 90), new Vector2(1100, 560), true);
+        var bg = UIKit.CBox("Bg", frame, new Color(1f, 1f, 1f, .65f), Vector2.zero, Vector2.zero, true); UIKit.Stretch(bg, 3, 3, 3, 3);
+        var text = UIKit.Label("Text", bg, "", 30, GameTheme.PaperInk, TextAnchor.UpperLeft, Vector2.zero, Vector2.zero); UIKit.Stretch(text.rectTransform, 16, 12, 16, 12); text.verticalOverflow = VerticalWrapMode.Truncate;
+        var ph = UIKit.Label("Placeholder", bg, "", 28, GameTheme.PaperMuted.WithAlpha(.5f), TextAnchor.UpperLeft, Vector2.zero, Vector2.zero); UIKit.Stretch(ph.rectTransform, 16, 14, 16, 12);
+        input = bg.gameObject.AddComponent<InputField>(); input.targetGraphic = bg.GetComponent<Image>(); input.textComponent = text; input.placeholder = ph;
+        input.lineType = InputField.LineType.MultiLineNewline; input.characterLimit = EssaySymbols.MaxChars + 200; input.text = sbText.ToString();
+        string warn = low.Count > 0 ? "Dòng " + string.Join(", ", low) + " AI đọc chưa chắc, em kiểm tra kỹ nhé." : "AI đọc khá chắc, em vẫn nên đọc lại một lượt.";
+        UIKit.Label("Warn", pc, warn, 26, low.Count > 0 ? GameTheme.Blood : GameTheme.EmberDeep, TextAnchor.MiddleLeft, new Vector2(0, -230), new Vector2(1080, 40), false, false, FontStyle.Bold);
+        UIKit.Label("Note", pc, "Chỉ sau khi em xác nhận, bài mới được chấm. Ảnh được gửi thẳng cho AI để đọc và không được lưu lại.", 22, GameTheme.PaperMuted, TextAnchor.MiddleLeft, new Vector2(0, -275), new Vector2(1080, 36), false, false, FontStyle.Italic);
+        UIKit.MakeButton(pc, "Cancel", "Quay lại gõ tay", new Vector2(-410, -372), new Vector2(300, 70), () => a.onCancel?.Invoke(), ButtonStyle.Secondary, 26);
+        UIKit.MakeButton(pc, "Other", "Chọn ảnh khác", new Vector2(-70, -372), new Vector2(300, 70), () => a.onOtherImage?.Invoke(), ButtonStyle.Bronze, 26);
+        UIKit.MakeButton(pc, "Ok", "Xác nhận và chấm", new Vector2(370, -372), new Vector2(400, 70), () => a.onConfirm?.Invoke(input != null ? input.text : ""), ButtonStyle.Primary, 32);
+        CheckFontOnce();
+    }
+
     // ================================================================== màn kết quả
     public void ShowResult(SolveResultArgs a)
     {
@@ -325,14 +390,21 @@ public class EssaySolveUI : MonoBehaviour
         UIKit.Label("WorkTitle", wc, "Bài làm của em", 32, GameTheme.PaperMuted, TextAnchor.MiddleLeft, new Vector2(0, 385), new Vector2(740, 44), false, false, FontStyle.Bold);
         var sb = new StringBuilder();
         for (int i = 0; i < a.lines.Length; i++) sb.Append(i + 1).Append("   ").Append(a.lines[i]).Append('\n');
-        var work = UIKit.Label("Work", wc, sb.ToString().TrimEnd('\n'), 28, GameTheme.PaperInk, TextAnchor.UpperLeft, new Vector2(0, -30), new Vector2(740, 740));
+        bool hasAna = !string.IsNullOrEmpty(a.analysis);
+        var work = UIKit.Label("Work", wc, sb.ToString().TrimEnd('\n'), hasAna ? 24 : 28, GameTheme.PaperInk, TextAnchor.UpperLeft, hasAna ? new Vector2(0, 170) : new Vector2(0, -30), hasAna ? new Vector2(740, 380) : new Vector2(740, 740));
         work.verticalOverflow = VerticalWrapMode.Truncate;
+        if (hasAna)
+        {
+            UIKit.Label("AnaTitle", wc, "Thầy Cú nhận xét", 30, GameTheme.EmberDeep, TextAnchor.MiddleLeft, new Vector2(0, -35), new Vector2(740, 40), false, false, FontStyle.Bold);
+            var ana = UIKit.Label("Ana", wc, a.analysis, 22, GameTheme.PaperInk, TextAnchor.UpperLeft, new Vector2(0, -235), new Vector2(740, 300)); ana.verticalOverflow = VerticalWrapMode.Truncate;
+        }
 
         // ---- phải: từng bước barem ----
         UIKit.Panel(s, "ResPanel", new Vector2(450, -30), new Vector2(860, 900), PanelStyle.Dark, out var rc);
         Color bandColor = a.band == GradeBand.Good ? GameTheme.Moss : a.band == GradeBand.Pass ? GameTheme.Gold : GameTheme.Blood;
         UIKit.Label("Band", rc, a.title, 52, bandColor, TextAnchor.MiddleCenter, new Vector2(0, 370), new Vector2(780, 70), true, true, FontStyle.Bold);
         UIKit.Label("Score", rc, "Điểm " + a.grade.score + "/" + a.grade.maxScore, 34, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 318), new Vector2(780, 44));
+        if (!string.IsNullOrEmpty(a.note)) UIKit.Label("Note", rc, a.note, 20, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 290), new Vector2(800, 28), false, false, FontStyle.Italic);
 
         int n = a.problem.rubric.Length;
         for (int i = 0; i < n; i++)
@@ -343,6 +415,7 @@ public class EssaySolveUI : MonoBehaviour
             {
                 case EssayStepStatus.Correct: tag = "Đúng"; col = GameTheme.Moss; break;
                 case EssayStepStatus.Partial: tag = "Một phần"; col = GameTheme.GoldHi; break;
+                case EssayStepStatus.Wrong: tag = "Chưa đúng"; col = GameTheme.Blood; break;
                 default: tag = "Chưa thấy"; col = GameTheme.Blood; break;
             }
             string where = st.lines != null && st.lines.Length > 0 ? "  ·  dòng " + string.Join(", ", st.lines) : "";
@@ -350,7 +423,9 @@ public class EssaySolveUI : MonoBehaviour
             UIKit.Label("StepHead" + i, rc, "Bước " + (i + 1) + " · " + a.problem.rubric[i].label + "  —  " + tag + where + "  ·  " + st.points + "/" + st.maxPoints,
                 26, col, TextAnchor.MiddleLeft, new Vector2(0, y), new Vector2(780, 34), false, false, FontStyle.Bold);
             string body;
-            if (a.revealDesc || st.status == EssayStepStatus.Correct) body = a.variant.rubricDesc[i];
+            string why = a.stepWhy != null && i < a.stepWhy.Length ? a.stepWhy[i] : null;
+            if (st.status != EssayStepStatus.Correct && !string.IsNullOrEmpty(why)) body = why;
+            else if (a.revealDesc || st.status == EssayStepStatus.Correct) body = a.variant.rubricDesc[i];
             else body = st.status == EssayStepStatus.Partial ? "Có một phần ý của bước này, còn thiếu ý khác." : "Chưa thấy ý của bước này trong bài làm.";
             UIKit.Label("StepBody" + i, rc, body, 22, GameTheme.Fog, TextAnchor.UpperLeft, new Vector2(0, y - 40), new Vector2(780, 48));
         }

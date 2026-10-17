@@ -156,7 +156,7 @@ public class VineSnare : MonoBehaviour
     }
 }
 
-/// <summary>Sóng xung kích lan từ tâm: né bằng cách lướt qua vành sóng (Space).</summary>
+/// <summary>Sóng xung kích lan từ tâm: né bằng cách lướt qua vành sóng (Shift).</summary>
 public class RogueShockwave : MonoBehaviour
 {
     float r, speed, maxR, thick, dmg; Element el; bool hit; Color col; SpriteRenderer ring, glow; float t;
@@ -221,12 +221,13 @@ public class RoomHazards : MonoBehaviour
         var h = go.AddComponent<RoomHazards>(); h.biome = biome; h.intensity = 1f + .25f * (int)RunState.difficulty;
         h.t1 = 4f; h.t2 = 7f; h.t3 = 11f;
         // vài vũng cố định cho đúng không khí của khu vực
-        if (biome == 0) { HazardFx.Puddle(new Vector2(-4.8f, -1.8f), 1.2f, 9999f, new Color(.45f, .9f, .3f), Element.Doc, 3f, .35f); HazardFx.Puddle(new Vector2(4.6f, 1.6f), 1.0f, 9999f, new Color(.45f, .9f, .3f), Element.Doc, 3f, .35f); }
-        if (biome == 1) { HazardFx.Puddle(new Vector2(-5.2f, 1.4f), 1.3f, 9999f, new Color(.75f, .45f, 1f), Element.Doc, 3f, .3f); HazardFx.Puddle(new Vector2(5.2f, -1.9f), 1.1f, 9999f, new Color(.75f, .45f, 1f), Element.Doc, 3f, .3f); }
+        float kx = RoomManager.HalfW / 8.2f, ky = (RoomManager.HalfH) / 4.05f;
+        if (biome == 0) { HazardFx.Puddle(new Vector2(-4.8f * kx, -1.8f * ky), 1.2f, 9999f, new Color(.45f, .9f, .3f), Element.Doc, 3f, .35f); HazardFx.Puddle(new Vector2(4.6f * kx, 1.6f * ky), 1.0f, 9999f, new Color(.45f, .9f, .3f), Element.Doc, 3f, .35f); }
+        if (biome == 1) { HazardFx.Puddle(new Vector2(-5.2f * kx, 1.4f * ky), 1.3f, 9999f, new Color(.75f, .45f, 1f), Element.Doc, 3f, .3f); HazardFx.Puddle(new Vector2(5.2f * kx, -1.9f * ky), 1.1f, 9999f, new Color(.75f, .45f, 1f), Element.Doc, 3f, .3f); }
         return h;
     }
 
-    Vector2 RandPos() { var pl = Combat.Player; for (int i = 0; i < 12; i++) { var p = new Vector2(Random.Range(-6.8f, 6.8f), Random.Range(-3f, 2.8f)); if (pl == null || Vector2.Distance(p, pl.transform.position) > 1.4f) return p; } return Vector2.zero; }
+    Vector2 RandPos() { var pl = Combat.Player; for (int i = 0; i < 12; i++) { var p = new Vector2(Random.Range(-RoomManager.HalfW + 1.4f, RoomManager.HalfW - 1.4f), Random.Range(RoomManager.MinY + .9f, RoomManager.WallY - .8f)); if (pl == null || Vector2.Distance(p, pl.transform.position) > 1.4f) return p; } return Vector2.zero; }
 
     void Update()
     {
@@ -244,8 +245,8 @@ public class RoomHazards : MonoBehaviour
         }
         else
         {   // sàn nhiễm điện theo hàng, tia laze quét
-            if (t1 <= 0f) { t1 = Random.Range(6f, 8.5f) / intensity; float x = Random.Range(-6f, 6f); ElectricTile.Spawn(new Vector2(x, -.3f), new Vector2(2.2f, 7f), 1.5f, 9f * intensity); }
-            if (t3 <= 0f) { t3 = Random.Range(11f, 15f) / intensity; float y = Random.Range(-2.6f, 2.4f); TeleLine.Spawn(new Vector2(-8f, y), new Vector2(8f, y), .7f, 1.4f, 9f * intensity, Element.Loi, Combat.ElementColor(Element.Loi)); }
+            if (t1 <= 0f) { t1 = Random.Range(6f, 8.5f) / intensity; float x = Random.Range(-RoomManager.HalfW + 1.5f, RoomManager.HalfW - 1.5f); ElectricTile.Spawn(new Vector2(x, RoomManager.CenterY), new Vector2(2.2f, RoomManager.HalfH * 2f - .6f), 1.5f, 9f * intensity); }
+            if (t3 <= 0f) { t3 = Random.Range(11f, 15f) / intensity; float y = Random.Range(RoomManager.MinY + .8f, RoomManager.WallY - .8f); TeleLine.Spawn(new Vector2(-RoomManager.HalfW, y), new Vector2(RoomManager.HalfW, y), .7f, 1.4f, 9f * intensity, Element.Loi, Combat.ElementColor(Element.Loi)); }
         }
     }
 }

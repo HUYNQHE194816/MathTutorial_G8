@@ -11,6 +11,9 @@ public static class Combat
 {
     // Thứ tự vẽ: sàn/tường < nhân vật (theo y) < hiệu ứng < vignette < chữ nổi
     public const int OrdChar = 200, OrdFx = 400, OrdVignette = 600, OrdText = 700;
+    /// <summary>Mọi sprite pixel của nhân vật, quái, đạo cụ dựng bằng MakePx đều nhân hệ số này (1 texel = 1/32 đơn vị) để sân rộng và nhân vật nhỏ gọn như Soul Knight.</summary>
+    public const float PxScale = .5f;
+    public static System.Action<float> Dealt;               // báo sát thương người chơi gây ra (hút máu)
 
     public static float Now;                                   // giờ trận (giây), không tăng khi đóng băng
     static float stopUntil, slowUntil, slowScale = 1f;
@@ -51,16 +54,19 @@ public static class Combat
     {
         var go = new GameObject(name); go.transform.SetParent(parent, false);
         if (localPos.HasValue) go.transform.localPosition = localPos.Value;
-        go.transform.localScale = new Vector3(scale, scale, 1f);
+        go.transform.localScale = new Vector3(scale * PxScale, scale * PxScale, 1f);
         var sr = go.AddComponent<SpriteRenderer>(); sr.sprite = sprite; sr.sortingOrder = order; return sr;
     }
+
+    /// <summary>Số kẻ địch còn sống (không tính vật cản như thùng).</summary>
+    public static int EnemyCount() { int n = 0; foreach (var f in Foes) if (f != null && !f.Dead && !f.isProp) n++; return n; }
 
     public static Foe Nearest(Vector2 p, float maxR, Foe except = null)
     {
         Foe best = null; float bd = maxR;
         foreach (var m in Foes)
         {
-            if (m == null || m == except || m.Dead || !m.Targetable) continue;
+            if (m == null || m == except || m.Dead || !m.Targetable || m.isProp) continue;
             float d = Vector2.Distance(p, m.transform.position) - m.radius;
             if (d < bd) { bd = d; best = m; }
         }
@@ -69,6 +75,7 @@ public static class Combat
 
     public static bool Roll(ref float dmg, float chance = .08f)
     {
+        chance += RunState.CritBonus;
         if (Random.value >= chance) return false;
         dmg *= 2f; return true;
     }
@@ -229,8 +236,8 @@ public static class Elements
 }
 
 // ====================================================================== vũ khí (mục 5.3)
-public enum WeaponId { Pistol, Rifle, Laser, Bow, Dagger, Spear, Orb, Cannon, Rocket, Staff, Axe, Scythe }
-public enum WKind { Gun, Auto, Beam, Bow, Stab, Thrust, Orbit, Blast, Rocket, Wand, Spin, Reap }
+public enum WeaponId { Pistol, Rifle, Laser, Bow, Dagger, Spear, Orb, Cannon, Rocket, Staff, Axe, Scythe, Shotgun, Railgun, Knives, Shuriken, Grenade }
+public enum WKind { Gun, Auto, Beam, Bow, Stab, Thrust, Orbit, Blast, Rocket, Wand, Spin, Reap, Spread, Charge, Throw, Boomerang, Grenade }
 
 public class WeaponDef
 {
@@ -268,6 +275,11 @@ public static class Weapons
         new WeaponDef(WeaponId.Staff, "Gậy phép", "Phép", WKind.Wand, false, 9f, .36f, 12f, 1, 0f, 0, 0f, "Cầu phép mang nguyên tố, nhịp đánh nhanh."),
         new WeaponDef(WeaponId.Axe, "Rìu chiến", "Cận chiến", WKind.Spin, true, 28f, .85f, 0f, 1, 0f, 0, 2.3f, "Chém vòng quanh người, chậm, hất lùi mạnh."),
         new WeaponDef(WeaponId.Scythe, "Lưỡi hái", "Cận chiến", WKind.Reap, true, 17f, .5f, 0f, 1, 0f, 0, 3.0f, "Chém cung rộng, hồi máu khi hạ quái."),
+        new WeaponDef(WeaponId.Shotgun, "Súng hoa cải", "Bắn tỏa", WKind.Spread, false, 5f, .85f, 15f, 6, 30f, 0, 0f, "Bắn tỏa nhiều viên, mạnh ở tầm gần, hất lùi."),
+        new WeaponDef(WeaponId.Railgun, "Súng điện từ", "Vũ khí sạc", WKind.Charge, false, 22f, 1.0f, 0f, 1, 0f, 99, 22f, "Giữ chuột để sạc, nhả ra bắn tia xuyên mọi thứ."),
+        new WeaponDef(WeaponId.Knives, "Phi đao", "Vũ khí ném", WKind.Throw, false, 7f, .24f, 17f, 1, 4f, 1, 0f, "Ném liên tục những con dao xoay, xuyên một mục tiêu."),
+        new WeaponDef(WeaponId.Shuriken, "Phi tiêu", "Vũ khí ném", WKind.Boomerang, false, 9f, .6f, 13f, 1, 0f, 99, 0f, "Bay đi rồi quay về như boomerang, trúng cả hai lượt."),
+        new WeaponDef(WeaponId.Grenade, "Lựu đạn", "Vũ khí ném", WKind.Grenade, false, 26f, .95f, 0f, 1, 0f, 0, 0f, "Ném theo đường vòng, nổ lan sau một nhịp."),
     };
     public static WeaponDef Get(WeaponId id) => defs[(int)id];
     public static int Count => defs.Length;
@@ -294,12 +306,12 @@ public static class Weapons
 }
 
 // ====================================================================== buff (mục 5.5)
-public enum BuffId { ExtraShot, Bounce, Pierce, Resist, Infuse, Wave, AttackSpeed, KillHeal, Blast }
+public enum BuffId { ExtraShot, Bounce, Pierce, Resist, Infuse, Wave, AttackSpeed, KillHeal, Blast, Fire, Ice, Heart, Boots, Vamp, Shield, Crit, Range, Thunder, Regen, Reflect, Ally }
 
 public class RunBuffDef
 {
-    public BuffId id; public string name, desc;
-    public RunBuffDef(BuffId id, string name, string desc) { this.id = id; this.name = name; this.desc = desc; }
+    public BuffId id; public string name, desc, icon; public bool unique;   // icon: khóa icon của boss rồng (ProcSprites.BuffIcon); unique: chỉ nhận một lần
+    public RunBuffDef(BuffId id, string name, string desc, string icon = null, bool unique = false) { this.id = id; this.name = name; this.desc = desc; this.icon = icon; this.unique = unique; }
 }
 
 public static class Buffs
@@ -315,6 +327,19 @@ public static class Buffs
         new RunBuffDef(BuffId.AttackSpeed, "Tốc đánh", "Tăng 15% tốc độ bắn hoặc chém"),
         new RunBuffDef(BuffId.KillHeal, "Hồi máu khi hạ quái", "Hồi 3 máu mỗi khi hạ một con quái"),
         new RunBuffDef(BuffId.Blast, "Nổ lan rộng", "Tăng 35% bán kính nổ của đại bác, tên lửa và mọi vụ nổ"),
+        // ---- buff lấy từ trận boss Rồng (Sinh học), tích hợp vào tự luận ----
+        new RunBuffDef(BuffId.Fire, "Hỏa Ấn", "Mọi đòn đánh thêm nguyên tố Hỏa: gây cháy 3 giây, ghép được phản ứng", "fire", true),
+        new RunBuffDef(BuffId.Ice, "Băng Ấn", "Mọi đòn đánh thêm nguyên tố Băng; mỗi 3 giây phóng 3 mảnh băng làm chậm", "ice", true),
+        new RunBuffDef(BuffId.Heart, "Tim Rồng", "Máu tối đa +20 và hồi ngay 40 máu", "heart"),
+        new RunBuffDef(BuffId.Boots, "Giày Gió", "Tốc độ chạy +15%", "boots"),
+        new RunBuffDef(BuffId.Vamp, "Hút Máu", "Hồi 15% sát thương gây ra", "vamp"),
+        new RunBuffDef(BuffId.Shield, "Khiên Sáng", "Chặn 2 đòn tấn công mỗi màn", "shield"),
+        new RunBuffDef(BuffId.Crit, "Chí Mạng", "Tỉ lệ bạo kích +15%", "crit"),
+        new RunBuffDef(BuffId.Range, "Tầm Xa", "Tầm chém, đâm và quét của vũ khí cận chiến +20%", "long"),
+        new RunBuffDef(BuffId.Thunder, "Sấm Sét", "Cứ 3 giây, sét đánh trúng một kẻ địch gần nhất", "thunder", true),
+        new RunBuffDef(BuffId.Regen, "Hồi Phục", "Hồi 1 máu mỗi giây", "regen"),
+        new RunBuffDef(BuffId.Reflect, "Chém Phản", "Đòn cận chiến chém bật đạn địch bay ngược về phía chúng", "reflect", true),
+        new RunBuffDef(BuffId.Ally, "Linh Hộ Vệ", "Một linh hồn đi theo hiệp sĩ, tự bắn vào kẻ địch", "ally"),
     };
 
     public static RunBuffDef Of(BuffId id) => All[(int)id];
@@ -324,10 +349,11 @@ public static class Buffs
     {
         switch (b.id)
         {
-            case BuffId.Blast: return w.kind == WKind.Blast || w.kind == WKind.Rocket;
+            case BuffId.Blast: return w.kind == WKind.Blast || w.kind == WKind.Rocket || w.kind == WKind.Grenade;
+            case BuffId.Range: case BuffId.Reflect: return w.melee;
             case BuffId.Wave: return w.melee;
             case BuffId.Bounce: return !w.melee && w.kind != WKind.Orbit || w.kind == WKind.Orbit;
-            case BuffId.Pierce: return w.kind == WKind.Bow || w.kind == WKind.Beam || w.kind == WKind.Thrust || w.kind == WKind.Gun || w.kind == WKind.Auto;
+            case BuffId.Pierce: return w.kind == WKind.Bow || w.kind == WKind.Beam || w.kind == WKind.Thrust || w.kind == WKind.Gun || w.kind == WKind.Auto || w.kind == WKind.Throw || w.kind == WKind.Charge;
             case BuffId.ExtraShot: return !w.melee;
             default: return true;
         }
@@ -337,7 +363,8 @@ public static class Buffs
     public static List<RunBuffDef> Offer(WeaponDef main, System.Random rng)
     {
         var pool = new List<RunBuffDef>(All);
-        var suit = pool.FindAll(b => Suits(b, main) && b.id != BuffId.Resist && b.id != BuffId.Infuse && b.id != BuffId.AttackSpeed && b.id != BuffId.KillHeal);
+        pool.RemoveAll(b => b.unique && RunState.Has(b.id) || (b.id == BuffId.Wave && RunState.wave));       // buff chỉ nhận một lần thì không xuất hiện lại
+        var suit = pool.FindAll(b => Suits(b, main) && (b.id == BuffId.Blast || b.id == BuffId.Wave || b.id == BuffId.Bounce || b.id == BuffId.Pierce || b.id == BuffId.ExtraShot || b.id == BuffId.Range || b.id == BuffId.Reflect));
         if (suit.Count == 0) suit = pool;
         var res = new List<RunBuffDef>();
         var first = suit[rng.Next(suit.Count)]; res.Add(first); pool.Remove(first);
@@ -360,6 +387,7 @@ public class RunSnap
     public WeaponSave main = new WeaponSave(), sub = new WeaponSave();
     public int extraShots, bounces, extraPierce, killHeal, atkSpeedStacks, blastStacks; public bool wave; public int infuse;
     public float[] resist = new float[9]; public List<string> buffLog = new List<string>();
+    public int[] cnt = new int[32];            // số lần nhận mỗi buff (theo BuffId)
 }
 
 [System.Serializable]
@@ -384,6 +412,12 @@ public static class RunState
     public static int extraShots, bounces, extraPierce, killHeal, atkSpeedStacks, blastStacks;
     public static bool wave; public static Element infuse = Element.None;
     public static readonly float[] resist = new float[9];
+    public static readonly int[] cnt = new int[32];
+    public static int Count(BuffId b) => cnt[(int)b];
+    public static bool Has(BuffId b) => cnt[(int)b] > 0;
+    public static float CritBonus => .15f * cnt[(int)BuffId.Crit];
+    public static float SpeedMul => 1f + .15f * cnt[(int)BuffId.Boots];
+    public static float RangeMul => 1f + .2f * cnt[(int)BuffId.Range];
     public static readonly List<string> buffLog = new List<string>();
     /// <summary>Ghi chú của Thầy Cú về phần còn thiếu trong các lần giải trụ đá "Đạt" (hiện ở phòng nghỉ).</summary>
     public static readonly List<string> notes = new List<string>();
@@ -434,6 +468,7 @@ public static class RunState
         main = new WeaponInstance(WeaponId.Pistol, 0); sub = Meta.LegendWeapon();           // vũ khí huyền thoại nhận ở cuối lượt trước làm vũ khí phụ
         extraShots = bounces = extraPierce = killHeal = atkSpeedStacks = blastStacks = 0; wave = false; infuse = Element.None;
         for (int i = 0; i < resist.Length; i++) resist[i] = 0f;
+        for (int i = 0; i < cnt.Length; i++) cnt[i] = 0;
         buffLog.Clear(); notes.Clear();
         ink = keepInk ? keep : -1;
         SaveCheckpoint();
@@ -446,7 +481,7 @@ public static class RunState
     public static RunSnap Capture()
     {
         var s = new RunSnap { stage = stage, phase = phase, hp = hp, extraShots = extraShots, bounces = bounces, extraPierce = extraPierce, killHeal = killHeal, atkSpeedStacks = atkSpeedStacks, blastStacks = blastStacks, wave = wave, infuse = (int)infuse };
-        s.main = ToSave(main); s.sub = ToSave(sub); System.Array.Copy(resist, s.resist, resist.Length); s.buffLog = new List<string>(buffLog); return s;
+        s.main = ToSave(main); s.sub = ToSave(sub); System.Array.Copy(resist, s.resist, resist.Length); s.buffLog = new List<string>(buffLog); System.Array.Copy(cnt, s.cnt, cnt.Length); return s;
     }
 
     static WeaponSave ToSave(WeaponInstance w) => w == null ? new WeaponSave() : new WeaponSave { id = (int)w.id, rarity = w.rarity, element = (int)w.element };
@@ -457,6 +492,7 @@ public static class RunState
         hp = s.hp; extraShots = s.extraShots; bounces = s.bounces; extraPierce = s.extraPierce; killHeal = s.killHeal; atkSpeedStacks = s.atkSpeedStacks; blastStacks = s.blastStacks; wave = s.wave; infuse = (Element)s.infuse;
         main = FromSave(s.main) ?? new WeaponInstance(WeaponId.Pistol, 0); sub = FromSave(s.sub);
         for (int i = 0; i < resist.Length; i++) resist[i] = i < s.resist.Length ? s.resist[i] : 0f;
+        for (int i = 0; i < cnt.Length; i++) cnt[i] = s.cnt != null && i < s.cnt.Length ? s.cnt[i] : 0;
         buffLog.Clear(); buffLog.AddRange(s.buffLog);
     }
 
@@ -485,7 +521,12 @@ public static class RunState
             case BuffId.AttackSpeed: atkSpeedStacks++; break;
             case BuffId.KillHeal: killHeal++; break;
             case BuffId.Blast: blastStacks++; break;
+            default: break;
         }
+        cnt[(int)b.id]++;
+        if (b.id == BuffId.Heart && Combat.Player != null) Combat.Player.Heal(40f);
+        else if (b.id == BuffId.Heart) hp = Mathf.Min(PlayerCombat.MaxHp, hp + 40f);
+        else if (b.id == BuffId.Ally && Combat.Player != null) Combat.Player.RefreshCompanions();
         buffLog.Add(log);
     }
 

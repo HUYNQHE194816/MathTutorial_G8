@@ -18,7 +18,14 @@ public class RoomManager : MonoBehaviour
     public static bool Frozen { get; private set; }
     public static bool HazardsOn = true;
 
-    public const float MinX = -8f, MaxX = 8f, MinY = -3.9f, WallY = 3.6f, DoorHalf = 1.15f, ExitY = 4.4f, Reach = 2.3f;
+    public const float DoorHalf = .95f, Reach = 1.9f, CenterY = -.15f;
+    /// <summary>Nửa kích thước sân hiện tại: sân to hay bé theo số quái của màn (quái đông thì sân rộng, quái ít thì sân nhỏ gọn), camera đi theo người chơi.</summary>
+    public static float HalfW = 8.2f, HalfH = 4.05f;
+    public static float MinX => -HalfW + .2f;
+    public static float MaxX => HalfW - .2f;
+    public static float MinY => CenterY - HalfH + .3f;
+    public static float WallY => CenterY + HalfH - .3f;
+    public static float ExitY => CenterY + HalfH + .55f;
     public static Vector2 Clamp(Vector2 p) => new Vector2(Mathf.Clamp(p.x, MinX, MaxX), Mathf.Clamp(p.y, MinY, WallY));
 
     static readonly HashSet<string> usedIds = new HashSet<string>();
@@ -31,6 +38,8 @@ public class RoomManager : MonoBehaviour
     [SerializeField] string forceSubject = "";                // để trống: môn xen kẽ ngẫu nhiên theo màn. Điền để thử riêng một môn
     [SerializeField] string menuSceneName = "EssaySubjectSelectScene";
     [SerializeField] int startInk = 100;
+    /// <summary>Hệ số kích thước sân theo từng loại màn (xem ArenaFactor).</summary>
+    float arenaF = 1f;
 
     string Subject => string.IsNullOrEmpty(forceSubject) ? RunState.SubjectOfRoom(RunState.room) : forceSubject;
     string StageLabel => RunState.stage + "-" + RunState.room;
@@ -55,8 +64,8 @@ public class RoomManager : MonoBehaviour
     enum State { Fighting, ChestReady, Solving, Panel, DoorOpen, Leaving, Boss, Rest, Final, Cutscene }
 
     // ---- thế giới ----
-    Transform world; PlayerCombat player; SpriteRenderer doorSr, doorGlow, chestSr, darkSr, weaponBarBg, weaponBarFill; SpriteRenderer[] pips = new SpriteRenderer[8];
-    Vector2 chestPos = new Vector2(0, -0.2f);
+    Transform world; PlayerCombat player; SpriteRenderer doorSr, doorGlow, chestSr, darkSr, vignetteSr, weaponBarBg, weaponBarFill; SpriteRenderer[] pips = new SpriteRenderer[8];
+    Vector2 chestPos = new Vector2(0, CenterY);
     public bool DoorOpen { get; private set; }
 
     // ---- UI ----
@@ -64,7 +73,7 @@ public class RoomManager : MonoBehaviour
     Image hpFill, bossFill, overlayImg, hurtImg, mainIcon, subIcon, mainEl, dashFill, topBar, botBar; Image[] buffIcons = new Image[16];
     Text introName, introTitle;
     EssaySolveUI solve; float hudT, reactionT, bannerT, introT, hurtA; Color overlayTarget; float darkCur, darkTarget, darkUntil;
-    StoryDirector story;
+    StoryDirector story; TouchControls touch;
 
     // ---- trạng thái ----
     List<EssayProblem> problems = new List<EssayProblem>();
@@ -97,8 +106,9 @@ public class RoomManager : MonoBehaviour
         solve = go.AddComponent<EssaySolveUI>(); solve.Init(transform);
         var sg = new GameObject("Story"); sg.transform.SetParent(transform, false); story = sg.AddComponent<StoryDirector>(); story.Init(transform);
 
-        player = PlayerCombat.Create(new Vector2(0, -3f));
-        Combat.Player = player; player.Died = OnPlayerDied;
+        player = PlayerCombat.Create(new Vector2(0, MinY + 1f));
+        Combat.Player = player; player.Died = OnPlayerDied; RFxHost.I.SetFollow(player.transform, true);
+        touch = TouchControls.Create(this, TouchLayout.Shooter, () => !Frozen && state != State.Cutscene && state != State.Panel, () => RunState.sub != null);
         Foe.Killed = OnFoeKilled;
         if (problems.Count == 0) SetPrompt("Chưa có dữ liệu bài tự luận. Gắn essay_problems.json vào RoomManager.");
 
@@ -128,51 +138,107 @@ public class RoomManager : MonoBehaviour
     }
 
     // ------------------------------------------------------------------ dựng phòng
+    /// <summary>Hệ số to nhỏ của sân: màn thường theo tổng số quái, boss và màn 16 rộng cố định, phòng nghỉ vừa phải.</summary>
+    float ArenaFactor()
+    {
+        switch (RunState.phase)
+        {
+            case RunPhase.Boss: return 1.3f;
+            case RunPhase.Rest: return 1.0f;
+            case RunPhase.Final: return 1.2f;
+            case RunPhase.Ending: return 1.0f;
+        }
+        int total = 0; int waves = WaveCount; for (int i = 0; i < waves; i++) total += Mathf.CeilToInt(WaveSize(i) * RoomRules.CountMul(RunState.difficulty) - .01f);
+        return Mathf.Clamp(.66f + .15f * total, 1.0f, 2.0f);
+    }
+
     void BuildWorld()
     {
+        arenaF = ArenaFactor(); HalfW = 8.2f * arenaF; HalfH = 4.05f * (1f + (arenaF - 1f) * .85f);
         var cam = Camera.main;
-        if (cam != null)
-        {
-            cam.orthographic = true; cam.orthographicSize = 5.4f; cam.transform.position = new Vector3(0, 0, -10f);
-            cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = GameTheme.Ink;
-        }
-        RFxHost.I.SetCamera(new Vector3(0, 0, -10f), 5.4f);
+        if (cam != null) { cam.orthographic = true; cam.transform.position = new Vector3(0, CenterY, -10f); cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = GameTheme.Ink; }
+        RFxHost.I.SetCamera(new Vector3(0, CenterY, -10f), 5.6f);
         world = new GameObject("Room").transform; world.SetParent(transform, false);
         var px = ThemeGfx.Pixel; var diffCol = DifficultyTheme.Of(RunState.difficulty);
         bool room = RunState.phase == RunPhase.Room;
 
-        Combat.MakeSr("Frame", world, px, new Color(.03f, .02f, .05f), new Vector2(17.5f, 9.2f), -102, new Vector2(0, -0.15f));
-        Combat.MakeSr("FrameRim", world, px, Color.Lerp(GameTheme.Bronze, GameTheme.Ink, .35f), new Vector2(17.15f, 8.85f), -101, new Vector2(0, -0.15f));
+        float fw = HalfW * 2f + 1.6f, fh = HalfH * 2f + 1.3f;
+        Combat.MakeSr("Frame", world, px, new Color(.03f, .02f, .05f), new Vector2(fw + 30f, fh + 20f), -102, new Vector2(0, CenterY));
+        Combat.MakeSr("FrameRim", world, px, Color.Lerp(GameTheme.Bronze, GameTheme.Ink, .45f), new Vector2(fw, fh), -101, new Vector2(0, CenterY));
 
-        // Sàn: ô 32x32 pixel, bốn biến thể trộn ngẫu nhiên theo từng khu vực
-        const int cols = 8, rows = 4; float tw = 16.4f / cols, th = 8.1f / rows; var floors = RogueArt.FloorTiles(biome); var fr = new System.Random(RunState.stage * 31 + RunState.room * 7 + (int)RunState.phase);
-        Color floorCol = RunState.phase == RunPhase.Rest ? new Color(1f, .9f, .82f) : Color.white;
+        // Sàn: ô 32x32 pixel nguyên kích thước (1 ô = 1 đơn vị), bốn biến thể trộn ngẫu nhiên theo khu vực
+        int cols = Mathf.CeilToInt(HalfW * 2f), rows = Mathf.CeilToInt(HalfH * 2f); var floors = RogueArt.FloorTiles(biome); var fr = new System.Random(RunState.stage * 31 + RunState.room * 7 + (int)RunState.phase);
+        Color floorCol = RunState.phase == RunPhase.Rest ? new Color(1f, .9f, .82f) : Color.white; float x0 = -cols * .5f + .5f, y0 = CenterY - rows * .5f + .5f;
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-                Combat.MakeSr("Tile", world, floors[fr.Next(4)], floorCol, new Vector2(tw, th), -99, new Vector2(-8.2f + tw * (c + .5f), -0.15f - 4.05f + th * (r + .5f)));
+            { var t = Combat.MakePx("Tile", world, floors[fr.Next(4)], -99, new Vector2(x0 + c, y0 + r)); t.color = floorCol; }
 
         if (room)
         {   // vòng rune quanh vị trí rương (màu theo độ khó)
-            Combat.MakeSr("RuneOuter", world, ProcSprites.Ring, diffCol.WithAlpha(.22f), new Vector2(6.4f, 6.4f), -98, chestPos);
-            Combat.MakeSr("RuneInner", world, ProcSprites.Ring, GameTheme.Bronze.WithAlpha(.35f), new Vector2(4.4f, 4.4f), -98, chestPos);
+            Combat.MakeSr("RuneOuter", world, ProcSprites.Ring, diffCol.WithAlpha(.22f), new Vector2(5f, 5f), -98, chestPos);
+            Combat.MakeSr("RuneInner", world, ProcSprites.Ring, GameTheme.Bronze.WithAlpha(.35f), new Vector2(3.4f, 3.4f), -98, chestPos);
         }
 
-        // Tường trên theo khu vực (cao 28 pixel), cửa là thanh rune
-        var walls = RogueArt.WallTiles(biome);
-        for (int i = 0; i < cols; i++) Combat.MakeSr("Wall" + i, world, walls[i % 2], Color.white, new Vector2(tw, tw * 28f / 32f), -98, new Vector2(-8.2f + tw * (i + .5f), 4.0f));
-        bool door = RunState.phase == RunPhase.Room || RunState.phase == RunPhase.Rest;
-        doorGlow = Combat.MakeSr("DoorGlow", world, ThemeGfx.Glow, GameTheme.Blood.WithAlpha(door ? .5f : 0f), new Vector2(6f, 2.6f), -96, new Vector2(0, 3.7f));
-        doorSr = Combat.MakeSr("Door", world, px, GameTheme.Blood, new Vector2(DoorHalf * 2f, .55f), -97, new Vector2(0, 4.05f));
-        Combat.MakeSr("DoorFrameL", world, px, GameTheme.Gold, new Vector2(.12f, .7f), -96, new Vector2(-DoorHalf - .06f, 4.05f));
-        Combat.MakeSr("DoorFrameR", world, px, GameTheme.Gold, new Vector2(.12f, .7f), -96, new Vector2(DoorHalf + .06f, 4.05f));
-        if (!door) { doorSr.color = new Color(.1f, .08f, .14f); }
+        // Tường bao: hai hàng ở trên (cao 1,75), một hàng quanh trái, phải và dưới
+        var walls = RogueArt.WallTiles(biome); float topY = CenterY + rows * .5f;
+        for (int i = 0; i < cols; i++)
+        {
+            Combat.MakePx("WallA" + i, world, walls[i % 2], -98, new Vector2(x0 + i, topY + .22f)); Combat.MakePx("WallB" + i, world, walls[(i + 1) % 2], -98, new Vector2(x0 + i, topY + .66f));
+            var bt = Combat.MakePx("WallBot" + i, world, walls[(i + 1) % 2], -98, new Vector2(x0 + i, CenterY - rows * .5f - .22f)); bt.color = new Color(.75f, .72f, .85f);
+        }
+        for (int j = -1; j < rows + 1; j++)
+        {
+            var l = Combat.MakePx("WallL" + j, world, walls[j & 1], -98, new Vector2(x0 - 1f, y0 + j)); l.color = new Color(.8f, .78f, .9f);
+            var rr = Combat.MakePx("WallR" + j, world, walls[(j + 1) & 1], -98, new Vector2(-x0 + 1f, y0 + j)); rr.color = new Color(.8f, .78f, .9f);
+        }
+        bool door = RunState.phase == RunPhase.Room || RunState.phase == RunPhase.Rest; float doorY = topY + .25f;
+        doorGlow = Combat.MakeSr("DoorGlow", world, ThemeGfx.Glow, GameTheme.Blood.WithAlpha(door ? .5f : 0f), new Vector2(4.4f, 2.2f), -96, new Vector2(0, doorY - .3f));
+        doorSr = Combat.MakeSr("Door", world, px, GameTheme.Blood, new Vector2(DoorHalf * 2f, .5f), -97, new Vector2(0, doorY));
+        Combat.MakeSr("DoorFrameL", world, px, GameTheme.Gold, new Vector2(.1f, .64f), -96, new Vector2(-DoorHalf - .05f, doorY));
+        Combat.MakeSr("DoorFrameR", world, px, GameTheme.Gold, new Vector2(.1f, .64f), -96, new Vector2(DoorHalf + .05f, doorY));
+        if (!door) doorSr.color = new Color(.1f, .08f, .14f);
 
-        Vector2[] torchAt = { new Vector2(-7.75f, 3.2f), new Vector2(7.75f, 3.2f), new Vector2(-7.75f, -3.6f), new Vector2(7.75f, -3.6f) };
-        for (int i = 0; i < torchAt.Length; i++) RoomTorch.Create(world, torchAt[i], i * 3.7f);
+        float tx = HalfW - .5f, tyTop = CenterY + HalfH - .9f, tyBot = CenterY - HalfH + .6f;
+        Vector2[] torchAt = { new Vector2(-tx, tyTop), new Vector2(tx, tyTop), new Vector2(-tx, tyBot), new Vector2(tx, tyBot), new Vector2(-tx * .5f, tyTop + .2f), new Vector2(tx * .5f, tyTop + .2f) };
+        int tc = arenaF > 1.35f ? 6 : 4; for (int i = 0; i < tc; i++) RoomTorch.Create(world, torchAt[i], i * 3.7f);
         int mist = RunState.phase == RunPhase.Final ? 9 : 5; for (int i = 0; i < mist; i++) RoomMist.Create(world, i);
 
-        Combat.MakeSr("Vignette", world, ProcSprites.Vignette, Color.white, new Vector2(27f, 14.5f), Combat.OrdVignette, Vector2.zero);
+        vignetteSr = Combat.MakeSr("Vignette", world, ProcSprites.Vignette, Color.white, new Vector2(27f, 14.5f), Combat.OrdVignette, Vector2.zero);
         darkSr = Combat.MakeSr("Dark", world, RogueArt.DarkMask, new Color(1, 1, 1, 0), new Vector2(26f, 26f), Combat.OrdVignette - 5, Vector2.zero);
+        PlaceProps();
+    }
+
+    // ------------------------------------------------------------------ vật cản
+    void PlaceProps()
+    {
+        if (RunState.phase != RunPhase.Room && RunState.phase != RunPhase.Boss) return;
+        var rnd = new System.Random(RunState.stage * 977 + RunState.room * 131 + (int)RunState.difficulty);
+        bool bossRoom = RunState.phase == RunPhase.Boss; int groups = bossRoom ? 5 : Mathf.Clamp(Mathf.RoundToInt(HalfW * .45f), 3, 8);
+        var spots = new List<Vector2>();
+        Vector2 spawn = new Vector2(0f, MinY + 1f);
+        for (int g = 0; g < groups; g++)
+        {
+            for (int tries = 0; tries < 40; tries++)
+            {
+                float x = Mathf.Round(Mathf.Lerp(-HalfW + 2f, HalfW - 2f, (float)rnd.NextDouble())), y = Mathf.Round(Mathf.Lerp(MinY + 1.2f, WallY - 1.6f, (float)rnd.NextDouble()));
+                var p = new Vector2(x, y);
+                if (Vector2.Distance(p, chestPos) < 3f || Vector2.Distance(p, spawn) < 3.2f || Mathf.Abs(x) < 2.2f && y > WallY - 2.2f) continue;      // chừa chỗ rương, chỗ xuất phát, cửa
+                if (bossRoom && (y < -.4f || Vector2.Distance(p, new Vector2(0f, 1.5f)) < 3.4f)) continue;                                        // boss: vật cản ở nửa trên, chừa chỗ trụ đá phía dưới
+                bool near = false; foreach (var q in spots) if (Vector2.Distance(p, q) < 2.6f) { near = true; break; }
+                if (near) continue;
+                spots.Add(p); double roll = rnd.NextDouble(); bool horiz = rnd.NextDouble() < .5; Vector2 step = horiz ? Vector2.right : Vector2.up;
+                if (roll < .5)
+                {   // một dãy thùng gỗ làm bức che chắn, đôi khi kèm một thùng nổ ở đầu dãy
+                    int n = 2 + rnd.Next(3); for (int i = 0; i < n; i++) RoomProp.Create(PropKind.Crate, Clamp(p + step * i), biome);
+                    if (rnd.NextDouble() < .35) RoomProp.Create(PropKind.Explosive, Clamp(p + step * n), biome);
+                }
+                else if (roll < .72) { int n = 1 + rnd.Next(2); for (int i = 0; i < n; i++) RoomProp.Create(PropKind.Explosive, Clamp(p + step * i), biome); }
+                else if (roll < .9) { int n = 1 + rnd.Next(2); for (int i = 0; i < n; i++) RoomProp.Create(PropKind.Poison, Clamp(p + step * i), biome); }
+                else if (arenaF >= 1.3f || bossRoom) { int n = 2 + rnd.Next(2); for (int i = 0; i < n; i++) RoomProp.Create(PropKind.Stone, Clamp(p + step * i), biome); }
+                else RoomProp.Create(PropKind.Crate, p, biome);
+                break;
+            }
+        }
     }
 
     // ------------------------------------------------------------------ HUD
@@ -250,7 +316,7 @@ public class RoomManager : MonoBehaviour
         if (inkText == null) return;
         inkText.text = "Mực: " + RunState.ink;
         shardText.text = RunState.shards > 0 ? "Mảnh Ký Ức: " + new string('◆', RunState.shards) + new string('◇', 3 - RunState.shards) : "";
-        hpText.text = "Máu " + Mathf.CeilToInt(RunState.hp) + "/" + (int)PlayerCombat.MaxHp + (player != null && player.Shield > 0f ? "  (+" + Mathf.CeilToInt(player.Shield) + " khiên)" : "");
+        hpText.text = "Máu " + Mathf.CeilToInt(RunState.hp) + "/" + (int)PlayerCombat.MaxHp + (player != null && player.Shield > 0f ? "  (+" + Mathf.CeilToInt(player.Shield) + " khiên)" : "") + (player != null && player.ShieldCharges > 0 ? "  ◈×" + player.ShieldCharges : "");
         UIKit.SetBar(hpFill, RunState.hp / PlayerCombat.MaxHp);
         if (player != null) { dashFill.fillAmount = 1f - Mathf.Clamp01(player.DashLeft / PlayerCombat.DashCooldown); dashFill.color = player.DashLeft > 0f ? new Color(.5f, .6f, .75f, .8f) : new Color(.6f, 1f, 1f, 1f); }
         var m = RunState.main; var s = RunState.sub;
@@ -260,11 +326,12 @@ public class RoomManager : MonoBehaviour
         buffText.text = RunState.buffLog.Count == 0 ? "Chưa có buff" : "";
         for (int i = 0; i < buffIcons.Length; i++)
         {
-            if (i < RunState.buffLog.Count) { buffIcons[i].enabled = true; buffIcons[i].sprite = RogueArt.BuffIcon(BuffIndex(RunState.buffLog[i])); } else buffIcons[i].enabled = false;
+            if (i < RunState.buffLog.Count) { buffIcons[i].enabled = true; buffIcons[i].sprite = BuffSprite(RunState.buffLog[i]); } else buffIcons[i].enabled = false;
         }
     }
 
-    static int BuffIndex(string log) { for (int i = 0; i < Buffs.All.Length; i++) if (log.StartsWith(Buffs.All[i].name)) return i; return 0; }
+    /// <summary>Icon buff: buff lấy từ boss Rồng dùng đúng icon của trận Sinh học, buff còn lại dùng icon của chế độ này.</summary>
+    public static Sprite BuffSprite(string log) { for (int i = 0; i < Buffs.All.Length; i++) if (log.StartsWith(Buffs.All[i].name)) return Buffs.All[i].icon != null ? ProcSprites.BuffIcon(Buffs.All[i].icon) : RogueArt.BuffIcon(i); return RogueArt.BuffIcon(0); }
 
     // ------------------------------------------------------------------ vòng lặp
     void Update()
@@ -274,6 +341,7 @@ public class RoomManager : MonoBehaviour
         if (reactionT > 0f) { reactionT -= rdt; if (reactionT <= 0f) reactionText.text = ""; }
         if (bannerT > 0f) { bannerT -= rdt; var c = bannerText.color; c.a = Mathf.Clamp01(bannerT / .5f); bannerText.color = new Color(GameTheme.Bone.r, GameTheme.Bone.g, GameTheme.Bone.b, c.a); if (bannerT <= 0f) bannerText.text = ""; }
         hudT -= rdt; if (hudT <= 0f) { hudT = .1f; RefreshHud(); }
+        TouchControls.InteractVisible = false; TouchControls.DashCooldown01 = player != null ? Mathf.Clamp01(player.DashLeft / PlayerCombat.DashCooldown) : 0f;
         UpdateEffectsUi(rdt);
         UpdateBossBar();
         UpdateWeaponBar();
@@ -282,24 +350,33 @@ public class RoomManager : MonoBehaviour
         switch (state)
         {
             case State.Fighting:
-                if (Combat.Foes.Count == 0) { clearT -= rdt; if (clearT <= 0f) NextWave(); }
-                else { clearT = .8f; SetPrompt("Đợt " + (waveIdx + 1) + "/" + WaveCount + " · còn " + Combat.Foes.Count + " quái"); }
+                if (Combat.EnemyCount() == 0) { clearT -= rdt; if (clearT <= 0f) NextWave(); }
+                else { clearT = .8f; SetPrompt("Đợt " + (waveIdx + 1) + "/" + WaveCount + " · còn " + Combat.EnemyCount() + " quái"); }
                 break;
             case State.ChestReady:
                 var k = Keyboard.current;
                 bool near = Vector2.Distance(player.transform.position, chestPos) <= Reach;
-                SetPrompt(near ? "Nhấn E để mở Rương Câu Đố" : "Rương Câu Đố đã hiện ra giữa phòng. Lại gần và nhấn E.");
-                if (near && k != null && k.eKey.wasPressedThisFrame) OpenChest();
+                SetPrompt(near ? (TouchControls.Active ? "Chạm nút MỞ để mở Rương Câu Đố" : "Nhấn E để mở Rương Câu Đố") : "Rương Câu Đố đã hiện ra giữa phòng. Lại gần để mở.");
+                TouchControls.InteractVisible = near;
+                if (near && Interact()) OpenChest();
                 break;
             case State.DoorOpen: if (player.transform.position.y >= ExitY) LeaveRoom(); break;
-            case State.Boss: SetPrompt(BossBase.Current != null && BossBase.Current.bstate == BState.Fight ? "Di chuyển WASD · bắn chuột · lướt Space · đổi vũ khí Q" : ""); break;
+            case State.Boss: SetPrompt(BossBase.Current != null && BossBase.Current.bstate == BState.Fight ? TouchControls.Active ? "" : "WASD đi · giữ chuột/J bắn (tự nhắm) · Shift lướt · Q đổi vũ khí · T tắt tự nhắm" : ""); break;
             case State.Rest: RestUpdate(); break;
             case State.Final: FinalUpdate(); break;
         }
     }
 
+    bool Interact() { var k = Keyboard.current; return (k != null && k.eKey.wasPressedThisFrame) || TouchControls.InteractPressed; }
+
     void UpdateEffectsUi(float dt)
     {
+        if (vignetteSr != null && Camera.main != null)
+        {   // vignette luôn phủ đúng khung nhìn dù camera di chuyển
+            var cam = Camera.main; float hh = cam.orthographicSize * 1.5f, hw = hh * Mathf.Max(1.2f, cam.aspect);
+            vignetteSr.transform.position = new Vector3(cam.transform.position.x, cam.transform.position.y, 0f);
+            var b = vignetteSr.sprite.bounds.size; vignetteSr.transform.localScale = new Vector3(hw * 2f / b.x, hh * 2f / b.y, 1f);
+        }
         overlayImg.color = Color.Lerp(overlayImg.color, overlayTarget, 1f - Mathf.Exp(-3f * dt));
         hurtA = Mathf.MoveTowards(hurtA, 0f, dt * 1.6f); float low = RunState.hp / PlayerCombat.MaxHp < .3f ? .18f + .12f * Mathf.Sin(Time.time * 5f) : 0f;
         hurtImg.color = new Color(.8f, .05f, .1f, Mathf.Max(hurtA * .6f, low));
@@ -332,7 +409,7 @@ public class RoomManager : MonoBehaviour
         if (w.id == WeaponId.Laser && (player.HeatFrac > .01f || player.Overheated)) { v = player.HeatFrac; c = player.Overheated ? new Color(1f, .3f, .2f) : Color.Lerp(new Color(.4f, .9f, 1f), new Color(1f, .5f, .2f), v); show = true; }
         else if (w.id == WeaponId.Bow && player.Charge > .02f) { v = player.Charge; c = Color.Lerp(new Color(1f, .9f, .5f), Color.white, v); show = true; }
         else if (w.id == WeaponId.Rocket) { pipN = player.Reloading ? 0 : Mathf.Max(0, player.Ammo); if (player.Ammo < 0) pipN = 4 + RunState.extraShots; show = true; v = player.Reloading ? .5f + .5f * Mathf.PingPong(Time.time * 3f, 1f) : 0f; c = new Color(1f, .6f, .3f); if (!player.Reloading) v = 0f; }
-        var pos = (Vector2)player.transform.position + new Vector2(0, -1.45f);
+        var pos = (Vector2)player.transform.position + new Vector2(0, -.95f);
         weaponBarBg.enabled = show && w.id != WeaponId.Rocket || (w.id == WeaponId.Rocket && player.Reloading); weaponBarFill.enabled = weaponBarBg.enabled; weaponBarBg.transform.position = pos; weaponBarFill.transform.position = pos - new Vector2((1f - v) * .6f, 0f);
         weaponBarFill.transform.localScale = new Vector3(Mathf.Max(.001f, 1.2f * v / weaponBarFill.sprite.bounds.size.x), .1f / weaponBarFill.sprite.bounds.size.y, 1f); weaponBarFill.color = c;
         for (int i = 0; i < pips.Length; i++) { pips[i].enabled = show && w.id == WeaponId.Rocket && !player.Reloading && i < pipN; pips[i].transform.position = pos + new Vector2((i - (pipN - 1) * .5f) * .22f, 0f); }
@@ -371,10 +448,12 @@ public class RoomManager : MonoBehaviour
     {
         for (int t = 0; t < 30; t++)
         {
-            var p = new Vector2((float)(rng.NextDouble() * 14.0 - 7.0), (float)(rng.NextDouble() * 5.5 - 2.4));
-            if (Vector2.Distance(p, player.transform.position) > 4.5f) return p;
+            var p = new Vector2(Mathf.Lerp(-HalfW + 1.2f, HalfW - 1.2f, (float)rng.NextDouble()), Mathf.Lerp(MinY + 1f, WallY - .7f, (float)rng.NextDouble()));
+            if (Vector2.Distance(p, player.transform.position) < 5f) continue;
+            bool blocked = false; foreach (var pr in RoomProp.All) if (pr != null && Vector2.Distance(p, pr.Pos) < 1.3f) { blocked = true; break; }
+            if (!blocked) return p;
         }
-        return new Vector2(0, 2.5f);
+        return new Vector2(0, WallY - 1f);
     }
 
     void OnFoeKilled(Foe f)
@@ -389,9 +468,9 @@ public class RoomManager : MonoBehaviour
     void SpawnChest()
     {
         state = State.ChestReady;
-        chestRoot = new GameObject("Chest"); chestRoot.transform.SetParent(world, false); chestRoot.transform.localPosition = chestPos + new Vector2(0, -.55f);
-        var glow = Combat.MakeSr("ChestGlow", chestRoot.transform, ThemeGfx.Glow, GameTheme.Gold.WithAlpha(.4f), new Vector2(4.2f, 3.4f), 5, new Vector2(0, .5f)); glow.sharedMaterial = Gfx.Additive;
-        chestSpr = Combat.MakePx("Spr", chestRoot.transform, RogueArt.Chest(false), 6, null, 1.4f);
+        chestRoot = new GameObject("Chest"); chestRoot.transform.SetParent(world, false); chestRoot.transform.localPosition = chestPos + new Vector2(0, -.45f);
+        var glow = Combat.MakeSr("ChestGlow", chestRoot.transform, ThemeGfx.Glow, GameTheme.Gold.WithAlpha(.4f), new Vector2(3f, 2.4f), 5, new Vector2(0, .4f)); glow.sharedMaterial = Gfx.Additive;
+        chestSpr = Combat.MakePx("Spr", chestRoot.transform, RogueArt.Chest(false), 6, null, 1.15f);
         RFx.Ring(chestPos, 1.8f, GameTheme.Gold, .5f); RFx.Burst(chestPos, GameTheme.GoldHi, 14, 4f, .7f, .16f, 1f); RogueAudio.Play(RSfx.Chest, .8f); GameAudio.Play(Snd.BuffOpen);
     }
 
@@ -433,6 +512,7 @@ public class RoomManager : MonoBehaviour
             title = essayTitle + (inBossEssay ? " · một lần duy nhất" : " · Lần " + (attemptsUsed + 1)), subjectId = essaySubject, statement = variant.statement, draft = draft,
             hintText = HintText(), showHintButton = hintCap > 0, hintButtonLabel = HintButtonLabel(), hintEnabled = hintLevel < hintCap,
             onSubmit = OnSubmit, onHint = OnHint, onExit = OnExitEssay,
+            onPickImage = ImageAllowed ? (System.Action<string>)OnPickImage : null,
         };
         solve.ShowWriting(a);
     }
@@ -448,9 +528,43 @@ public class RoomManager : MonoBehaviour
 
     void OnExitEssay(string draft)
     {
+        gradeToken++; grading = false; visionToken++; DropTex();
         if (inBossEssay) { solve.Hide(); Frozen = false; inBossEssay = false; var d = bossDone; bossDone = null; UIKit.Toast(hud, "Bỏ trụ đá: tính là chưa đạt."); d?.Invoke(GradeBand.Fail, null); return; }
         if (prob != null) usedIds.Remove(prob.id);
         solve.Hide(); Frozen = false; state = State.ChestReady; UIKit.Toast(hud, "Đã thoát đề, không tính lần làm.");
+    }
+
+    // ------------------------------------------------------------------ chấm bài: AI (Gemini) hoặc bộ chấm tạm, và đọc ảnh bài viết tay
+    bool grading; int gradeToken, visionToken; Texture2D lastTex; string lastDraft = "";
+    /// <summary>Ảnh bài viết tay dành cho độ khó Khó trở lên, cần kết nối AI và chạy trên máy tính.</summary>
+    bool ImageAllowed => EssayAI.Available && NativeFilePicker.Supported && difficulty >= EssayDifficulty.Hard;
+
+    void DropTex() { if (lastTex != null) { Destroy(lastTex); lastTex = null; } }
+
+    void OnPickImage(string draft)
+    {
+        lastDraft = draft ?? "";
+        string path = NativeFilePicker.PickImage(); if (string.IsNullOrEmpty(path)) return;
+        if (!EssayImageTools.Load(path, out var jpg, out var tex, out var err)) { UIKit.Toast(solve.Root, err); return; }
+        DropTex(); lastTex = tex; SendImage(jpg);
+    }
+
+    void SendImage(byte[] jpg)
+    {
+        int token = ++visionToken;
+        solve.ShowBusy("Thầy Cú đang đọc ảnh", "Thầy đọc từng dòng chữ viết tay của em", () => { visionToken++; DropTex(); ShowWriting(lastDraft); }, "Quay lại gõ tay");
+        EssayVision.Read(jpg, (list, err) =>
+        {
+            if (token != visionToken) return;
+            if (list == null) { DropTex(); ShowWriting(lastDraft); UIKit.Toast(solve.Root, err ?? "Không đọc được ảnh."); return; }
+            solve.ShowTranscript(new SolveTranscriptArgs
+            {
+                title = essayTitle, subjectId = essaySubject, preview = lastTex, lines = list,
+                onConfirm = text => { DropTex(); OnSubmit(text); },
+                onOtherImage = () => { OnPickImage(lastDraft); },
+                onCancel = () => { DropTex(); ShowWriting(lastDraft); },
+            });
+        });
     }
 
     void OnSubmit(string raw)
@@ -459,19 +573,39 @@ public class RoomManager : MonoBehaviour
         if (check == SubmitCheck.Empty) { UIKit.Toast(solve.Root, "Em chưa viết lời giải."); return; }
         if (check == SubmitCheck.TooShort) { UIKit.Toast(solve.Root, "Lời giải còn quá ngắn, em viết thêm nhé."); return; }
         if (check == SubmitCheck.TooLong) { UIKit.Toast(solve.Root, "Lời giải dài quá " + EssaySymbols.MaxChars + " ký tự."); return; }
+        lastDraft = raw; BeginGrade(lines);
+    }
 
-        var res = EssayFreeformGrader.Grade(prob, variant, lines); attemptsUsed++;
-        for (int i = 0; i < missStreak.Length; i++) missStreak[i] = res.steps[i].status == EssayStepStatus.Missing ? missStreak[i] + 1 : 0;
+    /// <summary>Có AI thì nhờ Gemini chấm kèm phân tích; AI chậm hoặc lỗi thì rơi về bộ chấm tạm để người chơi không bị kẹt.</summary>
+    void BeginGrade(string[] lines)
+    {
+        if (grading) return;
+        if (!EssayAI.Available) { FinishGrade(lines, EssayFreeformGrader.Grade(prob, variant, lines), "Chưa kết nối AI nên đang dùng bộ chấm tạm (không có phân tích)."); return; }
+        grading = true; int token = ++gradeToken; bool done = false;
+        solve.ShowBusy("Thầy Cú đang chấm bài", "Thầy đang đọc kỹ từng dòng lời giải của em", () => { if (done) return; done = true; grading = false; gradeToken++; FinishGrade(lines, EssayFreeformGrader.Grade(prob, variant, lines), "Em chọn dùng bộ chấm tạm."); });
+        EssayAIGrader.Grade(prob, variant, lines, (res, err) =>
+        {
+            if (done || token != gradeToken) return; done = true; grading = false;
+            if (res == null) { Debug.LogWarning("AI chấm lỗi: " + err); FinishGrade(lines, EssayFreeformGrader.Grade(prob, variant, lines), "AI chưa phản hồi nên tạm dùng bộ chấm đơn giản."); }
+            else FinishGrade(lines, res, null);
+        });
+    }
+
+    void FinishGrade(string[] lines, EssayGradeResult res, string note)
+    {
+        attemptsUsed++;
+        for (int i = 0; i < missStreak.Length; i++) missStreak[i] = res.steps[i].status == EssayStepStatus.Missing || res.steps[i].status == EssayStepStatus.Wrong ? missStreak[i] + 1 : 0;
         var band = RoomRules.Band(res.score, res.maxScore);
         int earned = RoomRules.InkFor(res.score, difficulty, hintsPaid); RunState.ink += earned; RefreshHud();
-        var r = new SolveResultArgs { subjectId = essaySubject, problem = prob, variant = variant, grade = res, band = band, lines = lines };
+        var r = new SolveResultArgs { subjectId = essaySubject, problem = prob, variant = variant, grade = res, band = band, lines = lines, note = note };
+        var ai = res as EssayAIResult; if (ai != null) { r.analysis = ai.AnalysisText(); r.stepWhy = ai.why; }
 
         if (inBossEssay)
         {   // trụ đá của boss: một lần duy nhất, kết quả đi thẳng vào hiệu ứng tuyệt kỹ (mục 6.1)
             r.revealDesc = true; r.title = band == GradeBand.Good ? "Đạt tốt" : band == GradeBand.Pass ? "Đạt" : "Chưa đạt";
             r.footer = BossEffectText(band) + "\n+" + earned + " Mực";
-            string note = band == GradeBand.Pass ? MissingNoteFor(res) : null;
-            r.buttons.Add(new SolveResultButton { label = "Tiếp tục trận đấu", onClick = () => { solve.Hide(); Frozen = false; inBossEssay = false; var d = bossDone; bossDone = null; d?.Invoke(band, note); } });
+            string bnote = band == GradeBand.Pass ? MissingNoteFor(res) : null;
+            r.buttons.Add(new SolveResultButton { label = "Tiếp tục trận đấu", onClick = () => { solve.Hide(); Frozen = false; inBossEssay = false; var d = bossDone; bossDone = null; d?.Invoke(band, bnote); } });
             GameAudio.Play(band == GradeBand.Fail ? Snd.QuizWrong : Snd.QuizCorrect); solve.ShowResult(r); return;
         }
 
@@ -508,6 +642,7 @@ public class RoomManager : MonoBehaviour
 
     string MissingNoteFor(EssayGradeResult res)
     {
+        var aiRes = res as EssayAIResult; if (aiRes != null && !string.IsNullOrEmpty(aiRes.nextHint)) return SubjectName(essaySubject) + (string.IsNullOrEmpty(prob.concept) ? "" : " · " + prob.concept) + ": " + aiRes.nextHint;
         var miss = new List<string>();
         for (int i = 0; i < res.steps.Length; i++) if (res.steps[i].status != EssayStepStatus.Correct) miss.Add(prob.rubric[i].label);
         if (miss.Count == 0) return null;
@@ -582,7 +717,7 @@ public class RoomManager : MonoBehaviour
         {
             var b = offer[i]; float x = (i - 1) * 490f;
             UIKit.MakeButton(c, "Buff" + i, b.name, new Vector2(x, 20), new Vector2(450, 120), () => { RunState.AddBuff(b, rng); ClosePanel(); GoNext(); }, ButtonStyle.Bronze, 32, .1f * i);
-            Icon("BI" + i, c, RogueArt.BuffIcon((int)b.id), new Vector2(x, 130), new Vector2(72, 72));
+            Icon("BI" + i, c, b.icon != null ? ProcSprites.BuffIcon(b.icon) : RogueArt.BuffIcon((int)b.id), new Vector2(x, 130), new Vector2(72, 72));
             UIKit.Label("Desc" + i, c, b.desc + (Buffs.Suits(b, RunState.main.Def) ? "" : ""), 26, GameTheme.Bone, TextAnchor.UpperCenter, new Vector2(x, -110), new Vector2(450, 110));
         }
     }
@@ -639,15 +774,15 @@ public class RoomManager : MonoBehaviour
     }
 
     // ------------------------------------------------------------------ PHÒNG NGHỈ
-    SpriteRenderer fireSr, owlSr; Vector2 firePos = new Vector2(1.6f, -.6f), owlPos = new Vector2(-2.4f, -.5f); bool rested; Sprite[] fireFr, owlFr; float restT;
+    SpriteRenderer fireSr, owlSr; Vector2 firePos = new Vector2(1.4f, -.6f), owlPos = new Vector2(-1.8f, -.5f); bool rested; Sprite[] fireFr, owlFr; float restT;
     void BeginRest()
     {
         state = State.Rest; HazardsOn = false; DoorOpen = true; rested = false; RogueAudio.PlayTrack(RTrack.Rest);
         doorSr.color = GameTheme.Moss; doorGlow.color = GameTheme.Moss.WithAlpha(.5f);
         fireFr = RogueArt.Campfire; owlFr = RogueArt.Owl;
         var fg = Combat.MakeSr("FireGlow", world, ThemeGfx.Glow, GameTheme.Ember.WithAlpha(.3f), new Vector2(8f, 6f), -95, firePos + new Vector2(0, .6f)); fg.sharedMaterial = Gfx.Additive;
-        fireSr = Combat.MakePx("Fire", world, fireFr[0], Combat.Order(firePos.y), firePos, 1.6f);
-        owlSr = Combat.MakePx("Owl", world, owlFr[0], Combat.Order(owlPos.y), owlPos, 1.5f);
+        fireSr = Combat.MakePx("Fire", world, fireFr[0], Combat.Order(firePos.y), firePos, 1.25f);
+        owlSr = Combat.MakePx("Owl", world, owlFr[0], Combat.Order(owlPos.y), owlPos, 1.2f);
         ShowBanner("Phòng nghỉ · đến bên lửa trại (E) để hồi sức, trò chuyện với Thầy Cú rồi đi tiếp", 5f);
         RunSave.Save();
     }
@@ -657,14 +792,15 @@ public class RoomManager : MonoBehaviour
         restT += Time.deltaTime; fireSr.sprite = fireFr[(int)(restT * 8f) % fireFr.Length]; owlSr.sprite = owlFr[(restT % 4f) > 3.6f ? 2 : (int)(restT * 1.5f) % 2]; owlSr.sortingOrder = Combat.Order(owlPos.y);
         if (Random.value < Time.deltaTime * 8f) RFx.Burst(firePos + new Vector2(Random.Range(-.3f, .3f), .8f), GameTheme.EmberHi, 1, 1.5f, .8f, .1f, -2f);
         var k = Keyboard.current; var pp = (Vector2)player.transform.position;
-        bool nearFire = Vector2.Distance(pp, firePos + Vector2.up) < 2.4f, nearOwl = Vector2.Distance(pp, owlPos + Vector2.up) < 2.2f;
+        bool nearFire = Vector2.Distance(pp, firePos + Vector2.up * .5f) < 1.8f, nearOwl = Vector2.Distance(pp, owlPos + Vector2.up * .5f) < 1.7f;
+        TouchControls.InteractVisible = (nearFire && !rested) || nearOwl;
         if (nearFire && !rested) SetPrompt("Nhấn E · nghỉ bên lửa trại (hồi 50% máu)");
         else if (nearFire) SetPrompt("Em đã nghỉ ngơi. Đi lên cửa phía trên để sang chặng sau.");
         else if (nearOwl) SetPrompt("Nhấn E · trò chuyện với Thầy Cú");
         else SetPrompt(rested ? "Cửa đã mở. Đi lên cửa phía trên để sang chặng sau." : "Lại gần lửa trại hoặc Thầy Cú. Cửa phía trên đã mở.");
-        if (k != null && k.eKey.wasPressedThisFrame)
+        if (Interact())
         {
-            if (nearFire && !rested) { rested = true; float h = PlayerCombat.MaxHp * .5f; player.Heal(h); RFx.Burst(player.transform.position, GameTheme.Moss, 14, 3f, .8f, .16f, -2f); RFx.Ring(player.transform.position, 1.8f, GameTheme.Moss, .5f); RogueAudio.Play(RSfx.Heal, .9f); RunState.hp = Mathf.Min(PlayerCombat.MaxHp, RunState.hp); RunSave.Save(); }
+            if (nearFire && !rested) { rested = true; float h = PlayerCombat.MaxHp * .5f; player.Heal(h); RFx.Burst(player.transform.position, GameTheme.Moss, 14, 3f, .8f, .16f, -2f); RFx.Ring(player.transform.position, 1.2f, GameTheme.Moss, .5f); RogueAudio.Play(RSfx.Heal, .9f); RunState.hp = Mathf.Min(PlayerCombat.MaxHp, RunState.hp); RunSave.Save(); }
             else if (nearOwl) ShowOwlTalk();
         }
         if (pp.y >= ExitY) LeaveRest();
@@ -699,14 +835,14 @@ public class RoomManager : MonoBehaviour
     {
         state = State.Final; HazardsOn = false; DoorOpen = false; RogueAudio.PlayTrack(RTrack.Altar); ritualStarted = false; rewardChosen = false;
         var ag = Combat.MakeSr("AltarGlow", world, ThemeGfx.Glow, new Color(.6f, .8f, 1f, .18f), new Vector2(11f, 7f), -95, altarPos + new Vector2(0, 1f)); ag.sharedMaterial = Gfx.Additive;
-        altarSr = Combat.MakePx("Altar", world, RogueArt.Altar, Combat.Order(altarPos.y) - 5, altarPos, 1.5f);
-        Color[] cols = { GameTheme.Ly, GameTheme.Hoa, GameTheme.Sinh }; Vector2[] sp = { new Vector2(-4.2f, 1.3f), new Vector2(0f, 2.6f), new Vector2(4.2f, 1.3f) };
+        altarSr = Combat.MakePx("Altar", world, RogueArt.Altar, Combat.Order(altarPos.y) - 5, altarPos, 1.3f);
+        Color[] cols = { GameTheme.Ly, GameTheme.Hoa, GameTheme.Sinh }; Vector2[] sp = { new Vector2(-3.8f, 1.1f), new Vector2(0f, 2.3f), new Vector2(3.8f, 1.1f) };
         for (int i = 0; i < 3; i++)
         {
-            var st = Combat.MakePx("Stone" + i, world, RogueArt.RuneStone, Combat.Order(sp[i].y), sp[i], 1.6f);
-            var gl = Combat.MakePx("Glyph" + i, world, RogueArt.RuneGlyph(i), Combat.Order(sp[i].y) + 1, sp[i] + new Vector2(0, 1.1f), 1.6f); gl.color = new Color(cols[i].r, cols[i].g, cols[i].b, .25f); gl.sharedMaterial = Gfx.Additive; runeGlow[i] = gl;
+            var st = Combat.MakePx("Stone" + i, world, RogueArt.RuneStone, Combat.Order(sp[i].y), sp[i], 1.4f);
+            var gl = Combat.MakePx("Glyph" + i, world, RogueArt.RuneGlyph(i), Combat.Order(sp[i].y) + 1, sp[i] + new Vector2(0, .85f), 1.5f); gl.color = new Color(cols[i].r, cols[i].g, cols[i].b, .25f); gl.sharedMaterial = Gfx.Additive; runeGlow[i] = gl;
         }
-        owlFr = RogueArt.Owl; owlSr = Combat.MakePx("Owl", world, owlFr[0], Combat.Order(-1.5f), new Vector2(-6.4f, -1.8f), 1.5f);
+        owlFr = RogueArt.Owl; owlSr = Combat.MakePx("Owl", world, owlFr[0], Combat.Order(-1.5f), new Vector2(-6.2f, -1.8f), 1.2f);
         ShowBanner("Màn 16 · Bệ Đá Cổ — hãy đặt tay lên bệ đá (E)", 6f); RunSave.Save();
     }
 
@@ -715,9 +851,9 @@ public class RoomManager : MonoBehaviour
         restT += Time.deltaTime; owlSr.sprite = owlFr[(int)(restT * 1.5f) % 2];
         for (int i = 0; i < 3; i++) { var c = runeGlow[i].color; if (!ritualStarted) { c.a = .3f + .2f * Mathf.Sin(restT * 2f + i); runeGlow[i].color = c; } }
         if (ritualStarted) return;
-        var k = Keyboard.current; bool near = Vector2.Distance(player.transform.position, altarPos + Vector2.up * 1.2f) < 2.8f;
-        SetPrompt(near ? "Nhấn E · đặt tay lên bệ đá" : "Đến bên bệ đá cổ ở giữa phòng.");
-        if (near && k != null && k.eKey.wasPressedThisFrame) ShowFinalReward();
+        var k = Keyboard.current; bool near = Vector2.Distance(player.transform.position, altarPos + Vector2.up * 1.0f) < 2.4f;
+        SetPrompt(near ? "Nhấn E · đặt tay lên bệ đá" : "Đến bên bệ đá cổ ở giữa phòng."); TouchControls.InteractVisible = near;
+        if (near && Interact()) ShowFinalReward();
     }
 
     void ShowFinalReward()

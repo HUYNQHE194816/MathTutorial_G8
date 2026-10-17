@@ -15,11 +15,11 @@ public class BossRat : BossBase
 
     protected override void BuildVisual()
     {
-        bossName = "Chuột Bạch Biến Dị"; bossTitle = "Vật thí nghiệm số 7"; index = 0; innate = Element.Doc; resist[(int)Element.Doc] = .5f; radius = 1.7f; bloodCol = new Color(.5f, 1f, .4f);
-        idleFrames = RogueArt.RatBoss; MakeBody(idleFrames[0], 1.8f, 4.2f);
+        bossName = "Chuột Bạch Biến Dị"; bossTitle = "Vật thí nghiệm số 7"; index = 0; innate = Element.Doc; resist[(int)Element.Doc] = .5f; radius = 1.25f; bloodCol = new Color(.5f, 1f, .4f);
+        idleFrames = RogueArt.RatBoss; MakeBody(idleFrames[0], 1.5f, 2.9f);
     }
 
-    Vector2 Mouth => (Vector2)transform.position + new Vector2(0f, .4f);
+    Vector2 Mouth => (Vector2)transform.position + new Vector2(0f, .3f);
     protected override void EnterPhase(int p)
     {
         if (p == 3)
@@ -32,8 +32,8 @@ public class BossRat : BossBase
     IEnumerator Grow()
     {
         RogueAudio.Play(RSfx.Roar, 1f, .7f); RFx.Shake(.6f); RFx.Punch(.6f); baseTint = new Color(1f, .82f, .82f); float t = 0f, s0 = bodyScale, f0 = footOff;
-        while (t < 1.2f) { t += Combat.Dt; float k = Mathf.SmoothStep(0f, 1f, t / 1.2f); bodyScale = Mathf.Lerp(s0, 1.3f, k); footOff = Mathf.Lerp(f0, f0 * 1.3f, k); RFx.Burst(Pos + Random.insideUnitCircle * 2f, poison, 1, 2f, .5f, .2f); yield return null; }
-        radius = 2.2f;
+        while (t < 1.2f) { t += Combat.Dt; float k = Mathf.SmoothStep(0f, 1f, t / 1.2f); bodyScale = Mathf.Lerp(s0, s0 * 1.3f, k); footOff = Mathf.Lerp(f0, f0 * 1.3f, k); RFx.Burst(Pos + Random.insideUnitCircle * 2f, poison, 1, 2f, .5f, .2f); yield return null; }
+        radius = 1.65f;
     }
 
     protected override IEnumerator Attack(int phase, int kind)
@@ -98,12 +98,12 @@ public class BossRat : BossBase
                     Vector2 target = ClampBoss(PlayerPos); RogueAudio.Play(RSfx.Warn, .8f, .7f); pose = 2; poseT = 2.2f;
                     float t = 0f; Vector2 from = transform.position;
                     CombatTelegraph.Spawn(target, 3f, 1.25f, 20f * dm, Element.Doc);
-                    while (t < .55f) { t += Combat.Dt; airY = Mathf.Sin(t / .55f * Mathf.PI * .5f) * 5.5f; shadow.color = new Color(0, 0, 0, .45f * (1f - t / .55f)); yield return null; }
+                    while (t < .55f) { t += Combat.Dt; airY = Mathf.Sin(t / .55f * Mathf.PI * .5f) * 4f; shadow.color = new Color(0, 0, 0, .45f * (1f - t / .55f)); yield return null; }
                     t = 0f; while (t < .7f) { t += Combat.Dt; transform.position = Vector2.Lerp(from, target, t / .7f); yield return null; }
-                    t = 0f; while (t < .2f) { t += Combat.Dt; airY = Mathf.Lerp(5.5f, 0f, t / .2f); yield return null; }
-                    airY = 0f; shadow.color = new Color(0, 0, 0, .45f); RogueAudio.Play(RSfx.Slam, 1f); RFx.Shake(.7f); RFx.Blast(transform.position + Vector3.down * 1.5f, 3f, poison, true); Combat.HitStop(.08f);
-                    RogueShockwave.Spawn(transform.position + Vector3.down * 1.5f, 8f, 17f, 1.1f, 15f * dm, Element.Doc, poison); yield return Wait(.55f);
-                    RogueShockwave.Spawn(transform.position + Vector3.down * 1.5f, 8f, 17f, 1.1f, 15f * dm, Element.Doc, poison); yield return Wait(1.6f); break;
+                    t = 0f; while (t < .2f) { t += Combat.Dt; airY = Mathf.Lerp(4f, 0f, t / .2f); yield return null; }
+                    airY = 0f; shadow.color = new Color(0, 0, 0, .45f); RogueAudio.Play(RSfx.Slam, 1f); RFx.Shake(.7f); RFx.Blast(transform.position + Vector3.down * 1.1f, 3f, poison, true); Combat.HitStop(.08f);
+                    RogueShockwave.Spawn(transform.position + Vector3.down * 1.1f, 8f, 17f, 1.1f, 15f * dm, Element.Doc, poison); yield return Wait(.55f);
+                    RogueShockwave.Spawn(transform.position + Vector3.down * 1.1f, 8f, 17f, 1.1f, 15f * dm, Element.Doc, poison); yield return Wait(1.6f); break;
                 }
         }
     }

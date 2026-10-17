@@ -357,4 +357,44 @@ public static partial class RogueArt
         }
         c.Outline(Ink); return c.ToSprite(new Vector2(.5f, 0f));
     });
+    // ======================================================================== VẬT CẢN TRONG PHÒNG
+    /// <summary>Thùng gỗ: 0 nguyên vẹn, 1 nứt (khi còn dưới nửa máu).</summary>
+    public static Sprite CrateProp(bool damaged) => Get("crateprop" + damaged, () =>
+    {
+        var c = new Px(30, 30); Color32 w = K(0xB07A44), wh = K(0xD9A468), wl = K(0x6E4624), band = K(0x8A5A30);
+        c.Slab(1, 1, 28, 28, w, wh, wl); c.Rect(1, 14, 28, 2, band); c.Rect(1, 1, 3, 28, band); c.Rect(26, 1, 3, 28, band); c.Rect(1, 1, 28, 2, wl);
+        for (int i = 0; i < 4; i++) { c.Set(2, 4 + i * 7, K(0x3A2410)); c.Set(27, 4 + i * 7, K(0x3A2410)); }
+        c.Line(4, 4, 25, 25, wl); c.Line(4, 25, 25, 4, wl); c.Line(5, 4, 25, 24, wh);
+        if (damaged) { c.Line(8, 26, 13, 17, Ink); c.Line(13, 17, 11, 11, Ink); c.Line(21, 3, 17, 12, Ink); }
+        c.Outline(Ink); return c.ToSprite(new Vector2(.5f, 0f));
+    });
+
+    /// <summary>Thùng nổ (đỏ, ký hiệu lửa) hoặc thùng độc (xanh lá, đầu lâu). Khung 1 nhấp nháy khi sắp nổ.</summary>
+    public static Sprite Barrel(bool poison, bool warn) => Get("barrel" + poison + warn, () =>
+    {
+        var c = new Px(24, 30); Color32 b = poison ? K(0x3F9A3A) : K(0xC23B2E), bh = poison ? K(0x7BD65A) : K(0xF0705C), bl = poison ? K(0x1F5A22) : K(0x7A1F1A); Color32 band = K(0x2B2D44), gold = K(0xF6D57A);
+        if (warn) { b = Lite(b, .35f); bh = Lite(bh, .5f); }
+        c.Ellipse(12, 26, 11, 4, bl); c.Rect(1, 4, 22, 22, b); c.Rect(1, 4, 4, 22, bh); c.Rect(19, 4, 4, 22, bl); c.Ellipse(12, 4, 11, 4, bl); c.Ellipse(12, 26, 10, 3.4f, bh);
+        c.Rect(1, 8, 22, 2, band); c.Rect(1, 20, 22, 2, band);
+        if (poison)
+        {   // đầu lâu
+            c.Ellipse(12, 15, 4.4f, 4f, K(0xEFE8D8)); c.Rect(9, 10, 6, 3, K(0xEFE8D8)); c.Rect(9, 14, 2, 3, band); c.Rect(13, 14, 2, 3, band); c.Rect(11, 11, 1, 2, band); c.Rect(13, 11, 1, 2, band);
+            c.Rect(10, 24, 4, 2, K(0x9BE05A));
+        }
+        else
+        {   // biểu tượng lửa vàng và ngòi
+            c.Poly(V(12, 21, 17, 15, 14, 11, 10, 11, 7, 15), K(0xFFD25A)); c.Poly(V(12, 18, 15, 15, 13, 12, 11, 12, 9, 15), K(0xFF8A2A)); c.Rect(11, 26, 2, 3, K(0x2B2D44)); c.Rect(12, 29, 1, 1, warn ? K(0xFFF3A0) : K(0xFFA14D));
+        }
+        c.Outline(Ink); return c.ToSprite(new Vector2(.5f, 0f));
+    });
+
+    /// <summary>Khối đá không thể phá, dựng thành tường chắn trong sân lớn.</summary>
+    public static Sprite StoneBlock(int biome) => Get("block" + biome, () =>
+    {
+        var c = new Px(30, 30); Color32 a = biome == 1 ? K(0x4F6A5A) : biome == 2 ? K(0x59638A) : K(0x6A6688), ah = Lite(a, .25f), al = Shade(a, .45f);
+        c.Slab(1, 1, 28, 24, a, ah, al); c.Rect(1, 25, 28, 4, ah); c.Rect(2, 26, 26, 2, Lite(ah, .2f)); c.Rect(1, 1, 28, 3, al);
+        c.Line(9, 5, 12, 20, al); c.Line(20, 6, 17, 22, al); c.Rect(6, 13, 6, 1, al); c.Rect(17, 9, 7, 1, al); if (biome == 1) { c.Rect(3, 22, 8, 3, K(0x3F8A44)); c.Rect(18, 24, 8, 3, K(0x56B25A)); }
+        if (biome == 2) { c.Rect(12, 12, 6, 2, K(0x4DE0FF)); }
+        c.Outline(Ink); return c.ToSprite(new Vector2(.5f, 0f));
+    });
 }

@@ -68,15 +68,34 @@ public class RFxHost : MonoBehaviour
         // (xử lý bởi chính decal, xem Decal())
     }
 
+    Transform follow; Vector2 camPos; bool camInit;
+
+    /// <summary>Camera đi theo mục tiêu (người chơi), bị giới hạn trong sân; sân nhỏ hơn khung nhìn thì căn giữa. Vị trí khớp lưới texel để pixel không rung.</summary>
+    public void SetFollow(Transform t, bool snap = false) { follow = t; if (snap) camInit = false; }
+
+    float PixelPerfectSize(Camera cam)
+    {
+        float h = Mathf.Max(360f, Screen.height); int k = Mathf.Max(2, Mathf.RoundToInt(h / 360f));       // mỗi texel (1/32 đơn vị) rộng k pixel màn hình
+        float s = h / (2f * 32f * k); float aspect = cam.aspect > .1f ? cam.aspect : 1.78f;
+        return Mathf.Max(s, 9.3f / aspect);                                                              // màn hình hẹp (dọc) thì nới ra cho đủ bề ngang
+    }
+
     void LateUpdate()
     {
         var cam = Camera.main; if (cam == null) return;
         float dt = Time.unscaledDeltaTime; trauma = Mathf.Max(0f, trauma - dt * 1.6f); punch = Mathf.MoveTowards(punch, 0f, dt * 2.2f);
         camOffset = Vector2.Lerp(camOffset, camOffsetTarget, 1f - Mathf.Exp(-camOffsetSpeed * dt));
+        float S = PixelPerfectSize(cam); float hh = S, hw = S * (cam.aspect > .1f ? cam.aspect : 1.78f);
+        Vector2 want = follow != null ? (Vector2)follow.position : new Vector2(0f, RoomManager.CenterY);
+        float mx = RoomManager.HalfW + 1.0f - hw, my = RoomManager.HalfH + 1.3f - hh;
+        float tx = mx <= 0f ? 0f : Mathf.Clamp(want.x, -mx, mx), ty = my <= 0f ? RoomManager.CenterY : Mathf.Clamp(want.y, RoomManager.CenterY - my, RoomManager.CenterY + my);
+        if (!camInit) { camPos = new Vector2(tx, ty); camInit = true; } else camPos = Vector2.Lerp(camPos, new Vector2(tx, ty), 1f - Mathf.Exp(-7f * dt));
         float sh = trauma * trauma; shakeT += dt * 60f;
         Vector2 off = new Vector2((Mathf.PerlinNoise(shakeT, 1f) - .5f), (Mathf.PerlinNoise(1f, shakeT) - .5f)) * 2f * sh * .55f;
-        cam.transform.position = camBase + new Vector3(camOffset.x + off.x, camOffset.y + off.y, 0f);
-        cam.orthographicSize = baseSize - punch * .25f;
+        Vector2 p = camPos + camOffset + off;
+        p.x = Mathf.Round(p.x * 32f) / 32f; p.y = Mathf.Round(p.y * 32f) / 32f;                          // khớp lưới texel
+        cam.transform.position = new Vector3(p.x, p.y, -10f);
+        cam.orthographicSize = S - punch * .25f;
     }
 
     public void AddTrauma(float t) { trauma = Mathf.Clamp01(Mathf.Max(trauma, trauma + t)); }

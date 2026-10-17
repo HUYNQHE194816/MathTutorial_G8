@@ -32,8 +32,8 @@ public class BossScientist : BossBase
 
     protected override void BuildVisual()
     {
-        bossName = "Nhà Khoa Học Điên"; bossTitle = "Kẻ gieo màn sương"; index = 2; innate = Element.Loi; resist[(int)Element.Loi] = .5f; radius = 1.25f; bloodCol = volt; metal = true;
-        idleFrames = RogueArt.Scientist; mech = RogueArt.MechBody; MakeBody(idleFrames[0], 1.9f, 3.4f); home = new Vector2(0f, 1.7f); droneFrames = RogueArt.MonsterFrames(2, 5);
+        bossName = "Nhà Khoa Học Điên"; bossTitle = "Kẻ gieo màn sương"; index = 2; innate = Element.Loi; resist[(int)Element.Loi] = .5f; radius = .9f; bloodCol = volt; metal = true;
+        idleFrames = RogueArt.Scientist; mech = RogueArt.MechBody; MakeBody(idleFrames[0], 1.2f, 2.2f); home = new Vector2(0f, 1.7f); droneFrames = RogueArt.MonsterFrames(2, 5);
     }
 
     protected override Sprite CurrentSprite() => form == 1 ? mech : idleFrames[pose != 0 ? 2 : (int)(animT / .6f) % 2];
@@ -52,13 +52,13 @@ public class BossScientist : BossBase
     {
         for (int i = 0; i < 3; i++)
         {
-            var d = BossMinion.Create(droneFrames, Pos, 24f * (1f + (RoomRules.HpMul(RunState.difficulty) - 1f) * .6f), .6f, 1.4f, new Color(1f, 1f, 1f)); d.follow = transform; d.orbitAng = i * 120f; d.orbitR = 3.2f; d.orbitSpeed = 55f; d.dmgMul = dm; d.shotEl = Element.Loi; d.shotCol = volt; d.metal = true; d.life = 9999f; drones.Add(d);
+            var d = BossMinion.Create(droneFrames, Pos, 24f * (1f + (RoomRules.HpMul(RunState.difficulty) - 1f) * .6f), .4f, 1.4f, new Color(1f, 1f, 1f)); d.follow = transform; d.orbitAng = i * 120f; d.orbitR = 2.4f; d.orbitSpeed = 55f; d.dmgMul = dm; d.shotEl = Element.Loi; d.shotCol = volt; d.metal = true; d.life = 9999f; drones.Add(d);
         }
     }
 
     protected override void Tick(float dt)
     {
-        airY = form == 0 ? .7f + Mathf.Sin(Time.time * 2f) * .15f : 0f;
+        airY = form == 0 ? .5f + Mathf.Sin(Time.time * 2f) * .1f : 0f;
         if (bstate != BState.Fight || transforming) return;
         drones.RemoveAll(d => d == null || d.Dead);
         if ((phaseIdx == 0 || phaseIdx == 1) && drones.Count == 0) { droneT += dt; if (droneT > 7f) { droneT = 0f; SpawnDrones(); } }
@@ -83,7 +83,7 @@ public class BossScientist : BossBase
         {   // lõi năng lượng lộ ra theo chu kỳ 12 giây
             coreT += dt; float c = coreT % 12f; bool open = c > 7.5f;
             if (open != coreOpen) { coreOpen = open; if (open) { RoomManager.Instance?.ShowBanner("LÕI NĂNG LƯỢNG LỘ DIỆN! Bắn vào ngực robot", 2.5f); RogueAudio.Play(RSfx.Shield, .7f, 1.5f); RFx.Ring(transform.position, 2.4f, new Color(1f, .8f, .3f), .4f); } else RogueAudio.Play(RSfx.ShieldBreak, .5f, 1.4f); }
-            if (core != null) { core.color = new Color(1f, 1f, 1f, coreOpen ? .85f + .15f * Mathf.Sin(Time.time * 12f) : 0f); core.transform.localScale = Vector3.one * (coreOpen ? 1.6f + .15f * Mathf.Sin(Time.time * 10f) : 1.2f); }
+            if (core != null) { core.color = new Color(1f, 1f, 1f, coreOpen ? .85f + .15f * Mathf.Sin(Time.time * 12f) : 0f); core.transform.localScale = Vector3.one * Combat.PxScale * (coreOpen ? 2.1f + .2f * Mathf.Sin(Time.time * 10f) : 1.6f); }
             AnimateArms();
         }
     }
@@ -93,18 +93,18 @@ public class BossScientist : BossBase
     {
         if (armL == null) return; float sw = Mathf.Sin(Time.time * 1.6f) * 5f;
         armL.sortingOrder = body.sortingOrder + 1; armR.sortingOrder = body.sortingOrder + 1; if (core != null) core.sortingOrder = body.sortingOrder + 2;
-        armL.transform.localEulerAngles = new Vector3(0, 0, sw + 8f); armL.transform.localPosition = new Vector3(-2.7f, 1.1f, 0);
-        if (float.IsNaN(punchAim)) { armR.transform.localEulerAngles = new Vector3(0, 0, -sw - 8f); armR.transform.localPosition = new Vector3(2.7f, 1.1f, 0); }
-        else { armR.transform.localEulerAngles = new Vector3(0, 0, punchAim + 90f); armR.transform.localPosition = new Vector3(2.7f, 1.1f, 0) + (Vector3)(Combat.FromAng(punchAim) * punchExt); }
+        armL.transform.localEulerAngles = new Vector3(0, 0, sw + 8f); armL.transform.localPosition = new Vector3(-1.9f, .8f, 0);
+        if (float.IsNaN(punchAim)) { armR.transform.localEulerAngles = new Vector3(0, 0, -sw - 8f); armR.transform.localPosition = new Vector3(1.9f, .8f, 0); }
+        else { armR.transform.localEulerAngles = new Vector3(0, 0, punchAim + 90f); armR.transform.localPosition = new Vector3(1.9f, .8f, 0) + (Vector3)(Combat.FromAng(punchAim) * punchExt); }
     }
 
     IEnumerator BecomeMech()
     {
         transforming = true; baseTint = Color.white; pose = 2; poseT = 3f; RogueAudio.Play(RSfx.Roar, 1f, 1.1f); RFx.Shake(.8f);
         for (int i = 0; i < 6; i++) { RFx.Blast((Vector2)transform.position + Random.insideUnitCircle * 1.5f, 1.2f, volt, true); yield return Wait(.2f); }
-        form = 1; bodyScale = 1f; footOff = 2.3f; radius = 2.1f; airY = 0f; shadow.transform.localScale = new Vector3(5.4f, 1.6f, 1f); pose = 0; poseT = 0f; metal = true;
-        armL = Combat.MakePx("ArmL", transform, RogueArt.MechArm, 0); armR = Combat.MakePx("ArmR", transform, RogueArt.MechArm, 0); armR.flipX = true;
-        core = Combat.MakePx("Core", transform, RogueArt.MechCore, 0, new Vector2(0, .3f), 1.2f); core.sharedMaterial = Gfx.Additive; core.color = new Color(1, 1, 1, 0);
+        form = 1; bodyScale = 1.5f; footOff = 1.7f; radius = 1.5f; airY = 0f; shadow.transform.localScale = new Vector3(3.8f, 1.1f, 1f); pose = 0; poseT = 0f; metal = true;
+        armL = Combat.MakePx("ArmL", transform, RogueArt.MechArm, 0, null, 1.5f); armR = Combat.MakePx("ArmR", transform, RogueArt.MechArm, 0, null, 1.5f); armR.flipX = true;
+        core = Combat.MakePx("Core", transform, RogueArt.MechCore, 0, new Vector2(0, .2f), 1.6f); core.sharedMaterial = Gfx.Additive; core.color = new Color(1, 1, 1, 0);
         RFx.Flash(transform.position, 10f, Color.white, .35f); RogueAudio.Play(RSfx.Slam, 1f, .8f); coreT = 0f; transforming = false;
     }
 
@@ -125,7 +125,7 @@ public class BossScientist : BossBase
         }
     }
 
-    Vector2 Muzzle => (Vector2)transform.position + new Vector2(0, form == 1 ? .8f : .6f);
+    Vector2 Muzzle => (Vector2)transform.position + new Vector2(0, form == 1 ? .6f : .4f);
 
     protected override IEnumerator Attack(int phase, int kind)
     {
@@ -179,7 +179,7 @@ public class BossScientist : BossBase
         pose = 1; poseT = 1.6f; RogueAudio.Play(RSfx.Rocket, .8f, .8f);
         for (int i = 0; i < 6; i++)
         {
-            float side = i % 2 == 0 ? -1f : 1f; Vector2 from = (Vector2)transform.position + new Vector2(side * 2.2f, 1.9f);
+            float side = i % 2 == 0 ? -1f : 1f; Vector2 from = (Vector2)transform.position + new Vector2(side * 1.6f, 1.4f);
             var b = Shoot(from, Combat.Rot(Vector2.up, side * 35f), 5.2f, 14f, BoltStyle.Rocket, new Color(1f, .6f, .3f), Element.None, .28f, 0, 0f, 1.5f, 1f, 4.5f); b.s.blast = 1.3f; b.s.accel = 1.5f; RFx.Burst(from, new Color(1f, .6f, .3f), 4, 3f, .3f, .16f);
             yield return Wait(.22f);
         }
@@ -188,16 +188,16 @@ public class BossScientist : BossBase
 
     IEnumerator Punch()
     {
-        Vector2 d = ToPlayer(transform.position); float a = Combat.Ang(d); Vector2 from = (Vector2)transform.position + new Vector2(0, .5f); Vector2 end = from + d * 9.5f; punchAim = a; punchExt = 0f;
+        Vector2 d = ToPlayer(transform.position); float a = Combat.Ang(d); Vector2 from = (Vector2)transform.position + new Vector2(0, .3f); Vector2 end = from + d * 9.5f; punchAim = a; punchExt = 0f;
         RogueAudio.Play(RSfx.Warn, .6f, 1.2f); TeleLine.Spawn(from, end, 1.7f, .95f, 22f * dm, Element.Nham, new Color(1f, .6f, .3f));
-        float t = 0f; while (t < .95f) { t += Combat.Dt; punchExt = Mathf.Lerp(0f, -.6f, t / .95f); yield return null; }
-        t = 0f; while (t < .15f) { t += Combat.Dt; punchExt = Mathf.Lerp(-.6f, 3.2f, t / .15f); yield return null; }
+        float t = 0f; while (t < .95f) { t += Combat.Dt; punchExt = Mathf.Lerp(0f, -.4f, t / .95f); yield return null; }
+        t = 0f; while (t < .15f) { t += Combat.Dt; punchExt = Mathf.Lerp(-.4f, 2.3f, t / .15f); yield return null; }
         RFx.Shake(.45f); RogueAudio.Play(RSfx.Slam, .8f, 1.1f); yield return Wait(.5f); punchAim = float.NaN; yield return Wait(.6f);
     }
 
     IEnumerator Stomp()
     {
-        pose = 2; poseT = 1.6f; Vector2 p = (Vector2)transform.position + Vector2.down * 1.6f; RogueAudio.Play(RSfx.Warn, .6f, .7f);
+        pose = 2; poseT = 1.6f; Vector2 p = (Vector2)transform.position + Vector2.down * 1.2f; RogueAudio.Play(RSfx.Warn, .6f, .7f);
         CombatTelegraph.Spawn(p, 3.4f, 1.1f, 20f * dm, Element.Loi); yield return Wait(1.1f);
         RFx.Shake(.7f); RogueAudio.Play(RSfx.Slam, 1f, 1.1f); RogueShockwave.Spawn(p, 9f, 16f, 1f, 14f * dm, Element.Loi, volt); yield return Wait(1.4f);
     }
@@ -229,7 +229,7 @@ public class BossScientist : BossBase
         }
         else
         {   // không có máy biến áp: tia quét ngang cả sân, sát thương có trần 30% máu tối đa
-            RoomManager.Instance?.ShowBanner("Không phản đòn được! Lướt qua tia quét bằng Space", 2.5f);
+            RoomManager.Instance?.ShowBanner("Không phản đòn được! Lướt qua tia quét bằng Shift", 2.5f);
             float x = -9f; float dmg = Mathf.Min(60f * dm, PlayerCombat.MaxHp * .3f); bool hit = false;
             TeleLine.Spawn(new Vector2(-8f, -4f), new Vector2(-8f, 4.2f), .5f, .6f, 0f, Element.Loi, new Color(1f, .6f, .3f)); yield return Wait(.7f);
             while (x < 9.5f)
