@@ -79,7 +79,11 @@ public class EssayDifficultyScreen : MonoBehaviour
             cards.Add(DifficultyCard.Build(this, i, (EssayDifficulty)i, x, ui));
         }
         UIKit.MakeButton(ui, "Btn_Back", "QUAY LẠI", new Vector2(-750f, -456f), new Vector2(300f, 72f), Back, ButtonStyle.Stone, 32, .6f);
-        if (RunSave.Exists) UIKit.MakeButton(ui, "Btn_Continue", "TIẾP TỤC LƯỢT DỞ", new Vector2(700f, -456f), new Vector2(420f, 72f), Continue, ButtonStyle.Primary, 32, .7f);
+        if (RunSave.Exists)
+        {
+            btnContinue = UIKit.MakeButton(ui, "Btn_Continue", "TIẾP TỤC LƯỢT DỞ", new Vector2(700f, -456f), new Vector2(420f, 72f), Continue, ButtonStyle.Primary, 32, .7f);
+            btnReset = UIKit.MakeButton(ui, "Btn_Reset", "XÓA LƯỢT DỞ", new Vector2(700f, -366f), new Vector2(420f, 64f), ResetRun, ButtonStyle.Danger, 28, .8f);
+        }
         MenuNatureFx.FitCover(artRoot, scene, ref lastRect);
     }
 
@@ -126,6 +130,29 @@ public class EssayDifficultyScreen : MonoBehaviour
         chosen.chosen = 1f;
         yield return new WaitForSecondsRealtime(.15f);
         SceneRouter.Go(targetScene);
+    }
+
+    UnityEngine.UI.Button btnContinue, btnReset; float resetArmedUntil;
+
+    /// <summary>Xóa lượt chơi dở (như reset game ở phần trắc nghiệm): bấm lần một để xác nhận, bấm lần hai trong 3 giây để xóa thật. Mực và thành tựu giữ nguyên.</summary>
+    void ResetRun()
+    {
+        if (locked) return;
+        var label = btnReset != null ? btnReset.GetComponentInChildren<UnityEngine.UI.Text>() : null;
+        if (Time.unscaledTime > resetArmedUntil)
+        {
+            resetArmedUntil = Time.unscaledTime + 3f; if (label != null) label.text = "BẤM LẠI ĐỂ XÓA";
+            UIKit.Toast(ui, "Lượt dở sẽ bị xóa: màn, máu, vũ khí, buff. Bấm lại để xác nhận."); StartCoroutine(DisarmReset()); return;
+        }
+        RunSave.Clear(); RunState.ResetAll(true); resetArmedUntil = 0f;
+        if (btnContinue != null) Destroy(btnContinue.gameObject); if (btnReset != null) Destroy(btnReset.gameObject);
+        UIKit.Toast(ui, "Đã xóa lượt dở. Chọn độ khó để bắt đầu lượt mới.");
+    }
+
+    IEnumerator DisarmReset()
+    {
+        yield return new WaitForSecondsRealtime(3.05f);
+        if (btnReset != null && Time.unscaledTime > resetArmedUntil) { var l = btnReset.GetComponentInChildren<UnityEngine.UI.Text>(); if (l != null) l.text = "XÓA LƯỢT DỞ"; }
     }
 
     /// <summary>Tiếp tục lượt chơi đã lưu (màn, máu, vũ khí, buff, Mực, Mảnh Ký Ức) từ điểm đã lưu gần nhất.</summary>

@@ -9,7 +9,7 @@ public abstract class Foe : MonoBehaviour
     public static System.Action<Foe> Killed;               // RoomManager gán: tính Mực, rơi hồi máu...
     static float lastHitSfx;
 
-    public float hp, maxHp, radius = .5f; public bool boss, decoy, metal;
+    public float hp, maxHp, radius = .5f; public bool boss, decoy, metal, isProp;
     public bool Dead { get; protected set; }
     public virtual bool Targetable => !Dead;
     public Element innate = Element.None;                   // nguyên tố mang theo; kháng nguyên tố này 50%
@@ -77,7 +77,7 @@ public abstract class Foe : MonoBehaviour
         if (Combat.Now < armorBreakUntil) m *= 1.25f;
         if (Combat.Now < exposedUntil) m *= exposedMul;
         float d = dmg * m * DamageTakenMul();
-        hp -= d; FlashNow();
+        hp -= d; FlashNow(); if (!isProp && d < 400f) Combat.Dealt?.Invoke(d);
         if (knock > 0f) Knock(((Vector2)transform.position - src).normalized * knock);
         Vector2 dir = ((Vector2)transform.position - src).normalized; if (dir.sqrMagnitude < .01f) dir = Vector2.up;
         Color tc = crit ? new Color(1f, .9f, .3f) : el == Element.None ? Color.white : Combat.ElementColor(el);
@@ -111,7 +111,12 @@ public abstract class Foe : MonoBehaviour
             else { poisonAcc += dt; if (poisonAcc >= 1f) { poisonAcc -= 1f; TakeHit(2.2f * poison, Element.Doc, transform.position, 0f, false, true); if (Dead) return false; } }
         }
         if (Combat.Now >= wetUntil && Combat.Now >= slowUntil) frost = Mathf.Min(frost, 2);
-        if (kb.sqrMagnitude > .01f) { transform.position = RoomManager.Clamp((Vector2)transform.position + kb * dt); kb *= Mathf.Exp(-9f * dt); } else kb = Vector2.zero;
+        if (kb.sqrMagnitude > .01f)
+        {
+            var np = RoomManager.Clamp((Vector2)transform.position + kb * dt); if (!boss && !isProp) np = RoomProp.Resolve(np, radius);
+            transform.position = np; kb *= Mathf.Exp(-9f * dt);
+        }
+        else kb = Vector2.zero;
         vfxT -= dt;
         if (vfxT <= 0f)
         {

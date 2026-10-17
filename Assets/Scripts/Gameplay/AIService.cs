@@ -50,6 +50,12 @@ public class AIService : MonoBehaviour
 
     [SerializeField] private int maxRetriesPerModel = 3;
 
+    [Tooltip("Thời gian chờ tối đa cho mỗi request (giây): văn bản / ảnh.")]
+    [SerializeField] private int timeoutText = 30, timeoutImage = 60;
+
+    /// <summary>Đã có khóa API để gọi Gemini chưa (tự luận dùng để quyết định bật AI hay rơi về bộ chấm tạm).</summary>
+    public bool HasKey => !string.IsNullOrWhiteSpace(apiKey);
+
     private const string URL_FORMAT = "https://generativelanguage.googleapis.com/v1beta/models/{0}:generateContent";
 
     // Chỉ cho 1 request chạy tại một thời điểm để tránh bắn dồn gây 429
@@ -108,6 +114,40 @@ public class AIService : MonoBehaviour
     }
 
     // ───────────────────────── Prompt ─────────────────────────
+
+    /// <summary>Gửi một prompt tự do (tự luận: chấm bài, phân tích). json=true yêu cầu Gemini trả JSON.</summary>
+    public void RequestRaw(string prompt, bool json, Action<string> onComplete, Action<string> onError, int attempts = 2)
+    {
+        StartCoroutine(SendPrompt(prompt, json, onComplete, onError, null, null, timeoutText, attempts));
+    }
+
+    /// <summary>Gửi prompt kèm một ảnh (đọc bài viết tay). Ảnh gửi thẳng cho Gemini, không lưu lại.</summary>
+    public void RequestVision(string prompt, byte[] image, string mime, Action<string> onComplete, Action<string> onError, int attempts = 2)
+    {
+        StartCoroutine(SendPrompt(prompt, true, onComplete, onError, image, mime, timeoutImage, attempts));
+    }
+
+    /// <summary>Bỏ rào ```json nếu model lỡ thêm vào (dùng chung cho các lớp tự luận).</summary>
+    public static string CleanJsonPublic(string raw) => CleanJson(raw);
+
+    private static string JsonEscape(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        var sb = new StringBuilder(s.Length + 16);
+        foreach (char c in s)
+        {
+            switch (c)
+            {
+                case '"': sb.Append("\\\""); break;
+                case '\\': sb.Append("\\\\"); break;
+                case '\n': sb.Append("\\n"); break;
+                case '\r': sb.Append("\\r"); break;
+                case '\t': sb.Append("\\t"); break;
+                default: if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4")); else sb.Append(c); break;
+            }
+        }
+        return sb.ToString();
+    }
 
     private static string OptionText(WrongQuestionItem item, int index)
     {
@@ -172,7 +212,8 @@ Thông tin câu hỏi gốc:
 
     // ───────────────────────── Gửi request + retry + fallback model ─────────────────────────
 
-    private IEnumerator SendPrompt(string prompt, bool json, Action<string> onComplete, Action<string> onError)
+    private IEnumerator SendPrompt(string prompt, bool json, Action<string> onComplete, Action<string> onError,
+                                   byte[] imageBytes = null, string imageMime = null, int timeoutSec = 0, int attemptsOverride = 0)
     {
         // Xếp hàng: chờ request trước xong
         while (busy) yield return null;
@@ -185,12 +226,27 @@ Thông tin câu hỏi gốc:
             yield break;
         }
 
-        GeminiRequestBody reqBody = new GeminiRequestBody
+        byte[] bodyRaw;
+        if (imageBytes == null)
         {
-            contents = new[] { new ContentItem { parts = new[] { new PartItem { text = prompt } } } },
-            generationConfig = new GenConfig { responseMimeType = json ? "application/json" : "text/plain" }
-        };
-        byte[] bodyRaw = Encoding.UTF8.GetBytes(JsonUtility.ToJson(reqBody));
+            GeminiRequestBody reqBody = new GeminiRequestBody
+            {
+                contents = new[] { new ContentItem { parts = new[] { new PartItem { text = prompt } } } },
+                generationConfig = new GenConfig { responseMimeType = json ? "application/json" : "text/plain" }
+            };
+            bodyRaw = Encoding.UTF8.GetBytes(JsonUtility.ToJson(reqBody));
+        }
+        else
+        {
+            // JsonUtility luôn ghi mọi trường nên không dựng được phần inlineData; dựng JSON thủ công cho request có ảnh.
+            var sbBody = new StringBuilder(imageBytes.Length * 4 / 3 + prompt.Length + 256);
+            sbBody.Append("{\"contents\":[{\"parts\":[{\"text\":\"").Append(JsonEscape(prompt)).Append("\"},{\"inlineData\":{\"mimeType\":\"")
+                  .Append(string.IsNullOrEmpty(imageMime) ? "image/jpeg" : imageMime).Append("\",\"data\":\"").Append(Convert.ToBase64String(imageBytes))
+                  .Append("\"}}]}],\"generationConfig\":{\"responseMimeType\":\"").Append(json ? "application/json" : "text/plain").Append("\"}}");
+            bodyRaw = Encoding.UTF8.GetBytes(sbBody.ToString());
+        }
+        int attemptsPerModel = attemptsOverride > 0 ? Mathf.Min(maxRetriesPerModel, attemptsOverride) : maxRetriesPerModel;
+        int timeout = timeoutSec > 0 ? timeoutSec : timeoutText;
 
         string lastError = "";
 
@@ -199,7 +255,7 @@ Thông tin câu hỏi gốc:
             if (string.IsNullOrWhiteSpace(model)) continue;
             string url = string.Format(URL_FORMAT, model.Trim());
 
-            for (int attempt = 0; attempt < maxRetriesPerModel; attempt++)
+            for (int attempt = 0; attempt < attemptsPerModel; attempt++)
             {
                 using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
                 {
@@ -207,6 +263,7 @@ Thông tin câu hỏi gốc:
                     request.downloadHandler = new DownloadHandlerBuffer();
                     request.SetRequestHeader("Content-Type", "application/json");
                     request.SetRequestHeader("x-goog-api-key", apiKey);
+                    request.timeout = timeout;      // tránh kẹt hàng đợi khi mạng treo
 
                     yield return request.SendWebRequest();
 
@@ -227,7 +284,7 @@ Thông tin câu hỏi gốc:
                         string body = request.downloadHandler != null ? request.downloadHandler.text : "";
                         lastError = $"[{model}] HTTP {code}: {(string.IsNullOrEmpty(body) ? request.error : body)}";
 
-                        bool retriable = code == 503 || code == 429
+                        bool retriable = code == 503 || code == 429 || code == 500 || code == 504
                                          || request.result == UnityWebRequest.Result.ConnectionError;
                         if (!retriable)
                         {
@@ -239,7 +296,7 @@ Thông tin câu hỏi gốc:
                     }
                 }
 
-                if (attempt < maxRetriesPerModel - 1)
+                if (attempt < attemptsPerModel - 1)
                 {
                     // Exponential backoff + jitter: ~2s, ~4s... để nhiều máy không retry cùng lúc
                     float wait = Mathf.Pow(2, attempt + 1) + UnityEngine.Random.Range(0f, 1f);

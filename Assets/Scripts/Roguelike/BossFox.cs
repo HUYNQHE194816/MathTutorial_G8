@@ -17,7 +17,7 @@ public class FoxTails : MonoBehaviour
     public void SetCount(int n, bool burst)
     {
         while (tails.Count > n) { var last = tails[tails.Count - 1]; if (burst) RFx.Burst(last.transform.position + last.transform.up * 1.6f, new Color(.5f, 1f, .9f), 12, 4f, .7f, .2f, 0f); Destroy(last.gameObject); tails.RemoveAt(tails.Count - 1); }
-        while (tails.Count < n) { var sr = Combat.MakePx("Tail", transform, RogueArt.FoxTail, 0); tails.Add(sr); }
+        while (tails.Count < n) { var sr = Combat.MakePx("Tail", transform, RogueArt.FoxTail, 0, null, 1.5f); tails.Add(sr); }
     }
 
     void LateUpdate()
@@ -49,9 +49,9 @@ public class BossFox : BossBase
 
     protected override void BuildVisual()
     {
-        bossName = "Cáo Chín Đuôi"; bossTitle = "Hồ ly giữa sương mù"; index = 1; innate = Element.Phong; resist[(int)Element.Phong] = .5f; radius = 1.25f; bloodCol = ghost;
-        idleFrames = RogueArt.FoxBody; MakeBody(idleFrames[0], 1.8f, 3.4f); home = new Vector2(0f, 1.5f);
-        tails = FoxTails.Attach(gameObject, body, 9, .9f);
+        bossName = "Cáo Chín Đuôi"; bossTitle = "Hồ ly giữa sương mù"; index = 1; innate = Element.Phong; resist[(int)Element.Phong] = .5f; radius = .95f; bloodCol = ghost;
+        idleFrames = RogueArt.FoxBody; MakeBody(idleFrames[0], 1.35f, 2.3f); home = new Vector2(0f, 1.5f);
+        tails = FoxTails.Attach(gameObject, body, 9, .6f);
     }
 
     protected override Sprite CurrentSprite() => idleFrames[pose != 0 ? 2 : (int)(animT / .6f) % 2];
@@ -67,7 +67,7 @@ public class BossFox : BossBase
     protected override void Tick(float dt)
     {
         tails.alpha = fade; baseTint = new Color(baseTint.r, baseTint.g, baseTint.b, fade); shadow.color = new Color(0, 0, 0, .45f * fade);
-        airY = Mathf.Sin(Time.time * 2.2f) * .12f;
+        airY = Mathf.Sin(Time.time * 2.2f) * .1f;
         decoys.RemoveAll(d => d == null || d.Dead);
     }
 
@@ -76,7 +76,7 @@ public class BossFox : BossBase
     IEnumerator Vanish() { RogueAudio.Play(RSfx.Teleport, .7f); RFx.Burst(Pos, ghost, 14, 4f, .6f, .2f, 0f); hidden = true; yield return Fade(0f, .22f); }
     IEnumerator Appear(Vector2 at) { transform.position = ClampBoss(at); RFx.Burst(Pos, ghost, 14, 4f, .6f, .2f, 0f); RFx.Ring(Pos, 1.6f, ghost, .3f); yield return Fade(1f, .2f); hidden = false; }
 
-    Vector2 Mouth => (Vector2)transform.position + new Vector2(0f, .5f);
+    Vector2 Mouth => (Vector2)transform.position + new Vector2(0f, .35f);
 
     protected override IEnumerator Attack(int phase, int kind)
     {
@@ -147,9 +147,9 @@ public class BossFox : BossBase
 
     void SpawnDecoy(Vector2 pos)
     {
-        var d = BossMinion.Create(idleFrames, pos, 1f, 1.1f, 1f, Color.white);
+        var d = BossMinion.Create(idleFrames, pos, 1f, .95f, 1.5f, Color.white);
         d.explodeOnHit = true; d.explodeDmg = 12f; d.dmgMul = dm; d.life = 14f; d.shotEl = Element.Hoa; d.shotCol = ghost; d.shotStyle = BoltStyle.Orb; d.drift = Random.insideUnitCircle.normalized * .6f; d.bloodCol = ghost;
-        var host = d.gameObject; var tl = FoxTails.Attach(host, d.GetComponentInChildren<SpriteRenderer>(), tails.Count, .9f);
+        var host = d.gameObject; var tl = FoxTails.Attach(host, d.GetComponentInChildren<SpriteRenderer>(), tails.Count, .6f);
         decoys.Add(d);
     }
 
@@ -159,7 +159,7 @@ public class BossFox : BossBase
         var ring = Combat.MakeSr("SweepMark", transform, RogueArt.Ring, ghost, new Vector2(7f, 5f), -96); ring.sharedMaterial = Gfx.Additive;
         float t = 0f; while (t < .85f) { t += Combat.Dt; ring.color = new Color(ghost.r, ghost.g, ghost.b, .4f + .4f * Mathf.Sin(t * 22f)); yield return null; }
         Destroy(ring.gameObject);
-        var blades = new List<SpriteRenderer>(); for (int i = 0; i < 4; i++) { var b = Combat.MakePx("Blade", transform, RogueArt.FoxTail, Combat.OrdFx - 12, new Vector2(0, 0), 1.5f); b.sharedMaterial = Gfx.Additive; blades.Add(b); }
+        var blades = new List<SpriteRenderer>(); for (int i = 0; i < 4; i++) { var b = Combat.MakePx("Blade", transform, RogueArt.FoxTail, Combat.OrdFx - 12, new Vector2(0, 0), 2.0f); b.sharedMaterial = Gfx.Additive; blades.Add(b); }
         float ang = Random.Range(0f, 360f), dir = Random.value < .5f ? 1f : -1f; float hitCd = 0f; RogueAudio.Play(RSfx.Wind, .9f, .8f);
         t = 0f;
         while (t < 2.3f)
@@ -167,7 +167,7 @@ public class BossFox : BossBase
             float dt = Combat.Dt; t += dt; ang += 190f * dir * dt; hitCd -= dt;
             for (int i = 0; i < 4; i++)
             {
-                float a = ang + i * 90f; blades[i].transform.localPosition = (Vector3)(Combat.FromAng(a) * .6f) + new Vector3(0, -.2f, 0); blades[i].transform.localEulerAngles = new Vector3(0, 0, a - 90f); blades[i].color = new Color(.8f, 1f, 1f, .85f);
+                float a = ang + i * 90f; blades[i].transform.localPosition = (Vector3)(Combat.FromAng(a) * .4f) + new Vector3(0, -.1f, 0); blades[i].transform.localEulerAngles = new Vector3(0, 0, a - 90f); blades[i].color = new Color(.8f, 1f, 1f, .85f);
                 if (Random.value < .4f) RFx.Burst((Vector2)transform.position + Combat.FromAng(a) * Random.Range(1.2f, 3.2f), ghost, 1, .5f, .25f, .16f);
             }
             var pl = Combat.Player;
@@ -211,8 +211,8 @@ public class BossFox : BossBase
         RogueAudio.Play(RSfx.Rise, .9f, .6f); yield return Fade(.0f, .3f); hidden = true;
         for (int i = 0; i < 12; i++)
         {   // bóng ảo trôi khắp sân (chỉ để nhìn)
-            var go = new GameObject("Shadow"); go.transform.position = new Vector2(Random.Range(-7f, 7f), Random.Range(-1.5f, 3f)); var sr = go.AddComponent<SpriteRenderer>(); sr.sprite = idleFrames[i % 2]; sr.color = new Color(.5f, .35f, .8f, .0f); sr.sortingOrder = Combat.Order(go.transform.position.y - 1.8f);
-            go.AddComponent<ShadowDrift>(); shadows.Add(go); RFx.Burst(go.transform.position, new Color(.6f, .4f, 1f), 6, 2f, .5f, .18f); yield return Wait(.1f);
+            var go = new GameObject("Shadow"); go.transform.position = new Vector2(Random.Range(-7f, 7f), Random.Range(-1.5f, 3f)); var sr = go.AddComponent<SpriteRenderer>(); sr.sprite = idleFrames[i % 2]; sr.color = new Color(.5f, .35f, .8f, .0f); sr.sortingOrder = Combat.Order(go.transform.position.y - 1.35f);
+            go.transform.localScale = Vector3.one * Combat.PxScale * 1.5f; go.AddComponent<ShadowDrift>(); shadows.Add(go); RFx.Burst(go.transform.position, new Color(.6f, .4f, 1f), 6, 2f, .5f, .18f); yield return Wait(.1f);
         }
     }
 
@@ -240,7 +240,7 @@ public class BossFox : BossBase
     {
         var go = new GameObject("Talisman"); var ring = Combat.MakeSr("Ring", go.transform, RogueArt.Ring, new Color(1f, .85f, .3f), new Vector2(3.6f, 3.6f), Combat.OrdFx); ring.sharedMaterial = Gfx.Additive;
         var tm = go.AddComponent<TextMesh>(); tm.font = GameFont.Body; tm.text = "BẢN THỂ"; tm.fontSize = 64; tm.characterSize = .13f; tm.anchor = TextAnchor.MiddleCenter; tm.color = new Color(1f, .85f, .3f); tm.fontStyle = FontStyle.Bold; go.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material; go.GetComponent<MeshRenderer>().sortingOrder = Combat.OrdText;
-        float t = 0f; while (t < dur && !Dead) { t += Combat.Dt; go.transform.position = (Vector2)transform.position + new Vector2(0, 3.2f + Mathf.Sin(t * 5f) * .15f); ring.transform.position = (Vector2)transform.position + Vector2.up * .2f; ring.transform.localScale = Vector3.one * (1f + .08f * Mathf.Sin(t * 8f)) * 3.6f / ring.sprite.bounds.size.x; yield return null; }
+        float t = 0f; while (t < dur && !Dead) { t += Combat.Dt; go.transform.position = (Vector2)transform.position + new Vector2(0, 2.2f + Mathf.Sin(t * 5f) * .12f); ring.transform.position = (Vector2)transform.position + Vector2.up * .2f; ring.transform.localScale = Vector3.one * (1f + .08f * Mathf.Sin(t * 8f)) * 3.6f / ring.sprite.bounds.size.x; yield return null; }
         Destroy(go);
     }
 
@@ -251,5 +251,5 @@ public class ShadowDrift : MonoBehaviour
 {
     SpriteRenderer sr; Vector2 v; float t;
     void Start() { sr = GetComponent<SpriteRenderer>(); v = Random.insideUnitCircle.normalized * Random.Range(.4f, 1f); }
-    void Update() { t += Combat.VDt; transform.position += (Vector3)(v * Combat.VDt); var c = sr.color; c.a = Mathf.Min(.4f, t * .5f); sr.color = c; sr.sortingOrder = Combat.Order(transform.position.y - 1.8f); if (Mathf.Abs(transform.position.x) > 8f) v.x = -v.x; }
+    void Update() { t += Combat.VDt; transform.position += (Vector3)(v * Combat.VDt); var c = sr.color; c.a = Mathf.Min(.4f, t * .5f); sr.color = c; sr.sortingOrder = Combat.Order(transform.position.y - 1.35f); if (Mathf.Abs(transform.position.x) > 8f) v.x = -v.x; }
 }

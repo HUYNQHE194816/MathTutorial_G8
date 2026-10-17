@@ -171,12 +171,12 @@ public abstract class BossBase : Foe
         body.sprite = CurrentSprite(); body.sortingOrder = Combat.Order(transform.position.y - footOff + .3f);
         if (bstate != BState.Dying) body.transform.localPosition = new Vector2(0, -footOff + airY);
         var pl = Combat.Player; if (pl != null) body.flipX = false;
-        float breathe = 1f + .015f * Mathf.Sin(animT * 3f); body.transform.localScale = new Vector3(bodyScale / breathe, bodyScale * breathe, 1f);
+        float breathe = 1f + .015f * Mathf.Sin(animT * 3f); body.transform.localScale = new Vector3(Combat.PxScale * bodyScale / breathe, Combat.PxScale * bodyScale * breathe, 1f);
         shadow.transform.localPosition = new Vector2(0, -footOff + .1f);
         SyncVisual(baseTint);
     }
 
-    protected float bodyScale = 1f, airY;
+    protected float bodyScale = 1.5f, airY;        // boss vẽ chunky hơn nhân vật 1,5 lần cho có cảm giác to lớn
 
     protected void MakeBody(Sprite s, float footOffset, float shadowW)
     {
@@ -190,7 +190,7 @@ public abstract class BossBase : Foe
     {
         if (Dead) return; Dead = true; bstate = BState.Dying; vulnerable = false; StopAllCoroutines();
         foreach (var b in CombatBolt.Enemy.ToArray()) if (b != null) Destroy(b.gameObject);
-        foreach (var o in new List<Foe>(Combat.Foes)) if (o != null && o != this && !o.Dead) { RFx.Burst(o.Pos, Color.white, 6, 3f, .4f, .15f); o.TakeHit(9999f, Element.None, o.Pos, 0f, false, true); }
+        foreach (var o in new List<Foe>(Combat.Foes)) if (o != null && o != this && !o.Dead && !o.isProp) { RFx.Burst(o.Pos, Color.white, 6, 3f, .4f, .15f); o.TakeHit(9999f, Element.None, o.Pos, 0f, false, true); }
         StartCoroutine(DeathRoutine());
     }
 
@@ -225,8 +225,9 @@ public class BossMinion : Foe
     {
         var go = new GameObject("BossMinion"); go.transform.position = pos; var m = go.AddComponent<BossMinion>();
         m.frames = frames; m.maxHp = m.hp = hp; m.radius = rad; m.tint = tint; m.bloodCol = new Color(.6f, .9f, 1f);
-        m.body = Combat.MakePx("Body", go.transform, frames[0], Combat.Order(pos.y), new Vector2(0, -frames[0].bounds.size.y * scale * .35f), scale); m.InitFlash(m.body);
-        Combat.MakeSr("Shade", go.transform, RogueArt.Disc, new Color(0, 0, 0, .35f), new Vector2(rad * 1.8f, rad * .6f), 4, new Vector2(0, -frames[0].bounds.size.y * scale * .35f + .1f));
+        float foot = -frames[0].bounds.size.y * scale * Combat.PxScale * .4f;
+        m.body = Combat.MakePx("Body", go.transform, frames[0], Combat.Order(pos.y), new Vector2(0, foot), scale); m.InitFlash(m.body);
+        Combat.MakeSr("Shade", go.transform, RogueArt.Disc, new Color(0, 0, 0, .35f), new Vector2(rad * 1.8f, rad * .6f), 4, new Vector2(0, foot + .05f));
         Combat.Foes.Add(m); RFx.Ring(pos, 1f, tint, .4f); return m;
     }
 
@@ -266,6 +267,7 @@ public class BossPillars : MonoBehaviour
 {
     public enum Style { Stone, Lantern, Transformer }
     class P { public Transform t; public SpriteRenderer sr, rune, glow; public EssayDifficulty d; public TextMesh label; public Vector2 pos; public Sprite[] frames; }
+    public static bool NearAny;
     readonly List<P> ps = new List<P>(); Style style; float timeLeft, total; System.Action<int> onChosen; System.Action onTimeout; int chosen = -1; bool done; TextMesh prompt, timer; float t; int nearIdx = -1;
 
     public static EssayDifficulty[] PickDifficulties(EssayDifficulty run)
@@ -293,13 +295,13 @@ public class BossPillars : MonoBehaviour
     {
         var p = new P { pos = pos, d = d }; var go = new GameObject("Pillar" + i); go.transform.SetParent(transform, false); go.transform.position = pos; p.t = go.transform;
         Color dc = DifficultyTheme.Of(d);
-        p.glow = Combat.MakeSr("Glow", go.transform, RogueArt.Glow, new Color(dc.r, dc.g, dc.b, .55f), new Vector2(3.4f, 3.4f), Combat.Order(pos.y) - 2, new Vector2(0, 1.1f)); p.glow.sharedMaterial = Gfx.Additive;
-        Combat.MakeSr("Base", go.transform, RogueArt.Disc, new Color(0, 0, 0, .45f), new Vector2(1.8f, .6f), 4, new Vector2(0, .05f));
+        p.glow = Combat.MakeSr("Glow", go.transform, RogueArt.Glow, new Color(dc.r, dc.g, dc.b, .55f), new Vector2(2.8f, 2.8f), Combat.Order(pos.y) - 2, new Vector2(0, .9f)); p.glow.sharedMaterial = Gfx.Additive;
+        Combat.MakeSr("Base", go.transform, RogueArt.Disc, new Color(0, 0, 0, .45f), new Vector2(1.3f, .45f), 4, new Vector2(0, .05f));
         Vector2 off = Vector2.zero;
-        if (style == Style.Stone) { p.sr = Combat.MakePx("Spr", go.transform, RogueArt.StonePillar, Combat.Order(pos.y)); p.rune = Combat.MakePx("Rune", go.transform, RogueArt.PillarRune, Combat.Order(pos.y) + 1, new Vector2(0, 1.35f)); p.rune.color = dc; p.rune.sharedMaterial = Gfx.Additive; }
-        else if (style == Style.Lantern) { p.frames = RogueArt.Lantern; p.sr = Combat.MakePx("Spr", go.transform, p.frames[0], Combat.Order(pos.y), new Vector2(0, 1.0f)); p.sr.color = Color.Lerp(Color.white, dc, .3f); }
-        else { p.frames = RogueArt.Transformer; p.sr = Combat.MakePx("Spr", go.transform, p.frames[0], Combat.Order(pos.y)); p.sr.color = Color.Lerp(Color.white, dc, .25f); }
-        var tmGo = new GameObject("Label"); tmGo.transform.SetParent(go.transform, false); tmGo.transform.localPosition = new Vector3(0, 3.3f, 0);
+        if (style == Style.Stone) { p.sr = Combat.MakePx("Spr", go.transform, RogueArt.StonePillar, Combat.Order(pos.y), null, 1.5f); p.rune = Combat.MakePx("Rune", go.transform, RogueArt.PillarRune, Combat.Order(pos.y) + 1, new Vector2(0, 1.0f), 1.5f); p.rune.color = dc; p.rune.sharedMaterial = Gfx.Additive; }
+        else if (style == Style.Lantern) { p.frames = RogueArt.Lantern; p.sr = Combat.MakePx("Spr", go.transform, p.frames[0], Combat.Order(pos.y), new Vector2(0, .5f), 1.5f); p.sr.color = Color.Lerp(Color.white, dc, .3f); }
+        else { p.frames = RogueArt.Transformer; p.sr = Combat.MakePx("Spr", go.transform, p.frames[0], Combat.Order(pos.y), null, 1.5f); p.sr.color = Color.Lerp(Color.white, dc, .25f); }
+        var tmGo = new GameObject("Label"); tmGo.transform.SetParent(go.transform, false); tmGo.transform.localPosition = new Vector3(0, 2.7f, 0);
         var tm = tmGo.AddComponent<TextMesh>(); tm.font = GameFont.Body; tm.text = RoomRules.DifficultyName(d); tm.fontSize = 64; tm.characterSize = .14f; tm.anchor = TextAnchor.MiddleCenter; tm.color = dc; tm.fontStyle = FontStyle.Bold;
         var mr = tmGo.GetComponent<MeshRenderer>(); mr.sharedMaterial = tm.font.material; mr.sortingOrder = Combat.OrdText - 20; p.label = tm;
         ps.Add(p); RFx.Burst(pos + Vector2.up * .5f, dc, 10, 3f, .6f, .16f, 3f, false); RFx.Ring(pos, 1.2f, dc, .5f);
@@ -308,7 +310,7 @@ public class BossPillars : MonoBehaviour
     void Update()
     {
         if (done) return; float dt = Combat.Dt; if (dt <= 0f) return; t += dt; timeLeft -= dt;
-        var pl = Combat.Player; var k = Keyboard.current; nearIdx = -1; float best = RoomManager.Reach;
+        var pl = Combat.Player; var k = Keyboard.current; nearIdx = -1; float best = RoomManager.Reach + .6f; NearAny = false;
         for (int i = 0; i < ps.Count; i++)
         {
             var p = ps[i]; float a = Mathf.Sin(t * 3f + i) * .5f + .5f; p.glow.color = new Color(p.glow.color.r, p.glow.color.g, p.glow.color.b, .35f + .3f * a);
@@ -320,8 +322,9 @@ public class BossPillars : MonoBehaviour
         timer.color = timeLeft < 5f ? new Color(1f, .35f + .3f * Mathf.Sin(t * 14f), .3f) : new Color(1f, .8f, .5f);
         if (nearIdx >= 0)
         {
-            prompt.transform.position = ps[nearIdx].pos + new Vector2(0, 4.0f); prompt.text = "Nhấn E · chọn trụ " + RoomRules.DifficultyName(ps[nearIdx].d); prompt.color = DifficultyTheme.Of(ps[nearIdx].d);
-            if (k != null && k.eKey.wasPressedThisFrame) { Choose(nearIdx); return; }
+            prompt.transform.position = ps[nearIdx].pos + new Vector2(0, 3.3f); prompt.text = "Nhấn E · chọn trụ " + RoomRules.DifficultyName(ps[nearIdx].d); prompt.color = DifficultyTheme.Of(ps[nearIdx].d);
+            NearAny = true; TouchControls.InteractVisible = true;
+            if ((k != null && k.eKey.wasPressedThisFrame) || TouchControls.InteractPressed) { Choose(nearIdx); return; }
         }
         else { prompt.text = ""; }
         if (timeLeft <= 0f) { done = true; onTimeout?.Invoke(); }

@@ -89,10 +89,8 @@ public class ScreenFit : MonoBehaviour
 
     static void FitRoomCamera()
     {
-        if (RoomManager.Instance == null) return;
-        var cam = Camera.main;
-        if (cam == null || !cam.orthographic) return;
-        float want = Mathf.Max(RoomBaseSize, RoomHalfWidth / Mathf.Max(.1f, cam.aspect));
-        if (!Mathf.Approximately(cam.orthographicSize, want)) cam.orthographicSize = want;
+        // RoomManager dùng camera theo người chơi (RFxHost) và tự tính kích thước pixel-perfect có bù màn hình hẹp,
+        // nên không ghi orthographicSize ở đây nữa để hai nơi không giành quyền điều khiển camera.
+        return;
     }
 }

@@ -146,14 +146,17 @@ public static partial class RogueArt
 
     // ======================================================================== HIỆP SĨ (giáp xám)
     // Hướng sang phải. 0..3 đứng thở, 0..5 chạy. Pivot ở chân. Vũ khí là sprite riêng xoay quanh tay.
-    public static Sprite[] KnightIdle => GetN("kidle", () => new[] { Knight(0, 0, 0, false), Knight(0, 0, 1, false), Knight(1, 0, 2, false), Knight(1, 0, 1, false) });
-    public static Sprite[] KnightRun => GetN("krun", () => new[]
+    public static Sprite[] KnightIdle => GetN("kidle", () => new[] { Knight(0, float.NaN, 0, false), Knight(0, float.NaN, 1, false), Knight(1, float.NaN, 2, false), Knight(1, float.NaN, 1, false) });
+    /// <summary>Chu kỳ chạy 8 khung: chân đổi bước qua hai đoạn đùi và ống chân, chân sau nhấc lên khi vung tới, thân nhún lên ở khung hai chân chạm nhau.</summary>
+    public static Sprite[] KnightRun => GetN("krun8", () =>
     {
-        Knight(1, 3, 0, true), Knight(0, 2, 1, true), Knight(0, 0, 2, true), Knight(1, -3, 1, true), Knight(0, -2, 0, true), Knight(0, 0, 1, true)
+        var r = new Sprite[8];
+        for (int k = 0; k < 8; k++) r[k] = Knight(k == 2 || k == 6 ? 1 : 0, k * Mathf.PI / 4f, k % 4, true);
+        return r;
     });
-    public static Sprite KnightDash => Get("kdash", () => Knight(0, 4, 3, true, true));
+    public static Sprite KnightDash => Get("kdash", () => Knight(0, 0f, 3, true, true));
 
-    static Sprite Knight(int bob, int stride, int cape, bool run, bool dash = false)
+    static Sprite Knight(int bob, float phase, int cape, bool run, bool dash = false)
     {
         var c = new Px(30, 38); int b = bob;
         Color32 steel = K(0xA9B1C6), hi = K(0xE2E7F4), lo = K(0x6A7392), deep = K(0x3B405C), dark = K(0x23253A), cloak = K(0x41528C), cloakD = K(0x283258),
@@ -166,12 +169,23 @@ public static partial class RogueArt
         c.Poly(V(12 + lean, 27 + b, 16 + lean, 27 + b, 16 + lean, 13, 9 - sw + lean, 9 + cape), cloak);
         c.Line(13 + lean, 25 + b, 9 - sw * .5f + lean, 10 + cape, Shade(cloak, .3f));
 
-        // chân (chạy thì bước xen kẽ)
-        int s1 = stride, s2 = -stride; int up1 = run && stride > 1 ? 1 : 0, up2 = run && stride < -1 ? 1 : 0;
-        c.Rect(11 + s1 + lean, 3 + up1, 4, 10 - up1, deep); c.Rect(11 + s1 + lean, 6 + up1, 2, 7 - up1, lo);
-        c.Rect(10 + s1 + lean, 2 + up1, 6, 3, dark); c.Rect(10 + s1 + lean, 4 + up1, 6, 1, steel);
-        c.Rect(15 + s2 + lean, 3 + up2, 4, 10 - up2, deep); c.Rect(15 + s2 + lean, 6 + up2, 2, 7 - up2, lo);
-        c.Rect(14 + s2 + lean, 2 + up2, 6, 3, dark); c.Rect(14 + s2 + lean, 4 + up2, 6, 1, steel);
+        // chân: hai đoạn (đùi, ống chân), bước theo pha; chân sau đặt tối hơn để có chiều sâu
+        {
+            bool idleLegs = float.IsNaN(phase);
+            float dxA = idleLegs ? 1.5f : 3.6f * Mathf.Cos(phase), liA = idleLegs ? 0f : Mathf.Max(0f, -Mathf.Sin(phase)) * 3f;
+            float dxB = idleLegs ? -1.5f : 3.6f * Mathf.Cos(phase + Mathf.PI), liB = idleLegs ? 0f : Mathf.Max(0f, -Mathf.Sin(phase + Mathf.PI)) * 3f;
+            if (dash) { dxA = 4.2f; dxB = -4.2f; liA = 2f; liB = 2f; }
+            for (int pass = 0; pass < 2; pass++)
+            {
+                bool far = pass == 0; float dx = far ? dxB : dxA, li = far ? liB : liA; float hip = far ? 12.5f : 16.5f;
+                Color32 thigh = far ? deep : lo, shin = far ? deep : steel, boot = far ? K(0x1A1B2B) : dark;
+                float fx = hip + dx + lean, fy = 3f + li; float kx = hip + dx * .55f + (dx > 0f ? 1.1f : -.4f) + lean, ky = 8.2f + li * .55f;
+                c.Line(hip - 1.5f + lean, 12f, kx - 1.5f, ky, thigh, 4); c.Line(kx - 1.5f, ky, fx - 1.5f, fy + 1f, shin, 4);
+                if (!far) { c.Line(hip - 1.5f + lean, 12f, kx - 1.5f, ky, thigh, 2); }
+                int bx = Mathf.RoundToInt(fx) - 3, by = Mathf.RoundToInt(fy) - 1;
+                c.Rect(bx, by, 7, 3, boot); c.Rect(bx + 1, by + 2, 5, 1, far ? lo : steel);
+            }
+        }
 
         // thân giáp
         c.Slab(10 + lean, 13 + b, 11, 12, steel, hi, lo);
@@ -294,6 +308,33 @@ public static partial class RogueArt
                 c.Poly(V(19, 13, 21, 24, 25, 23, 28, 13), steelHi); c.Poly(V(19, 12, 21, 2, 25, 3, 28, 12), steelLo);
                 c.Line(29, 13, 29, 13, White); c.Rect(21, 11, 4, 4, acc); c.Set(22, 13, White); c.Rect(16, 9, 5, 7, dark);
                 pv = new Vector2(5f / 30f, 12.5f / 26f); break;
+            case 12: // Súng hoa cải (hai nòng)
+                c = new Px(32, 12);
+                c.Poly(V(0, 3, 9, 5, 9, 9, 0, 10), wood); c.Rect(1, 4, 8, 1, woodHi); c.Rect(0, 3, 2, 7, woodLo);
+                c.Slab(9, 4, 8, 6, steel, steelHi, steelLo); c.Rect(17, 7, 14, 2, steelLo); c.Rect(17, 5, 14, 2, steel); c.Rect(17, 6, 14, 1, dark); c.Rect(30, 5, 2, 4, dark); c.Rect(29, 9, 1, 1, acc);
+                c.Rect(18, 2, 7, 3, wood); c.Rect(18, 4, 7, 1, woodHi); c.Rect(11, 1, 3, 4, wood); c.Rect(12, 6, 3, 2, acc); c.Set(13, 7, White); c.Rect(15, 4, 2, 2, gold);
+                pv = new Vector2(10f / 32f, 6f / 12f); break;
+            case 13: // Súng điện từ (vũ khí sạc)
+                c = new Px(36, 14);
+                c.Slab(5, 4, 24, 6, K(0x59607A), K(0x9CA6C8), K(0x363B52)); c.Rect(12, 10, 18, 2, K(0x2D3046)); c.Rect(12, 2, 18, 2, K(0x2D3046)); c.Rect(10, 12, 20, 1, acc); c.Rect(10, 1, 20, 1, acc);
+                for (int i = 0; i < 4; i++) { c.Rect(12 + i * 5, 3, 2, 8, K(0x2D3046)); c.Rect(12 + i * 5, 4, 2, 6, acc); c.Set(12 + i * 5, 9, White); }
+                c.Rect(28, 5, 8, 4, K(0x20222F)); c.Rect(33, 6, 3, 2, Lite(acc, .7f)); c.Rect(1, 4, 5, 6, K(0x2B2D44)); c.Rect(2, 5, 3, 4, acc); c.Rect(7, 0, 4, 5, dark); c.Rect(8, 1, 2, 3, steelLo);
+                pv = new Vector2(8f / 36f, 5f / 14f); break;
+            case 14: // Phi đao cầm tay
+                c = new Px(18, 8);
+                c.Poly(V(6, 2, 17, 4, 6, 6), steel); c.Poly(V(6, 4, 16, 4, 6, 6), steelHi); c.Line(7, 2, 15, 3, steelLo); c.Set(17, 4, White);
+                c.Rect(4, 1, 2, 6, gold); c.Rect(0, 2, 4, 4, dark); c.Rect(1, 3, 3, 1, wood); c.Rect(0, 3, 1, 2, acc);
+                pv = new Vector2(3f / 18f, .5f); break;
+            case 15: // Phi tiêu cầm tay
+                c = new Px(16, 16);
+                c.Poly(V(8, 15, 10, 10, 15, 8, 10, 6, 8, 1, 6, 6, 1, 8, 6, 10), steel); c.Poly(V(8, 15, 10, 10, 8, 8, 6, 10), steelHi); c.Poly(V(8, 1, 10, 6, 8, 8, 6, 6), steelLo);
+                c.Ellipse(8, 8, 2.4f, 2.4f, acc); c.Ellipse(8, 8, 1.2f, 1.2f, Color.clear); c.Set(8, 14, White);
+                pv = new Vector2(.5f, .5f); break;
+            case 16: // Lựu đạn cầm tay
+                c = new Px(14, 16);
+                c.Blob(7, 6, 5.2f, 5.6f, K(0x5C7A3A), K(0x9AC25E), K(0x2F4220)); for (int i = 0; i < 3; i++) c.Rect(2, 3 + i * 3, 10, 1, K(0x2F4220));
+                c.Rect(5, 11, 4, 2, steelLo); c.Rect(6, 13, 2, 2, steel); c.Ellipse(11, 14, 2f, 2f, Color.clear); c.Line(8, 14, 12, 14, gold); c.Rect(9, 10, 4, 1, steel); c.Set(7, 7, acc); c.Set(6, 8, Lite(acc, .6f));
+                pv = new Vector2(.5f, .4f); break;
             default: // Lưỡi hái
                 c = new Px(34, 28);
                 c.Rect(0, 4, 28, 3, wood); c.Rect(0, 5, 28, 1, woodHi); c.Rect(0, 4, 28, 1, woodLo); c.Rect(4, 4, 2, 3, gold); c.Rect(14, 4, 2, 3, gold);
@@ -341,6 +382,24 @@ public static partial class RogueArt
     public static Sprite Shard => Get("shard", () =>
     {
         var c = new Px(9, 9); c.Poly(V(4.5f, 0, 9, 4.5f, 4.5f, 9, 0, 4.5f), White); c.Poly(V(4.5f, 4.5f, 9, 4.5f, 4.5f, 9), K(0xC8C8D8)); c.Set(3, 5, White);
+        return c.ToSprite(new Vector2(.5f, .5f));
+    });
+
+    public static Sprite Knife => Get("knife", () =>
+    {
+        var c = new Px(16, 6); c.Poly(V(3, 1, 15, 3, 3, 5), K(0xDDE4F4)); c.Poly(V(3, 3, 14, 3, 3, 5), White); c.Line(4, 1, 13, 2, K(0x6B7392)); c.Rect(0, 1, 3, 4, K(0x7A4F2E)); c.Rect(2, 0, 1, 6, K(0xD4A33F)); c.Outline(Ink);
+        return c.ToSprite(new Vector2(.5f, .5f));
+    });
+
+    public static Sprite Star => Get("star", () =>
+    {
+        var c = new Px(14, 14); c.Poly(V(7, 13, 8.6f, 8.4f, 13, 7, 8.6f, 5.6f, 7, 1, 5.4f, 5.6f, 1, 7, 5.4f, 8.4f), K(0xCDD5EC)); c.Poly(V(7, 13, 8.6f, 8.4f, 7, 7, 5.4f, 8.4f), White);
+        c.Ellipse(7, 7, 1.6f, 1.6f, Color.clear); c.Outline(Ink); return c.ToSprite(new Vector2(.5f, .5f));
+    });
+
+    public static Sprite GrenadeSprite => Get("grenade", () =>
+    {
+        var c = new Px(12, 14); c.Blob(6, 5.5f, 4.6f, 5f, K(0x5C7A3A), K(0x9AC25E), K(0x2F4220)); c.Rect(4, 10, 4, 2, K(0x6B7392)); c.Rect(5, 12, 2, 1, K(0xB9C1D8)); c.Rect(8, 11, 3, 1, K(0xD4A33F)); c.Set(6, 13, K(0xFFC24D)); c.Outline(Ink);
         return c.ToSprite(new Vector2(.5f, .5f));
     });
 

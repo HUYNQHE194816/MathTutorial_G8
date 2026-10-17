@@ -3,14 +3,14 @@ using UnityEngine;
 /// <summary>
 /// Quái và boss vẽ bằng code. biome: 0 Phòng thí nghiệm hóa, 1 Phòng sinh học, 2 Phòng vật lý trên mây.
 /// kind: 0 Xạ thủ, 1 Lao thẳng, 2 Pháp sư, 3 Robot (có người cưỡi), 4 Triệu hồi, 5 Quân nhỏ.
-/// Mỗi quái có 3 khung: [0] bước A, [1] bước B, [2] tư thế ra đòn / báo hiệu.
+/// Mỗi quái có 4 khung: [0] bước A, [1] bước B, [2] tư thế ra đòn / báo hiệu, [3] tư thế đứng giữa (để chu kỳ đi mượt hơn).
 /// </summary>
 public static partial class RogueArt
 {
     public static Sprite[] MonsterFrames(int biome, int kind) => GetN("m" + biome + "_" + kind, () =>
     {
-        var r = new Sprite[3];
-        for (int f = 0; f < 3; f++) r[f] = DrawMonster(biome, kind, f);
+        var r = new Sprite[4];            // [0] bước A, [1] bước B, [2] ra đòn, [3] đứng giữa (chu kỳ đi: 0,3,1,3)
+        for (int f = 0; f < 4; f++) r[f] = DrawMonster(biome, kind, f);
         return r;
     });
 
