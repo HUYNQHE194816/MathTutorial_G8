@@ -180,20 +180,20 @@ public class MainMenuScreen : MonoBehaviour
         var fs = MenuArt.Get("px_frame");
         if (fs != null)
         {
-            var rt = UIKit.CBox("MenuFrame", ui, Color.white, new Vector2(0, -20), new Vector2(600, 520), true);
+            var rt = UIKit.CBox("MenuFrame", ui, Color.white, new Vector2(0, -50), new Vector2(600, 580), true);
             rt.GetComponent<Image>().sprite = fs;
         }
-        else UIKit.Panel(ui, "MenuFrame", new Vector2(0, -20), new Vector2(600, 520), PanelStyle.Dark, out _);
+        else UIKit.Panel(ui, "MenuFrame", new Vector2(0, -50), new Vector2(600, 580), PanelStyle.Dark, out _);
 
-        UIKit.MakeButton(ui, "Btn_Start", "BẮT ĐẦU", new Vector2(0, 120), new Vector2(440, 88),
+        UIKit.MakeButton(ui, "Btn_Start", "BẮT ĐẦU", new Vector2(0, 113), new Vector2(440, 88),
       () => SceneRouter.Go("ModeSelectScene"), ButtonStyle.Bronze, 42, 0f);
-        UIKit.MakeButton(ui, "Btn_Dashboard", "TIẾN ĐỘ", new Vector2(0, 28), new Vector2(440, 72),
+        UIKit.MakeButton(ui, "Btn_Dashboard", "TIẾN ĐỘ", new Vector2(0, 21), new Vector2(440, 72),
             OpenDashboard, ButtonStyle.Stone, 34, .08f);
-        UIKit.MakeButton(ui, "Btn_Log", "NHẬT KÝ", new Vector2(0, -56), new Vector2(440, 72),
+        UIKit.MakeButton(ui, "Btn_Log", "NHẬT KÝ", new Vector2(0, -63), new Vector2(440, 72),
             OpenPracticeLog, ButtonStyle.Stone, 34, .16f);
-        UIKit.MakeButton(ui, "Btn_Settings", "CÀI ĐẶT", new Vector2(0, -140), new Vector2(440, 72),
+        UIKit.MakeButton(ui, "Btn_Settings", "CÀI ĐẶT", new Vector2(0, -147), new Vector2(440, 72),
             OpenSettings, ButtonStyle.Stone, 34, .24f);
-        UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -224), new Vector2(440, 72),
+        UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -231), new Vector2(440, 72),
             Quit, ButtonStyle.Stone, 34, .32f);
     }
 

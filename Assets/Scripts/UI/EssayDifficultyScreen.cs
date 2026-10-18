@@ -78,11 +78,11 @@ public class EssayDifficultyScreen : MonoBehaviour
             float x = (i - 1.5f) * (CardW + CardGap);
             cards.Add(DifficultyCard.Build(this, i, (EssayDifficulty)i, x, ui));
         }
-        UIKit.MakeButton(ui, "Btn_Back", "QUAY LẠI", new Vector2(-750f, -456f), new Vector2(300f, 72f), Back, ButtonStyle.Stone, 32, .6f);
+        UIKit.MakeButton(ui, "Btn_Back", "QUAY LẠI", new Vector2(-750f, -480f), new Vector2(300f, 72f), Back, ButtonStyle.Stone, 32, .6f);
         if (RunSave.Exists)
         {
-            btnContinue = UIKit.MakeButton(ui, "Btn_Continue", "TIẾP TỤC LƯỢT DỞ", new Vector2(700f, -456f), new Vector2(420f, 72f), Continue, ButtonStyle.Primary, 32, .7f);
-            btnReset = UIKit.MakeButton(ui, "Btn_Reset", "XÓA LƯỢT DỞ", new Vector2(700f, -366f), new Vector2(420f, 64f), ResetRun, ButtonStyle.Danger, 28, .8f);
+            btnContinue = UIKit.MakeButton(ui, "Btn_Continue", "TIẾP TỤC LƯỢT DỞ", new Vector2(700f, -480f), new Vector2(420f, 72f), Continue, ButtonStyle.Primary, 32, .7f);
+            btnReset = UIKit.MakeButton(ui, "Btn_Reset", "XÓA LƯỢT DỞ", new Vector2(240f, -480f), new Vector2(360f, 72f), ResetRun, ButtonStyle.Danger, 28, .8f);
         }
         MenuNatureFx.FitCover(artRoot, scene, ref lastRect);
     }
@@ -95,10 +95,10 @@ public class EssayDifficultyScreen : MonoBehaviour
             new Vector2(0, 478), new Vector2(1200, 44), true, true);
         titleText = UIKit.Label("Title", h, "CHỌN ĐỘ KHÓ", 112, GameTheme.GoldHi, TextAnchor.MiddleCenter,
             new Vector2(0, 392), new Vector2(1200, 150), true, true, FontStyle.Bold);
-        var shade = UIKit.CBox("SubShade", h, new Color(.02f, .04f, .10f, .65f), new Vector2(0, 292), new Vector2(1500, 150));
+        var shade = UIKit.CBox("SubShade", h, new Color(.02f, .04f, .10f, .65f), new Vector2(0, 300), new Vector2(1500, 150));
         shade.GetComponent<Image>().sprite = ThemeGfx.Glow;
         UIKit.Label("Sub", h, "Quái càng đông, càng nhanh, càng mạnh — đề càng hóc, thưởng càng lớn.", 34,
-            new Color(.86f, .91f, 1f, .98f), TextAnchor.MiddleCenter, new Vector2(0, 292), new Vector2(1500, 50), true, true, FontStyle.Italic);
+            new Color(.86f, .91f, 1f, .98f), TextAnchor.MiddleCenter, new Vector2(0, 300), new Vector2(1500, 50), true, true, FontStyle.Italic);
     }
 
     // ------------------------------------------------------------------ hành vi
@@ -263,7 +263,7 @@ public class DifficultyCard : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     {
         var col = DifficultyTheme.Of(d);
         string name = RoomRules.DifficultyName(d).ToUpper();
-        var root = UIKit.CBox("Card_" + d, ui, Color.clear, new Vector2(x, -93f), new Vector2(EssayDifficultyScreen.CardW, EssayDifficultyScreen.CardH));
+        var root = UIKit.CBox("Card_" + d, ui, Color.clear, new Vector2(x, -70f), new Vector2(EssayDifficultyScreen.CardW, EssayDifficultyScreen.CardH));
         var card = root.gameObject.AddComponent<DifficultyCard>();
         card.owner = owner; card.index = index; card.diff = d; card.color = col;
         card.Root = root; card.basePos = root.anchoredPosition;
