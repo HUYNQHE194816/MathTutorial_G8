@@ -144,9 +144,9 @@ public class EssayDifficultyScreen : MonoBehaviour
             resetArmedUntil = Time.unscaledTime + 3f; if (label != null) label.text = "BẤM LẠI ĐỂ XÓA";
             UIKit.Toast(ui, "Lượt dở sẽ bị xóa: màn, máu, vũ khí, buff. Bấm lại để xác nhận."); StartCoroutine(DisarmReset()); return;
         }
-        RunSave.Clear(); RunState.ResetAll(true); resetArmedUntil = 0f;
+        RunSave.Clear(); RunState.ResetAll(true); Meta.SeenIntro = false; resetArmedUntil = 0f;   // xóa lượt dở thì lượt mới sẽ chiếu lại cốt truyện
         if (btnContinue != null) Destroy(btnContinue.gameObject); if (btnReset != null) Destroy(btnReset.gameObject);
-        UIKit.Toast(ui, "Đã xóa lượt dở. Chọn độ khó để bắt đầu lượt mới.");
+        UIKit.Toast(ui, "Đã xóa lượt dở. Chọn độ khó để bắt đầu lượt mới (cốt truyện sẽ chiếu lại).");
     }
 
     IEnumerator DisarmReset()
