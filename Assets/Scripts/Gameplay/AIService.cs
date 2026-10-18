@@ -47,7 +47,11 @@ public class AIService : MonoBehaviour
     [SerializeField] private string apiKey = "";
 
     [Tooltip("Thử lần lượt từng model. Nếu model đầu hết số lần retry (429/503) thì chuyển sang model tiếp theo.")]
-    [SerializeField] private string[] models = { "gemini-3.6-flash" };
+    [SerializeField] private string[] models = { 
+    "gemini-3.5-flash-lite", 
+    "gemini-3.1-flash-lite", 
+    "gemini-3.6-flash" 
+};
 
     [SerializeField] private int maxRetriesPerModel = 3;
 
@@ -114,10 +118,10 @@ public class AIService : MonoBehaviour
         StartCoroutine(SendPrompt(BuildExplainPrompt(item), false, onComplete, onError));
     }
 
-    /// <summary>Sinh kịch bản dạy kèm có cấu trúc để học sinh tự sửa lỗi.</summary>
-    public void RequestScript(WrongQuestionItem item, Action<CoachScript> onComplete, Action<string> onError)
+    /// <summary>Sinh kịch bản dạy kèm có cấu trúc để học sinh tự sửa lỗi (kèm theo suy nghĩ tự nhập của học sinh nếu có).</summary>
+    public void RequestScript(WrongQuestionItem item, string studentThought, Action<CoachScript> onComplete, Action<string> onError)
     {
-        StartCoroutine(SendPrompt(BuildScriptPrompt(item), true,
+        StartCoroutine(SendPrompt(BuildScriptPrompt(item, studentThought), true,
             raw =>
             {
                 CoachScript script = null;
@@ -128,6 +132,11 @@ public class AIService : MonoBehaviour
                 else onError?.Invoke("AI trả về kịch bản không hợp lệ.");
             },
             onError));
+    }
+
+    public void RequestScript(WrongQuestionItem item, Action<CoachScript> onComplete, Action<string> onError)
+    {
+        RequestScript(item, null, onComplete, onError);
     }
 
     // ───────────────────────── Prompt ─────────────────────────
@@ -207,16 +216,18 @@ Chỉ trả về JSON đúng mẫu, không thêm chữ nào khác. Thứ tự st
 5) recap: một câu 'cần nhớ' ngắn gọn.
 Với hint và recap để options là mảng rỗng, correct là 0, onWrong là chuỗi rỗng. Với guide_question và check_question, correct là chỉ số (bắt đầu từ 0) của đáp án đúng, onWrong là gợi ý thêm khi em chọn sai (không tiết lộ đáp án).
 Mẫu JSON:
-{""misconception"":""em đã nhầm ở đâu"",""steps"":[{""type"":""hint"",""text"":""..."",""options"":[],""correct"":0,""onWrong"":""""},{""type"":""guide_question"",""text"":""..."",""options"":[""..."",""..."",""...""],""correct"":0,""onWrong"":""...""}]}
+{""misconception"":""em đã nhầm ở đâu (dựa trên giải thích của học sinh)"",""steps"":[{""type"":""hint"",""text"":""..."",""options"":[],""correct"":0,""onWrong"":""""},{""type"":""guide_question"",""text"":""..."",""options"":[""..."",""..."",""...""],""correct"":0,""onWrong"":""...""}]}
 
 Thông tin câu hỏi gốc:
 - Câu: <<Q>>
 - A. <<A>> | B. <<B>> | C. <<C>> | D. <<D>>
 - Học sinh chọn: <<CH>> (SAI)
-- Đáp án đúng: <<CO>>";
+- Đáp án đúng: <<CO>>
+- Học sinh giải thích suy nghĩ/lý do lúc chọn: <<THOUGHT>>";
 
-    private string BuildScriptPrompt(WrongQuestionItem item)
+    private string BuildScriptPrompt(WrongQuestionItem item, string studentThought = null)
     {
+        string thought = string.IsNullOrWhiteSpace(studentThought) ? "Không có (học sinh chưa nói rõ)" : studentThought.Trim();
         return SCRIPT_TEMPLATE
             .Replace("<<Q>>", item.questionText ?? "")
             .Replace("<<A>>", Opt(item, 0))
@@ -224,7 +235,8 @@ Thông tin câu hỏi gốc:
             .Replace("<<C>>", Opt(item, 2))
             .Replace("<<D>>", Opt(item, 3))
             .Replace("<<CH>>", OptionText(item, item.chosenIndex) ?? "Hết thời gian (chưa chọn)")
-            .Replace("<<CO>>", OptionText(item, item.correctIndex) ?? "N/A");
+            .Replace("<<CO>>", OptionText(item, item.correctIndex) ?? "N/A")
+            .Replace("<<THOUGHT>>", thought);
     }
 
     // ───────────────────────── Gửi request + retry + fallback model ─────────────────────────

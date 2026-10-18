@@ -149,6 +149,15 @@ public static class ProfessorSceneCreator
                 new Color(.28f, .45f, .85f), "", 28, out choiceLbls[i], true);
         }
 
+        // ── Khung nhập suy nghĩ của học sinh ──
+        var inputContainer = NewRect("InputContainer", box.transform, new Vector2(.03f, .03f), new Vector2(.97f, .36f));
+        var inputField = NewInputField("StudentThoughtInput", inputContainer, new Vector2(0f, 0.15f), new Vector2(0.78f, 0.85f),
+            "Nhập suy nghĩ hoặc lý do em chọn đáp án này...", 24);
+        TMP_Text sendBtnLbl;
+        var sendBtn = NewButton("SendButton", inputContainer, new Vector2(0.80f, 0.15f), new Vector2(1f, 0.85f),
+            new Color(.18f, .65f, .38f), "Gửi cho Thầy", 24, out sendBtnLbl, true);
+        inputContainer.gameObject.SetActive(false);
+
         // ── Manager ──
         var mgrGo = new GameObject("ProfessorDialogueManager");
         var audio = mgrGo.AddComponent<AudioSource>();
@@ -172,6 +181,9 @@ public static class ProfessorSceneCreator
         so.FindProperty("dialogueBox").objectReferenceValue = boxBtn;
         SetArray(so.FindProperty("choiceButtons"), choiceBtns);
         SetArray(so.FindProperty("choiceLabels"), choiceLbls);
+        so.FindProperty("inputContainer").objectReferenceValue = inputContainer.gameObject;
+        so.FindProperty("thoughtInputField").objectReferenceValue = inputField;
+        so.FindProperty("sendThoughtButton").objectReferenceValue = sendBtn;
         so.FindProperty("audioSource").objectReferenceValue = audio;
         so.FindProperty("correctClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/AudioBank/Correct.mp3");
         so.FindProperty("wrongClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/AudioBank/Fail.mp3");
@@ -274,6 +286,32 @@ public static class ProfessorSceneCreator
         labelText.rectTransform.offsetMin = new Vector2(12, 0);
         labelText.rectTransform.offsetMax = new Vector2(-12, 0);
         return btn;
+    }
+
+    static TMP_InputField NewInputField(string name, Transform parent, Vector2 aMin, Vector2 aMax, string placeholder, float fontSize)
+    {
+        var bg = NewImage(name, parent, aMin, aMax, new Color(.15f, .20f, .32f, 1f));
+        var inputField = bg.gameObject.AddComponent<TMP_InputField>();
+        inputField.targetGraphic = bg;
+
+        var textArea = NewRect("TextArea", bg.transform, Vector2.zero, Vector2.one);
+        textArea.offsetMin = new Vector2(14, 6);
+        textArea.offsetMax = new Vector2(-14, -6);
+        var mask = textArea.gameObject.AddComponent<RectMask2D>();
+
+        var phText = NewText("Placeholder", textArea.transform, Vector2.zero, Vector2.one, placeholder,
+            fontSize, new Color(0.7f, 0.75f, 0.85f, 0.6f), TextAlignmentOptions.Left, false);
+        phText.fontStyle = FontStyles.Italic;
+
+        var mainText = NewText("Text", textArea.transform, Vector2.zero, Vector2.one, "",
+            fontSize, Color.white, TextAlignmentOptions.Left, false);
+
+        inputField.textViewport = textArea;
+        inputField.textComponent = mainText;
+        inputField.placeholder = phText;
+        inputField.fontAsset = font;
+
+        return inputField;
     }
 
     static void Register()

@@ -66,8 +66,9 @@ public class BossFightManager : MonoBehaviour
         Player = PlayerKnight.Create(this, new Vector2(0f, -5f));
         Boss = DragonBoss.Create(this, Player, new Vector2(0f, 3.44f), totalQuestions * hpPerQuestion);
         Boss.Damaged += OnBossDamaged; threshold = Boss.MaxHp - hpPerQuestion;
+        ReviewSessionData.Clear();
         ui = gameObject.AddComponent<BossFightUI>();
-        ui.Build(StartGame, Choose, ChooseBuff, Retry, Back); ui.SetWorldView(worldRT);
+        ui.Build(StartGame, Choose, ChooseBuff, Retry, Back, ReviewAI); ui.SetWorldView(worldRT);
         EnsureEventSystem();
         bool needLoad = external && !reuse;
         string info = session ? SubjectSession.Describe(sessionBank.Count) : (reuse && loadedBank != null ? $"Nguồn: Sheet/CSV • {loadedBank.Count} câu" : "");
@@ -226,8 +227,20 @@ public class BossFightManager : MonoBehaviour
     {
         if (State != BossState.Question || lockAnswer) return;
         lockAnswer = true; bool ok = map[i] == 0;
-        ui.MarkAnswer(i, System.Array.IndexOf(map, 0), ok);
-        if (ok) Sfx.Correct(); else Sfx.Wrong();
+        int correctIdx = System.Array.IndexOf(map, 0);
+        ui.MarkAnswer(i, correctIdx, ok);
+        if (ok) Sfx.Correct();
+        else
+        {
+            Sfx.Wrong();
+            if (answered >= 0 && answered < order.Count)
+            {
+                var q = order[answered];
+                var shown = new string[4];
+                for (int idx = 0; idx < 4; idx++) shown[idx] = q.answers[map[idx]];
+                ReviewSessionData.AddWrong(q.text, shown, i, correctIdx);
+            }
+        }
         StartCoroutine(AfterAnswer(ok));
     }
 
@@ -310,7 +323,8 @@ public class BossFightManager : MonoBehaviour
         string sub = win
             ? $"Bạn đã vượt qua {totalQuestions} câu hỏi Sinh học!\nTrả lời sai {wrong} lần, còn {Mathf.CeilToInt(Player.Hp)} máu."
             : $"Bạn đã vượt qua {answered}/{totalQuestions} câu (trả lời sai {wrong} lần).\nÔn lại bài rồi quay lại đánh bại rồng nhé!";
-        ui.ShowEnd(win, sub);
+        bool hasWrong = ReviewSessionData.wrongQuestions != null && ReviewSessionData.wrongQuestions.Count > 0;
+        ui.ShowEnd(win, sub, hasWrong);
     }
 
     /// <summary>Lưu kết quả vào hệ thống tiến độ sẵn có của project (hiện trên Dashboard).</summary>
@@ -322,4 +336,10 @@ public class BossFightManager : MonoBehaviour
 
     void Retry() { autoStart = true; Time.timeScale = 1f; SceneManager.LoadScene(SceneManager.GetActiveScene().name); }
     void Back() { Time.timeScale = 1f; SceneManager.LoadScene(SubjectSession.BackSceneOr(SubjectId.Sinh, backSceneName)); }
+    void ReviewAI()
+    {
+        Time.timeScale = 1f;
+        ReviewSessionData.returnScene = SceneManager.GetActiveScene().name;
+        SceneManager.LoadScene("ProfessorReviewScene");
+    }
 }
