@@ -114,3 +114,6 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Khóa API (KHÔNG commit)
+/ai_key.txt

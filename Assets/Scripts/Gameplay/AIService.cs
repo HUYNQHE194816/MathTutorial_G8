@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
+using System.IO;
 
 // ───────────────── Kịch bản dạy kèm (AI sinh ra, game diễn lại) ─────────────────
 [Serializable]
@@ -82,11 +83,27 @@ public class AIService : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            LoadKeyFromLocal();
         }
         else
         {
             Destroy(gameObject);
         }
+    }
+
+    /// <summary>Nạp key từ ngoài Git: ai_key.txt cạnh thư mục Assets (Editor) hoặc cạnh file .exe (build Windows); nếu không có thì thử biến môi trường GEMINI_API_KEY.</summary>
+    void LoadKeyFromLocal()
+    {
+        if (!string.IsNullOrWhiteSpace(apiKey)) return;   // đã gõ tay trong Inspector thì giữ nguyên
+        string k = null;
+        try
+        {
+            string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "ai_key.txt"));
+            if (File.Exists(path)) k = File.ReadAllText(path);
+        }
+        catch (Exception e) { Debug.LogWarning("[AIService] Không đọc được ai_key.txt: " + e.Message); }
+        if (string.IsNullOrWhiteSpace(k)) k = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        if (!string.IsNullOrWhiteSpace(k)) apiKey = k.Trim();
     }
 
     // ───────────────────────── API công khai ─────────────────────────

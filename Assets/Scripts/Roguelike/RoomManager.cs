@@ -536,14 +536,19 @@ public class RoomManager : MonoBehaviour
 
     // ------------------------------------------------------------------ chấm bài: AI (Gemini) hoặc bộ chấm tạm, và đọc ảnh bài viết tay
     bool grading; int gradeToken, visionToken; Texture2D lastTex; string lastDraft = "";
-    /// <summary>Ảnh bài viết tay dành cho độ khó Khó trở lên, cần kết nối AI và chạy trên máy tính.</summary>
-    bool ImageAllowed => EssayAI.Available && NativeFilePicker.Supported && difficulty >= EssayDifficulty.Hard;
+    /// <summary>Nút tải ảnh bài viết tay hiện ở độ khó Khó trở lên trên máy tính; có bấm được hay không phụ thuộc AI đã kết nối chưa (xem OnPickImage).</summary>
+    bool ImageAllowed => NativeFilePicker.Supported;
 
     void DropTex() { if (lastTex != null) { Destroy(lastTex); lastTex = null; } }
 
     void OnPickImage(string draft)
     {
         lastDraft = draft ?? "";
+        if (!EssayAI.Available)
+        {
+            UIKit.Toast(solve.Root, AIService.Instance == null ? "Chưa có AIService trong scene. Hãy vào game từ LoginScene, hoặc thêm một GameObject gắn AIService (điền API key) vào RoomScene." : "AIService chưa có API key nên chưa đọc được ảnh.", 4f);
+            return;
+        }
         string path = NativeFilePicker.PickImage(); if (string.IsNullOrEmpty(path)) return;
         if (!EssayImageTools.Load(path, out var jpg, out var tex, out var err)) { UIKit.Toast(solve.Root, err); return; }
         DropTex(); lastTex = tex; SendImage(jpg);
