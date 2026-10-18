@@ -92,6 +92,7 @@ public static class ProgressSaveSystem
         if (data.subjects == null) data.subjects = new List<SubjectStats>();
         if (data.badges == null) data.badges = new List<string>();
         if (data.seenBadges == null) data.seenBadges = new List<string>();
+        if (data.lessons == null) data.lessons = new List<LessonStats>();
 
         current = data;
         Refresh(data);
@@ -119,16 +120,27 @@ public static class ProgressSaveSystem
     public static void RecordSession(string subject, int score, int correct, int wrong, bool won, float seconds)
     {
         var d = Current;
+        string now = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+
+        // Bài đang chơi (lấy từ luồng Chọn môn > Chương > Bài; không đi qua luồng thì để trống)
+        string chapter = "", lesson = "";
+        if (SubjectSession.Active && SubjectSession.Chapter != null && SubjectSession.Subject == ToId(subject))
+        {
+            chapter = SubjectSession.Chapter.title;
+            lesson = string.IsNullOrEmpty(SubjectSession.Lesson) ? "Ôn cả chương" : SubjectSession.Lesson;
+        }
 
         d.sessions.Add(new SessionRecord
         {
             subject = subject,
+            chapter = chapter,
+            lesson = lesson,
             score = score,
             correct = correct,
             wrong = wrong,
             won = won,
             seconds = Mathf.RoundToInt(seconds),
-            date = DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+            date = now
         });
         if (d.sessions.Count > MaxSessions)
             d.sessions.RemoveRange(0, d.sessions.Count - MaxSessions);
@@ -141,8 +153,28 @@ public static class ProgressSaveSystem
         s.totalAnswered += correct + wrong;
         d.totalPlaySeconds += Mathf.RoundToInt(seconds);
 
+        // Thống kê theo bài
+        if (lesson != "")
+        {
+            var l = d.lessons.Find(x => x.subject == subject && x.chapter == chapter && x.lesson == lesson);
+            if (l == null)
+            {
+                l = new LessonStats { subject = subject, chapter = chapter, lesson = lesson };
+                d.lessons.Add(l);
+            }
+            l.attempts++;
+            l.bestScore = Mathf.Max(l.bestScore, score);
+            l.lastScore = score;
+            l.lastDate = now;
+        }
+
         Refresh(d);
         Save();
+    }
+
+    private static SubjectId ToId(string subject)
+    {
+        return subject == SubjectLy ? SubjectId.Ly : subject == SubjectHoa ? SubjectId.Hoa : SubjectId.Sinh;
     }
 
     // ---------- Truy vấn ----------

@@ -6,6 +6,8 @@ using System.Collections.Generic;
 public class SessionRecord
 {
     public string subject;
+    public string chapter;
+    public string lesson;
     public int score;
     public int correct;
     public int wrong;
@@ -26,6 +28,19 @@ public class SubjectStats
     public int totalAnswered;
 }
 
+/// <summary>Thống kê cộng dồn theo từng bài (không bị cắt như danh sách sessions).</summary>
+[Serializable]
+public class LessonStats
+{
+    public string subject;
+    public string chapter;
+    public string lesson;
+    public int attempts;
+    public int bestScore;
+    public int lastScore;
+    public string lastDate;   // "yyyy-MM-dd HH:mm"
+}
+
 /// <summary>Toàn bộ tiến độ của một học sinh (lưu thành 1 file JSON).</summary>
 [Serializable]
 public class ProgressData
@@ -35,6 +50,7 @@ public class ProgressData
     public int totalPlaySeconds;
     public List<SessionRecord> sessions = new List<SessionRecord>();
     public List<SubjectStats> subjects = new List<SubjectStats>();
+    public List<LessonStats> lessons = new List<LessonStats>();
     public List<string> badges = new List<string>();       // huy hiệu đã mở
     public List<string> seenBadges = new List<string>();   // huy hiệu đã được hiện trên dashboard
 }
