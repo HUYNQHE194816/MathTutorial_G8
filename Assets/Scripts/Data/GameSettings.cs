@@ -71,6 +71,23 @@ public static class GameSettings
         set { brightness = Mathf.Clamp(value, BrightMin, BrightMax); PlayerPrefs.SetFloat(KBright, brightness); BrightnessOverlay.Ensure(); }
     }
 
+    // ---------- Bí danh (lưu riêng theo từng tài khoản Tên + Lớp) ----------
+    static string NickKey
+    {
+        get { return "KHTN_Nick_" + StudentProfileData.studentName + "_" + StudentProfileData.studentClass; }
+    }
+
+    /// <summary>Bí danh hiển thị. Chưa đặt thì dùng tên đăng nhập.</summary>
+    public static string Nickname
+    {
+        get
+        {
+            string n = PlayerPrefs.GetString(NickKey, "");
+            return string.IsNullOrWhiteSpace(n) ? StudentProfileData.studentName : n;
+        }
+        set { PlayerPrefs.SetString(NickKey, (value ?? "").Trim()); }
+    }
+
     // ---------- Cấu hình ----------
     public static int QualityLevel
     {

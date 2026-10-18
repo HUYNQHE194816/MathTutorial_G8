@@ -19,6 +19,7 @@ public class SettingsWindow : MonoBehaviour
     RectTransform content;
 
     Slider master, music, sfx, bright;
+    InputField nickIn;
     Text masterVal, musicVal, sfxVal, brightVal;
     Text soundBtnLabel, fullBtnLabel, vsyncBtnLabel;
     Image soundDot, fullDot, vsyncDot;
@@ -38,6 +39,7 @@ public class SettingsWindow : MonoBehaviour
 
     public void Close()
     {
+        if (nickIn != null) GameSettings.Nickname = nickIn.text;
         PlayerPrefs.Save();
         var cb = onClose; onClose = null;
         Destroy(gameObject);
@@ -95,9 +97,16 @@ public class SettingsWindow : MonoBehaviour
         Row("Đồng bộ dọc", R, 14);
         Toggle(R, 14, ToggleVsync, out vsyncBtnLabel, out vsyncDot);
 
-        // ---- Cột phải: xem trước font ----
-        Header("XEM TRƯỚC FONT", R, -48);
-        var frame = UIKit.CBox("PreviewFrame", content, Abyss, new Vector2(R, -170), new Vector2(640, 150));
+        // ---- Cột phải: TÀI KHOẢN (bí danh) ----
+        Header("TÀI KHOẢN", R, -48);
+        Row("Bí danh", R, -110);
+        nickIn = UIKit.MakeInput(content, "In_Nick", "Bí danh của bạn", new Vector2(R + 130, -110), 14, 360);
+        nickIn.text = GameSettings.Nickname;
+        nickIn.onEndEdit.AddListener(s => { GameSettings.Nickname = s; PlayerPrefs.Save(); });
+
+        // ---- Cột phải: xem trước font (đã dời xuống và thu nhỏ) ----
+        Header("XEM TRƯỚC FONT", R, -170);
+        var frame = UIKit.CBox("PreviewFrame", content, Abyss, new Vector2(R, -262), new Vector2(640, 100));
         var rim = UIKit.CBox("Rim", frame, GameTheme.Bronze, Vector2.zero, Vector2.zero); UIKit.Stretch(rim, 2, 2, 2, 2);
         var inner = UIKit.CBox("In", frame, GameTheme.Night, Vector2.zero, Vector2.zero); UIKit.Stretch(inner, 4, 4, 4, 4);
         previewText = UIKit.Label("Txt", inner, "Mỗi điều bạn biết là một ngọn đèn giữa màn sương.\nAa Bb Cc – Lý · Hóa · Sinh – 0123456789",
