@@ -59,7 +59,9 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        DuelSession.ScoreProbe = () => score;      // Đối kháng: điểm hiện tại
         if (maze != null && maze.config != null)
+            if (maze != null && maze.config != null)
         {
             startTimeSeconds = maze.config.timeLimitSeconds;
             pointsPerCorrectAnswer = maze.config.pointsPerCorrectAnswer;

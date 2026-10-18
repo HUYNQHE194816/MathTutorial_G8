@@ -119,6 +119,12 @@ public static class ProgressSaveSystem
     // ---------- Ghi kết quả một lượt chơi ----------
     public static void RecordSession(string subject, int score, int correct, int wrong, bool won, float seconds)
     {
+        if (DuelSession.Active)
+        {   // đang đối kháng: không ghi nhật ký, chốt điểm và sang màn kết quả
+            DuelSession.Finish(score);
+            SceneRouter.Go("DuelResultScene");
+            return;
+        }
         var d = Current;
         string now = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
 
