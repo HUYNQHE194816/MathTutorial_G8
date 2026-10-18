@@ -7,19 +7,33 @@ using Random = UnityEngine.Random;   // tránh nhập nhằng với System.Rando
 public enum DuelMode { None, Quiz, Essay }
 
 /// <summary>Dữ liệu một trận đối kháng, sống xuyên các scene (giống SubjectSession).</summary>
+/// <summary>Dữ liệu một trận đối kháng, sống xuyên các scene (giống SubjectSession).</summary>
 public static class DuelSession
 {
     public const float Duration = 180f;          // 3 phút
 
+    // Các scene thuộc về một trận đang diễn ra. Nạp scene khác giữa lúc đang tính giờ = bỏ cuộc.
+    static readonly string[] DuelScenes = { "GameplayScene", "MillionareScene", "BiologyBossScene", "RoomScene", "DuelResultScene" };
+
     public static bool Active;
     public static DuelMode Mode;
     public static string OppNick = "";
-    public static float EndAt;                    // mốc hết giờ (realtimeSinceStartup); 0 = chưa bắt đầu tính giờ
+    public static float EndAt;                    // mốc hết giờ (realtimeSinceStartup); 0 = chưa tính giờ
     public static bool Finished;                  // mình đã xong (hết giờ hoặc ván kết thúc)
     public static int FinalScore;
-    public static Func<int> ScoreProbe;           // game đăng ký: () => điểm hiện tại (dùng ở phần B)
+    public static int EssayPoints;                // điểm tự luận cộng dồn (RoomManager ghi vào)
+    public static Func<int> ScoreProbe;           // game trắc nghiệm đăng ký: () => điểm hiện tại
 
-    public static int MyScore { get { return Finished || ScoreProbe == null ? FinalScore : ScoreProbe(); } }
+    public static int MyScore
+    {
+        get
+        {
+            if (Finished) return FinalScore;
+            if (Mode == DuelMode.Essay) return EssayPoints;
+            return ScoreProbe != null ? ScoreProbe() : 0;
+        }
+    }
+
     public static float Remaining { get { return EndAt <= 0f ? Duration : Mathf.Max(0f, EndAt - Time.realtimeSinceStartup); } }
 
     public static void Begin(DuelMode mode, string opp)
@@ -28,10 +42,26 @@ public static class DuelSession
         Active = true; Mode = mode; OppNick = opp ?? "";
     }
 
+    /// <summary>Bắt đầu tính 3 phút (gọi lần đầu khi vào scene game; các lần sau không làm gì).</summary>
+    public static void BeginClock()
+    {
+        if (!Active || EndAt > 0f) return;
+        EndAt = Time.realtimeSinceStartup + Duration;
+        DuelBackend.Current.RoundStarted();
+    }
+
+    /// <summary>Chốt điểm của mình. Gọi nhiều lần cũng chỉ tính lần đầu.</summary>
+    public static void Finish(int score)
+    {
+        if (!Active || Finished) return;
+        Finished = true; FinalScore = score; ScoreProbe = null;
+        DuelBackend.Current.PushScore(score, true);
+    }
+
     public static void Reset()
     {
         Active = false; Mode = DuelMode.None; OppNick = "";
-        EndAt = 0f; Finished = false; FinalScore = 0; ScoreProbe = null;
+        EndAt = 0f; Finished = false; FinalScore = 0; EssayPoints = 0; ScoreProbe = null;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -42,10 +72,12 @@ public static class DuelSession
         SceneManager.sceneLoaded += OnLoaded;
     }
 
-    // Về menu / chọn chế độ thì coi như thoát trận, để các game khác không bị ảnh hưởng.
     static void OnLoaded(Scene s, LoadSceneMode m)
     {
-        if (s.name == "MainMenu" || s.name == "ModeSelectScene") Reset();
+        // Về menu / chọn chế độ = thoát trận
+        if (s.name == "MainMenu" || s.name == "ModeSelectScene") { Reset(); return; }
+        // Đang tính giờ mà sang scene lạ (vd bấm "Về menu" trong game) = bỏ cuộc
+        if (Active && EndAt > 0f && Array.IndexOf(DuelScenes, s.name) < 0) Reset();
     }
 }
 
