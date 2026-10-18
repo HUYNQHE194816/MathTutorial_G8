@@ -39,6 +39,11 @@ public class ProfessorDialogueManager : MonoBehaviour
     public Button[] choiceButtons;
     public TMP_Text[] choiceLabels;
 
+    [Header("Nhập suy nghĩ của học sinh")]
+    public GameObject inputContainer;
+    public TMP_InputField thoughtInputField;
+    public Button sendThoughtButton;
+
     [Header("Âm thanh")]
     public AudioSource audioSource;
     public AudioClip correctClip;
@@ -68,6 +73,8 @@ public class ProfessorDialogueManager : MonoBehaviour
     private int choice = -1;
     private bool skipTyping;
     private bool selfFixedThis;
+    private string submittedThought = null;
+    private bool thoughtSubmitted = false;
 
     // ───────────────────────── Khởi động ─────────────────────────
 
@@ -92,11 +99,34 @@ public class ProfessorDialogueManager : MonoBehaviour
             }
         }
 
+        if (inputContainer == null && dialogueBox != null)
+        {
+            EnsureInputUI();
+        }
+
+        if (sendThoughtButton != null)
+        {
+            sendThoughtButton.onClick.AddListener(OnSubmitThought);
+        }
+        if (thoughtInputField != null)
+        {
+            thoughtInputField.onSubmit.AddListener(_ => OnSubmitThought());
+        }
+
         if (demoDataWhenEmpty && (ReviewSessionData.wrongQuestions == null || ReviewSessionData.wrongQuestions.Count == 0))
             LoadDemoData();
 
         StartCoroutine(IdleBreathing());
         StartCoroutine(Run());
+    }
+
+    void OnSubmitThought()
+    {
+        if (thoughtInputField != null && !string.IsNullOrWhiteSpace(thoughtInputField.text))
+        {
+            submittedThought = thoughtInputField.text.Trim();
+            thoughtSubmitted = true;
+        }
     }
 
     void LoadDemoData()
@@ -124,6 +154,7 @@ public class ProfessorDialogueManager : MonoBehaviour
     {
         var list = ReviewSessionData.wrongQuestions;
         HideChoices();
+        HideInputField();
         if (questionCard != null) questionCard.SetActive(false);
 
         if (list == null || list.Count == 0)
@@ -146,24 +177,28 @@ public class ProfessorDialogueManager : MonoBehaviour
             SetCounter(i + 1, list.Count);
             ShowQuestion(item);
 
-            // Tải kịch bản AI ngầm trong lúc học sinh trả lời giáo sư (câu hiện tại, rồi câu kế tiếp)
-            Prefetch(item);
-            if (i + 1 < list.Count) Prefetch(list[i + 1]);
-
             bool timedOut = item.chosenIndex < 0;
             selfFixedThis = false;
 
-            // 1. Chẩn đoán nguyên nhân (nhánh cố định)
+            // 1. Giáo sư hỏi: em tự nhập suy nghĩ/lý do lúc đó hoặc dùng ô nhập
             yield return Say(ProfessorLines.AskReason(i, item), Face.Think);
-            yield return AskMany(ProfessorLines.ReasonChoices(timedOut), null);
-            yield return Say(ProfessorLines.ReactToReason(choice, timedOut), Face.Neutral);
 
-            // 2. Chờ kịch bản AI (thường đã có sẵn)
+            // Cho học sinh tự nhập lý do
+            yield return WaitForStudentInput();
+
+            // Giáo sư phản hồi lại suy nghĩ của em
+            yield return Say(ProfessorLines.ReactToCustomThought(), Face.Neutral);
+
+            // Gửi suy nghĩ của học sinh cho Gemini để lấy kịch bản dạy kèm
+            FetchScriptWithThought(item, submittedThought);
+
+            // 2. Chờ kịch bản AI
             var slot = slots[item];
             if (!slot.done)
             {
                 SetFace(Face.Think);
                 HideChoices();
+                HideInputField();
                 SetTextInstant(ProfessorLines.Preparing());
                 float waited = 0f;
                 while (!slot.done && waited < scriptTimeoutSeconds)
@@ -284,12 +319,10 @@ public class ProfessorDialogueManager : MonoBehaviour
         yield return Ask("Ta hiểu rồi");
     }
 
-    // ───────────────────────── Tải kịch bản AI ─────────────────────────
+    // ───────────────────────── Tải kịch bản AI kèm suy nghĩ học sinh ─────────────────────────
 
-    void Prefetch(WrongQuestionItem item)
+    void FetchScriptWithThought(WrongQuestionItem item, string studentThought)
     {
-        if (slots.ContainsKey(item)) return;
-
         var slot = new ScriptSlot();
         slots[item] = slot;
 
@@ -298,6 +331,7 @@ public class ProfessorDialogueManager : MonoBehaviour
 
         AIService.Instance.RequestScript(
             item,
+            studentThought,
             onComplete: s =>
             {
                 if (slot.done) return;
@@ -313,6 +347,145 @@ public class ProfessorDialogueManager : MonoBehaviour
             });
     }
 
+    // ───────────────────────── Nhập suy nghĩ của học sinh ─────────────────────────
+
+    IEnumerator WaitForStudentInput()
+    {
+        HideChoices();
+        thoughtSubmitted = false;
+        submittedThought = null;
+
+        if (thoughtInputField != null)
+        {
+            thoughtInputField.text = "";
+        }
+
+        if (inputContainer != null)
+        {
+            inputContainer.SetActive(true);
+            if (thoughtInputField != null)
+            {
+                thoughtInputField.ActivateInputField();
+                thoughtInputField.Select();
+            }
+        }
+
+        while (!thoughtSubmitted)
+        {
+            yield return null;
+        }
+
+        HideInputField();
+    }
+
+    void HideInputField()
+    {
+        if (inputContainer != null)
+            inputContainer.SetActive(false);
+    }
+
+    void EnsureInputUI()
+    {
+        if (dialogueBox == null) return;
+        Transform parentBox = dialogueBox.transform;
+
+        // Container
+        var contGo = new GameObject("InputContainer", typeof(RectTransform));
+        contGo.transform.SetParent(parentBox, false);
+        var rtCont = contGo.GetComponent<RectTransform>();
+        rtCont.anchorMin = new Vector2(0.03f, 0.03f);
+        rtCont.anchorMax = new Vector2(0.97f, 0.36f);
+        rtCont.offsetMin = Vector2.zero;
+        rtCont.offsetMax = Vector2.zero;
+        inputContainer = contGo;
+
+        // InputField Box
+        var inputGo = new GameObject("StudentThoughtInput", typeof(RectTransform), typeof(Image));
+        inputGo.transform.SetParent(contGo.transform, false);
+        var rtInput = inputGo.GetComponent<RectTransform>();
+        rtInput.anchorMin = new Vector2(0f, 0.12f);
+        rtInput.anchorMax = new Vector2(0.78f, 0.88f);
+        rtInput.offsetMin = Vector2.zero;
+        rtInput.offsetMax = Vector2.zero;
+        var bg = inputGo.GetComponent<Image>();
+        bg.color = new Color(0.14f, 0.18f, 0.30f, 1f);
+
+        thoughtInputField = inputGo.AddComponent<TMP_InputField>();
+        thoughtInputField.targetGraphic = bg;
+
+        // TextArea
+        var areaGo = new GameObject("TextArea", typeof(RectTransform), typeof(RectMask2D));
+        areaGo.transform.SetParent(inputGo.transform, false);
+        var rtArea = areaGo.GetComponent<RectTransform>();
+        rtArea.anchorMin = Vector2.zero;
+        rtArea.anchorMax = Vector2.one;
+        rtArea.offsetMin = new Vector2(16, 6);
+        rtArea.offsetMax = new Vector2(-16, -6);
+
+        // Placeholder Text
+        var phGo = new GameObject("Placeholder", typeof(RectTransform), typeof(TextMeshProUGUI));
+        phGo.transform.SetParent(areaGo.transform, false);
+        var rtPh = phGo.GetComponent<RectTransform>();
+        rtPh.anchorMin = Vector2.zero;
+        rtPh.anchorMax = Vector2.one;
+        rtPh.offsetMin = Vector2.zero;
+        rtPh.offsetMax = Vector2.zero;
+        var phText = phGo.GetComponent<TextMeshProUGUI>();
+        if (dialogueText != null) phText.font = dialogueText.font;
+        phText.text = "Nhập suy nghĩ hoặc lý do em chọn đáp án này...";
+        phText.fontSize = 24;
+        phText.fontStyle = FontStyles.Italic;
+        phText.color = new Color(0.7f, 0.75f, 0.85f, 0.6f);
+        phText.alignment = TextAlignmentOptions.MidlineLeft;
+
+        // Main Text
+        var textGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+        textGo.transform.SetParent(areaGo.transform, false);
+        var rtText = textGo.GetComponent<RectTransform>();
+        rtText.anchorMin = Vector2.zero;
+        rtText.anchorMax = Vector2.one;
+        rtText.offsetMin = Vector2.zero;
+        rtText.offsetMax = Vector2.zero;
+        var txt = textGo.GetComponent<TextMeshProUGUI>();
+        if (dialogueText != null) txt.font = dialogueText.font;
+        txt.fontSize = 24;
+        txt.color = Color.white;
+        txt.alignment = TextAlignmentOptions.MidlineLeft;
+
+        thoughtInputField.textViewport = rtArea;
+        thoughtInputField.textComponent = txt;
+        thoughtInputField.placeholder = phText;
+
+        // Send Button
+        var btnGo = new GameObject("SendButton", typeof(RectTransform), typeof(Image), typeof(Button));
+        btnGo.transform.SetParent(contGo.transform, false);
+        var rtBtn = btnGo.GetComponent<RectTransform>();
+        rtBtn.anchorMin = new Vector2(0.80f, 0.12f);
+        rtBtn.anchorMax = new Vector2(1f, 0.88f);
+        rtBtn.offsetMin = Vector2.zero;
+        rtBtn.offsetMax = Vector2.zero;
+        var btnImg = btnGo.GetComponent<Image>();
+        btnImg.color = new Color(0.18f, 0.65f, 0.38f);
+        sendThoughtButton = btnGo.GetComponent<Button>();
+        sendThoughtButton.targetGraphic = btnImg;
+
+        var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        lblGo.transform.SetParent(btnGo.transform, false);
+        var rtLbl = lblGo.GetComponent<RectTransform>();
+        rtLbl.anchorMin = Vector2.zero;
+        rtLbl.anchorMax = Vector2.one;
+        rtLbl.offsetMin = Vector2.zero;
+        rtLbl.offsetMax = Vector2.zero;
+        var lbl = lblGo.GetComponent<TextMeshProUGUI>();
+        if (dialogueText != null) lbl.font = dialogueText.font;
+        lbl.text = "Gửi cho Thầy";
+        lbl.fontSize = 24;
+        lbl.alignment = TextAlignmentOptions.Center;
+        lbl.color = Color.white;
+
+        inputContainer.SetActive(false);
+    }
+
     // ───────────────────────── Hội thoại: nói & hỏi ─────────────────────────
 
     /// <summary>Giáo sư nói một câu, chữ hiện dần. Bấm vào hộp thoại để hiện ngay.</summary>
@@ -320,6 +493,7 @@ public class ProfessorDialogueManager : MonoBehaviour
     {
         SetFace(face);
         HideChoices();
+        HideInputField();
 
         dialogueText.text = text;
         dialogueText.ForceMeshUpdate();
@@ -347,6 +521,7 @@ public class ProfessorDialogueManager : MonoBehaviour
 
     IEnumerator AskMany(string[] labels, bool[] disabled)
     {
+        HideInputField();
         for (int i = 0; i < choiceButtons.Length; i++)
         {
             bool has = i < labels.Length;

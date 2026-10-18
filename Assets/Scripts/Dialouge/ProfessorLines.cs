@@ -66,6 +66,10 @@ public static class ProfessorLines
         }
     }
 
+    public static string ReactToCustomThought() =>
+        Pick("Ta hiểu suy nghĩ của em rồi. Để ta xem lại câu này và hướng dẫn em nhé.",
+             "Được rồi, ta đã ghi nhận cách em nghĩ lúc đó. Hãy cùng ta phân tích xem sao.");
+
     public static string Preparing() =>
         "Hmm... để ta soạn bài giảng cho câu này. Em chờ ta một chút.";
 

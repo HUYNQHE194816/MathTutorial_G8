@@ -14,7 +14,7 @@ public class BossFightUI : MonoBehaviour
     Text qCounter, hpText, dashText, qNum, qText, feedback, endTitle, endSub, toastTitle, toastDesc;
     RectTransform buffBox, toastRt; CanvasGroup toastGroup;
     GameObject menuPanel, questionPanel, endPanel;
-    Text menuSub, menuStatus, startLabel; Button startBtn;
+    Text menuSub, menuStatus, startLabel; Button startBtn, retryBtn, reviewBtn, backBtn;
     readonly List<Text> backLabels = new List<Text>();
     readonly Button[] optBtns = new Button[4]; readonly Text[] optTxt = new Text[4];
     GameObject buffPanel; Text buffSub;
@@ -69,7 +69,7 @@ public class BossFightUI : MonoBehaviour
     }
 
     // ---------- build ----------
-    public void Build(System.Action onStart, System.Action<int> onAnswer, System.Action<int> onBuff, System.Action onRetry, System.Action onBack)
+    public void Build(System.Action onStart, System.Action<int> onAnswer, System.Action<int> onBuff, System.Action onRetry, System.Action onBack, System.Action onReviewAI)
     {
         font = Font.CreateDynamicFontFromOSFont(new[] { "Segoe UI", "Arial", "Roboto", "Noto Sans", "Helvetica Neue", "Helvetica" }, 48);
         var cgo = new GameObject("UI Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster)); cgo.transform.SetParent(transform, false);
@@ -167,8 +167,10 @@ public class BossFightUI : MonoBehaviour
         endPanel = Full("EndPanel", root, new Color(.05f, .04f, .09f, .88f), true).gameObject;
         endTitle = Label("Title", endPanel.transform, "", 100, Gold, TextAnchor.MiddleCenter); Place(endTitle.rectTransform, C, C, C, new Vector2(0, 200), new Vector2(1700, 140));
         endSub = Label("Sub", endPanel.transform, "", 44, Color.white, TextAnchor.MiddleCenter, FontStyle.Normal); Place(endSub.rectTransform, C, C, C, new Vector2(0, 30), new Vector2(1500, 220));
-        MakeButton("Retry", endPanel.transform, new Vector2(-320, -200), new Vector2(560, 120), Gold, new Color(1f, .87f, .45f), "CHƠI LẠI", 48, new Color(.17f, .1f, .05f), onRetry);
-        backLabels.Add(MakeButton("Back", endPanel.transform, new Vector2(320, -200), new Vector2(560, 120), Btn, BtnHi, "VỀ CHỌN MÔN", 44, Color.white, onBack).GetComponentInChildren<Text>());
+        retryBtn = MakeButton("Retry", endPanel.transform, Vector2.zero, new Vector2(460, 120), Gold, new Color(1f, .87f, .45f), "CHƠI LẠI", 44, new Color(.17f, .1f, .05f), onRetry);
+        reviewBtn = MakeButton("ReviewAI", endPanel.transform, Vector2.zero, new Vector2(460, 120), new Color(.22f, .55f, .92f), new Color(.35f, .68f, 1f), "AI GIẢI THÍCH", 44, Color.white, onReviewAI);
+        backBtn = MakeButton("Back", endPanel.transform, Vector2.zero, new Vector2(460, 120), Btn, BtnHi, "VỀ CHỌN MÔN", 44, Color.white, onBack);
+        backLabels.Add(backBtn.GetComponentInChildren<Text>());
         endPanel.SetActive(false);
     }
 
@@ -288,10 +290,23 @@ public class BossFightUI : MonoBehaviour
 
     public void HideBuffChoice() { buffPanel.SetActive(false); }
 
-    public void ShowEnd(bool win, string sub)
+    public void ShowEnd(bool win, string sub, bool hasWrong = false)
     {
         endTitle.text = win ? "RỒNG ĐÃ BỊ HẠ GỤC!" : "HIỆP SĨ ĐÃ GỤC NGÃ"; endTitle.color = win ? Gold : new Color(1f, .45f, .4f);
-        endSub.text = sub; endPanel.SetActive(true);
+        endSub.text = sub;
+        if (reviewBtn != null) reviewBtn.gameObject.SetActive(hasWrong);
+        if (hasWrong)
+        {
+            if (retryBtn != null) ((RectTransform)retryBtn.transform).anchoredPosition = new Vector2(-500f, -200f);
+            if (reviewBtn != null) ((RectTransform)reviewBtn.transform).anchoredPosition = new Vector2(0f, -200f);
+            if (backBtn != null) ((RectTransform)backBtn.transform).anchoredPosition = new Vector2(500f, -200f);
+        }
+        else
+        {
+            if (retryBtn != null) ((RectTransform)retryBtn.transform).anchoredPosition = new Vector2(-280f, -200f);
+            if (backBtn != null) ((RectTransform)backBtn.transform).anchoredPosition = new Vector2(280f, -200f);
+        }
+        endPanel.SetActive(true);
     }
 
     public void Float(Vector2 world, string s, Color c, bool big)
