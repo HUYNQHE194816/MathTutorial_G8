@@ -197,7 +197,7 @@ public class MainMenuScreen : MonoBehaviour
 
     void BuildFooter()
     {
-        string n = StudentProfileData.studentName;
+        string n = GameSettings.Nickname;
         if (string.IsNullOrWhiteSpace(n)) n = "Học sinh";
         UIKit.Label("Greeting", ui, "Người Giữ Ký Ức: " + n, 28, GameTheme.Bone, TextAnchor.MiddleLeft,
             new Vector2(-560, -490), new Vector2(700, 44), false, true);

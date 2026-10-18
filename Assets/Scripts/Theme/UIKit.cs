@@ -230,6 +230,26 @@ public static class UIKit
 
     public static void SetBar(Image fill, float v) { if (fill != null) fill.fillAmount = Mathf.Clamp01(v); }
 
+    /// <summary>Ô nhập một dòng, kiểu khung đá của màn Đăng nhập.</summary>
+    public static InputField MakeInput(Transform p, string n, string hint, Vector2 pos, int limit, float width)
+    {
+        var fr = CBox(n, p, GameTheme.Iron, pos, new Vector2(width, 64), true);
+        var frame = fr.GetComponent<Image>();
+        var fill = CBox("Fill", fr, GameTheme.Ink, Vector2.zero, Vector2.zero); Stretch(fill, 4, 4, 4, 4);
+        var ph = Label("Placeholder", fill, hint, 28, GameTheme.Fog.WithAlpha(.6f), TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, false, false, FontStyle.Italic);
+        var tx = Label("Text", fill, "", 30, GameTheme.Bone, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero);
+        Stretch(ph.rectTransform, 16, 0, 16, 0); Stretch(tx.rectTransform, 16, 0, 16, 0);
+        ph.horizontalOverflow = tx.horizontalOverflow = HorizontalWrapMode.Overflow;
+        tx.supportRichText = false;
+        var input = fr.gameObject.AddComponent<InputField>();
+        input.targetGraphic = frame; input.transition = Selectable.Transition.None;
+        input.textComponent = tx; input.placeholder = ph; input.characterLimit = limit;
+        input.lineType = InputField.LineType.SingleLine;
+        input.customCaretColor = true; input.caretColor = GameTheme.EmberHi;
+        input.selectionColor = GameTheme.Ember.WithAlpha(.35f);
+        return input;
+    }
+
     // ---------- Thông báo nhỏ ----------
     public static void Toast(Transform root, string msg, float seconds = 1.8f)
     {
