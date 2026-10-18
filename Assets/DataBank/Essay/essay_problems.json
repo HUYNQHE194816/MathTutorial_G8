@@ -1,0 +1,2751 @@
+{
+  "problems": [
+    {
+      "id": "ly8-kl-001",
+      "subject": "ly",
+      "concept": "ly8.khoi_luong_rieng",
+      "level": 1,
+      "scaffold": 1,
+      "statement": "Một vật có khối lượng {m} g, thể tích {V} cm³. Tính khối lượng riêng của vật (g/cm³) và cho biết vật chìm hay nổi trong nước (nước có khối lượng riêng 1 g/cm³).",
+      "parameters": [
+        {
+          "name": "m",
+          "values": [
+            30,
+            60,
+            120,
+            200
+          ]
+        },
+        {
+          "name": "V",
+          "values": [
+            40,
+            50,
+            100
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "D",
+          "formula": "m/V",
+          "unit": "g/cm³",
+          "decimals": 2
+        },
+        {
+          "id": "verdict",
+          "formula": "D",
+          "threshold": 1,
+          "above": "chìm",
+          "below": "nổi"
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức",
+          "desc": "Viết đúng công thức D = m/V",
+          "expect": [
+            "m/v|m:v"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Thế số",
+          "desc": "Thế số đúng: D = {m}/{V}, đơn vị nhất quán",
+          "expect": [
+            "#{m}",
+            "#{V}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Kết quả",
+          "desc": "Tính đúng D = {D} g/cm³ và ghi đơn vị",
+          "expect": [
+            "#{D}",
+            "~g/cm3"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Kết luận",
+          "desc": "So sánh D với 1 g/cm³ và kết luận vật {verdict} trong nước",
+          "expect": [
+            "{verdict}"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "D",
+        "unit": "g/cm³",
+        "tolerance": 0.02
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_D=m*V",
+            "nham_D=V/m"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "dao_tu_mau"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "ket_luan_nguoc"
+          ]
+        }
+      ],
+      "hints": [
+        "Khối lượng riêng cho biết điều gì về một chất?",
+        "Công thức liên hệ khối lượng m, thể tích V và khối lượng riêng D là gì?",
+        "Bước 1: viết D = m/V rồi thế số."
+      ]
+    },
+    {
+      "id": "ly8-ap-002",
+      "subject": "ly",
+      "concept": "ly8.ap_suat",
+      "level": 1,
+      "scaffold": 1,
+      "statement": "Một vật nặng tác dụng lên mặt sàn một lực ép {F} N, diện tích tiếp xúc là {S} cm². Tính áp suất vật tác dụng lên sàn (Pa).",
+      "parameters": [
+        {
+          "name": "F",
+          "values": [
+            60,
+            120,
+            240
+          ]
+        },
+        {
+          "name": "S",
+          "values": [
+            20,
+            40,
+            60
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "S_m2",
+          "formula": "S/10000",
+          "unit": "m²",
+          "decimals": 4
+        },
+        {
+          "id": "p",
+          "formula": "F/S_m2",
+          "unit": "Pa",
+          "decimals": 0
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức",
+          "desc": "Viết đúng công thức p = F/S",
+          "expect": [
+            "f/s|f:s"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Đổi đơn vị",
+          "desc": "Đổi diện tích {S} cm² = {S_m2} m²",
+          "expect": [
+            "#{S_m2}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Kết quả",
+          "desc": "Tính đúng p = {p} Pa và ghi đơn vị",
+          "expect": [
+            "#{p}",
+            "~pa"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "p",
+        "unit": "Pa",
+        "tolerance": 1
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_p=F*S",
+            "nham_p=S/F"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_doi_don_vi",
+            "doi_sai_he_so_cm2_m2"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_don_vi"
+          ]
+        }
+      ],
+      "hints": [
+        "Áp suất cho biết tác dụng của lực ép phụ thuộc vào những yếu tố nào?",
+        "Công thức tính áp suất từ lực ép F và diện tích bị ép S?",
+        "Bước 1: đổi S sang m² (1 m² = 10 000 cm²) rồi dùng p = F/S."
+      ]
+    },
+    {
+      "id": "ly8-tocdo-003",
+      "subject": "ly",
+      "concept": "ly8.toc_do",
+      "level": 1,
+      "scaffold": 1,
+      "statement": "Một xe đạp đi được quãng đường {s} km trong {t} phút. Tính tốc độ của xe theo đơn vị km/h.",
+      "parameters": [
+        {
+          "name": "s",
+          "values": [
+            6,
+            12,
+            18
+          ]
+        },
+        {
+          "name": "t",
+          "values": [
+            24,
+            30,
+            45
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "t_h",
+          "formula": "t/60",
+          "unit": "h",
+          "decimals": 2
+        },
+        {
+          "id": "v",
+          "formula": "s/t_h",
+          "unit": "km/h",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức",
+          "desc": "Viết đúng công thức v = s/t",
+          "expect": [
+            "s/t|s:t"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Đổi đơn vị",
+          "desc": "Đổi {t} phút = {t_h} giờ",
+          "expect": [
+            "#{t_h}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Kết quả",
+          "desc": "Tính đúng v = {v} km/h và ghi đơn vị",
+          "expect": [
+            "#{v}",
+            "~km/h"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "v",
+        "unit": "km/h",
+        "tolerance": 0.05
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_v=s*t",
+            "nham_v=t/s"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_doi_phut_ra_gio",
+            "chia_nham_100"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_don_vi"
+          ]
+        }
+      ],
+      "hints": [
+        "Tốc độ cho biết xe đi nhanh hay chậm bằng cách nào?",
+        "Công thức tính tốc độ từ quãng đường s và thời gian t?",
+        "Bước 1: đổi phút ra giờ rồi lấy s chia t."
+      ]
+    },
+    {
+      "id": "ly8-lds-004",
+      "subject": "ly",
+      "concept": "ly8.luc_day_archimedes",
+      "level": 2,
+      "scaffold": 2,
+      "statement": "Một vật có thể tích {V} cm³ và trọng lượng {P} N được nhúng chìm hoàn toàn trong nước (trọng lượng riêng của nước là 10 000 N/m³). Tính lực đẩy Archimedes tác dụng lên vật và cho biết vật sẽ chìm xuống hay nổi lên.",
+      "parameters": [
+        {
+          "name": "V",
+          "values": [
+            100,
+            200,
+            500
+          ]
+        },
+        {
+          "name": "P",
+          "values": [
+            1.5,
+            3,
+            6
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "V_m3",
+          "formula": "V/1000000",
+          "unit": "m³",
+          "decimals": 6
+        },
+        {
+          "id": "FA",
+          "formula": "10000*V_m3",
+          "unit": "N",
+          "decimals": 2
+        },
+        {
+          "id": "verdict",
+          "formula": "P-FA",
+          "threshold": 0,
+          "above": "chìm",
+          "below": "nổi"
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức",
+          "desc": "Viết đúng công thức F_A = d·V",
+          "expect": [
+            "d*v|d.v|dxv"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Đổi đơn vị",
+          "desc": "Đổi {V} cm³ = {V_m3} m³",
+          "expect": [
+            "#{V_m3}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Kết quả",
+          "desc": "Tính đúng F_A = {FA} N và ghi đơn vị",
+          "expect": [
+            "#{FA}",
+            "~n|newton"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Kết luận",
+          "desc": "So sánh F_A với P = {P} N và kết luận vật {verdict}",
+          "expect": [
+            "{verdict}"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "FA",
+        "unit": "N",
+        "tolerance": 0.02
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_FA=d/V",
+            "nham_FA=P"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_doi_don_vi",
+            "doi_sai_he_so_cm3_m3"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "ket_luan_nguoc",
+            "khong_so_sanh_FA_voi_P"
+          ]
+        }
+      ],
+      "hints": [
+        "Chất lỏng tác dụng lên vật nhúng trong nó một lực theo phương nào?",
+        "Công thức tính lực đẩy Archimedes từ trọng lượng riêng d và thể tích V?",
+        "Bước 1: đổi V sang m³ rồi tính F_A = d·V."
+      ]
+    },
+    {
+      "id": "hoa8-pt-001",
+      "subject": "hoa",
+      "concept": "hoa8.tinh_theo_pthh",
+      "level": 2,
+      "scaffold": 2,
+      "statement": "Cho {m} g Fe tác dụng hết với dung dịch HCl dư. Tính khối lượng FeCl₂ tạo thành. (Fe = 56, FeCl₂ = 127)",
+      "parameters": [
+        {
+          "name": "m",
+          "values": [
+            5.6,
+            11.2,
+            16.8
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "n",
+          "formula": "m/56",
+          "unit": "mol",
+          "decimals": 2
+        },
+        {
+          "id": "mFeCl2",
+          "formula": "n*127",
+          "unit": "g",
+          "decimals": 1
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Phương trình",
+          "desc": "Viết phương trình cân bằng: Fe + 2HCl → FeCl₂ + H₂",
+          "expect": [
+            "fe+2hcl",
+            "fecl2",
+            "h2"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Số mol Fe",
+          "desc": "Tính n(Fe) = {m}/56 = {n} mol",
+          "expect": [
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Tỉ lệ mol",
+          "desc": "Lập tỉ lệ mol Fe : FeCl₂ = 1 : 1, suy ra n(FeCl₂) = {n} mol",
+          "expect": [
+            "fecl2",
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Khối lượng",
+          "desc": "Tính m(FeCl₂) = {n} × 127 = {mFeCl2} g, có đơn vị",
+          "expect": [
+            "#{mFeCl2}",
+            "~g"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "mFeCl2",
+        "unit": "g",
+        "tolerance": 0.1
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "quen_he_so_2_HCl",
+            "sai_cong_thuc_muoi"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "dung_sai_khoi_luong_mol"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "dung_sai_he_so_ti_le"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "sai_khoi_luong_mol_FeCl2",
+            "quen_don_vi"
+          ]
+        }
+      ],
+      "hints": [
+        "Phản ứng cho biết các chất tác dụng với nhau theo tỉ lệ nào?",
+        "Muốn dùng tỉ lệ của phương trình, cần đổi khối lượng sang đại lượng nào?",
+        "Bước 1: viết phương trình cân bằng, rồi tính n(Fe) = m/M."
+      ]
+    },
+    {
+      "id": "hoa8-pt-002",
+      "subject": "hoa",
+      "concept": "hoa8.the_tich_khi_dkc",
+      "level": 2,
+      "scaffold": 2,
+      "statement": "Cho {m} g Zn tác dụng hết với dung dịch HCl dư. Tính thể tích khí H₂ thu được ở điều kiện chuẩn (25 °C, 1 bar; 1 mol khí chiếm 24,79 L). (Zn = 65)",
+      "parameters": [
+        {
+          "name": "m",
+          "values": [
+            6.5,
+            13,
+            19.5
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "n",
+          "formula": "m/65",
+          "unit": "mol",
+          "decimals": 2
+        },
+        {
+          "id": "V",
+          "formula": "n*24.79",
+          "unit": "L",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Phương trình",
+          "desc": "Viết phương trình cân bằng: Zn + 2HCl → ZnCl₂ + H₂",
+          "expect": [
+            "zn+2hcl",
+            "zncl2",
+            "h2"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Số mol Zn",
+          "desc": "Tính n(Zn) = {m}/65 = {n} mol",
+          "expect": [
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Tỉ lệ mol",
+          "desc": "Lập tỉ lệ mol Zn : H₂ = 1 : 1, suy ra n(H₂) = {n} mol",
+          "expect": [
+            "h2",
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Thể tích",
+          "desc": "Tính V(H₂) = {n} × 24,79 = {V} L, có đơn vị",
+          "expect": [
+            "#{V}",
+            "~l|lit"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "V",
+        "unit": "L",
+        "tolerance": 0.02
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "quen_he_so_2_HCl",
+            "sai_cong_thuc_muoi"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "dung_sai_khoi_luong_mol"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "dung_sai_he_so_ti_le"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "nham_the_tich_mol",
+            "quen_don_vi"
+          ]
+        }
+      ],
+      "hints": [
+        "Muốn tính thể tích khí, cần biết số mol khí đó trước. Số mol khí lấy từ đâu?",
+        "Thể tích khí ở điều kiện chuẩn liên hệ với số mol qua đại lượng nào?",
+        "Bước 1: viết phương trình cân bằng, rồi tính n(Zn) = m/M."
+      ]
+    },
+    {
+      "id": "hoa8-cm-003",
+      "subject": "hoa",
+      "concept": "hoa8.nong_do_mol",
+      "level": 1,
+      "scaffold": 1,
+      "statement": "Hòa tan {m} g NaCl vào nước, thu được {V} mL dung dịch. Tính nồng độ mol (mol/L) của dung dịch. (NaCl = 58,5)",
+      "parameters": [
+        {
+          "name": "m",
+          "values": [
+            5.85,
+            11.7,
+            23.4
+          ]
+        },
+        {
+          "name": "V",
+          "values": [
+            100,
+            200,
+            500
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "n",
+          "formula": "m/58.5",
+          "unit": "mol",
+          "decimals": 2
+        },
+        {
+          "id": "V_L",
+          "formula": "V/1000",
+          "unit": "L",
+          "decimals": 2
+        },
+        {
+          "id": "CM",
+          "formula": "n/V_L",
+          "unit": "mol/L",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Số mol NaCl",
+          "desc": "Tính n(NaCl) = {m}/58,5 = {n} mol",
+          "expect": [
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Đổi thể tích",
+          "desc": "Đổi {V} mL = {V_L} L",
+          "expect": [
+            "#{V_L}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Nồng độ",
+          "desc": "Tính đúng C_M = n/V = {CM} mol/L và ghi đơn vị",
+          "expect": [
+            "#{CM}",
+            "~mol/l|m"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "CM",
+        "unit": "mol/L",
+        "tolerance": 0.02
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "dung_sai_khoi_luong_mol"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_doi_mL_ra_L"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "nham_CM=V/n",
+            "quen_don_vi"
+          ]
+        }
+      ],
+      "hints": [
+        "Nồng độ mol cho biết điều gì về dung dịch?",
+        "Công thức tính C_M từ số mol chất tan và thể tích dung dịch?",
+        "Bước 1: tính số mol NaCl, rồi đổi thể tích sang lít."
+      ]
+    },
+    {
+      "id": "sinh8-hh-001",
+      "subject": "sinh",
+      "concept": "sinh8.van_dong_ho_hap_tuan_hoan",
+      "level": 2,
+      "scaffold": 2,
+      "statement": "Giải thích vì sao khi chạy nhanh, nhịp thở và nhịp tim của cơ thể đều tăng.",
+      "parameters": [],
+      "derived": [],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Nhu cầu năng lượng",
+          "desc": "Nêu cơ bắp hoạt động mạnh cần nhiều năng lượng hơn",
+          "expect": [
+            "nang luong",
+            "co bap|hoat dong manh|van dong|co hoat dong"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Tạo năng lượng",
+          "desc": "Nêu quá trình tạo năng lượng cần O₂ và thải CO₂",
+          "expect": [
+            "o2|oxi|oxygen",
+            "co2|cacbonic|carbon"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Nhịp thở",
+          "desc": "Nhịp thở tăng để đưa nhiều O₂ vào và thải CO₂ ra",
+          "expect": [
+            "nhip tho|tho nhanh|tho manh|tho sau",
+            "o2|oxi|oxygen"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Nhịp tim",
+          "desc": "Nhịp tim tăng để máu chuyển O₂ và chất dinh dưỡng đến cơ nhanh hơn",
+          "expect": [
+            "nhip tim|tim dap|tim co",
+            "mau",
+            "o2|oxi|dinh duong"
+          ]
+        }
+      ],
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "chi_noi_vi_met"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "cho_rang_O2_tu_sinh_nang_luong"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "khong_noi_voi_nhu_cau_O2"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "khong_neu_vai_tro_cua_mau"
+          ]
+        }
+      ],
+      "hints": [
+        "Khi chạy, cơ bắp thay đổi hoạt động thế nào so với lúc nghỉ?",
+        "Cơ bắp hoạt động mạnh cần thêm gì, và tạo ra chất thải nào?",
+        "Bước đầu: nêu nhu cầu năng lượng của cơ rồi nối sang O₂ và CO₂."
+      ]
+    },
+    {
+      "id": "sinh8-th-002",
+      "subject": "sinh",
+      "concept": "sinh8.tuan_hoan",
+      "level": 2,
+      "scaffold": 2,
+      "statement": "Nêu vai trò của hệ tuần hoàn và giải thích vì sao khi tim ngừng đập, các tế bào nhanh chóng bị tổn thương.",
+      "parameters": [],
+      "derived": [],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Vai trò",
+          "desc": "Nêu vai trò: vận chuyển các chất trong cơ thể",
+          "expect": [
+            "van chuyen"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Tim và máu",
+          "desc": "Tim co bóp đẩy máu lưu thông trong mạch máu",
+          "expect": [
+            "tim",
+            "co bop|day mau|bom mau"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Vận chuyển",
+          "desc": "Máu mang O₂ và chất dinh dưỡng đến tế bào, mang CO₂ và chất thải đi",
+          "expect": [
+            "o2|oxi|oxygen",
+            "dinh duong",
+            "co2|chat thai"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Khi tim ngừng",
+          "desc": "Tim ngừng đập thì tế bào thiếu O₂, chất dinh dưỡng và chất thải bị ứ lại nên tế bào bị tổn thương",
+          "expect": [
+            "tim ngung|ngung dap|khong dap",
+            "thieu|khong du|khong co",
+            "te bao"
+          ]
+        }
+      ],
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_voi_vai_tro_ho_hap"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "khong_neu_vai_tro_cua_tim"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "chi_noi_van_chuyen_O2"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "khong_noi_hau_qua_voi_te_bao"
+          ]
+        }
+      ],
+      "hints": [
+        "Máu đi khắp cơ thể để làm gì?",
+        "Cái gì giúp máu chảy liên tục trong mạch?",
+        "Bước đầu: nêu vai trò chung của hệ tuần hoàn."
+      ]
+    },
+    {
+      "id": "sinh8-td-003",
+      "subject": "sinh",
+      "concept": "sinh8.tieu_hoa",
+      "level": 2,
+      "scaffold": 2,
+      "statement": "Giải thích vì sao cần nhai kĩ thức ăn trước khi nuốt.",
+      "parameters": [],
+      "derived": [],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Mục đích",
+          "desc": "Thức ăn chứa chất phức tạp, cần biến đổi thành chất đơn giản để cơ thể hấp thụ",
+          "expect": [
+            "don gian|phuc tap"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Tiêu hóa cơ học",
+          "desc": "Nhai kĩ làm thức ăn nhỏ, mềm, tăng diện tích tiếp xúc với enzim (tiêu hóa cơ học)",
+          "expect": [
+            "nho|mem|nghien",
+            "dien tich|tiep xuc|enzim|enzym"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Tiêu hóa hóa học",
+          "desc": "Enzim trong nước bọt biến đổi tinh bột thành đường (tiêu hóa hóa học)",
+          "expect": [
+            "nuoc bot|enzim|enzym|amilaza",
+            "tinh bot|duong"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Hấp thụ",
+          "desc": "Chất đơn giản được hấp thụ vào máu, giúp cơ thể hấp thụ tốt hơn và giảm gánh nặng cho dạ dày",
+          "expect": [
+            "hap thu|vao mau|ruot",
+            "tot|nhanh|de|giam"
+          ]
+        }
+      ],
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_tieu_hoa_voi_hap_thu"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "khong_phan_biet_co_hoc_hoa_hoc"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "nham_chat_duoc_enzim_bien_doi"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "khong_neu_loi_ich_hap_thu"
+          ]
+        }
+      ],
+      "hints": [
+        "Thức ăn vào miệng ở dạng nào, và cơ thể hấp thụ được dạng nào?",
+        "Việc nhai làm thay đổi kích thước thức ăn có lợi gì cho enzim?",
+        "Bước đầu: nêu cần biến đổi thức ăn thành chất đơn giản."
+      ]
+    },
+    {
+      "id": "ly8-apchatlong-h01",
+      "subject": "ly",
+      "concept": "ly8.ap_suat_chat_long",
+      "level": 3,
+      "difficulty": "hard",
+      "scaffold": 3,
+      "statement": "Một bình chứa nước cao {h} cm (trọng lượng riêng của nước 10000 N/m³). Đáy bình có diện tích {S} cm². Tính áp suất của nước tác dụng lên đáy bình (Pa) và áp lực của nước lên đáy bình (N).",
+      "parameters": [
+        {
+          "name": "h",
+          "values": [
+            20,
+            30,
+            50,
+            60
+          ]
+        },
+        {
+          "name": "S",
+          "values": [
+            50,
+            100,
+            200
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "h_m",
+          "formula": "h/100",
+          "unit": "m",
+          "decimals": 2
+        },
+        {
+          "id": "p",
+          "formula": "10000*h_m",
+          "unit": "Pa",
+          "decimals": 0
+        },
+        {
+          "id": "S_m2",
+          "formula": "S/10000",
+          "unit": "m²",
+          "decimals": 4
+        },
+        {
+          "id": "F",
+          "formula": "p*S_m2",
+          "unit": "N",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức",
+          "desc": "Viết đúng công thức áp suất chất lỏng p = d.h",
+          "expect": [
+            "d*h|d.h|dxh|h*d"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Đổi đơn vị",
+          "desc": "Đổi chiều cao {h} cm = {h_m} m",
+          "expect": [
+            "#{h_m}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Áp suất",
+          "desc": "Tính đúng p = {p} Pa và ghi đơn vị",
+          "expect": [
+            "#{p}",
+            "~pa"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Đổi diện tích",
+          "desc": "Đổi diện tích {S} cm² = {S_m2} m²",
+          "expect": [
+            "#{S_m2}"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Áp lực",
+          "desc": "Dùng F = p.S, tính đúng F = {F} N",
+          "expect": [
+            "#{F}",
+            "~n|newton"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "F",
+        "unit": "N",
+        "tolerance": 0.05
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_p=d/h"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_doi_cm_ra_m"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "doi_sai_he_so_cm2_m2"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "nham_F=p/S"
+          ]
+        }
+      ],
+      "hints": [
+        "Áp suất chất lỏng phụ thuộc vào những đại lượng nào?",
+        "Công thức p = d.h cần chiều cao tính bằng mét.",
+        "Bước đầu: đổi h sang m rồi tính p = 10000.h. Sau đó đổi S sang m² và tính F = p.S."
+      ]
+    },
+    {
+      "id": "ly8-acsimet-h02",
+      "subject": "ly",
+      "concept": "ly8.luc_day_acsimet",
+      "level": 3,
+      "difficulty": "hard",
+      "scaffold": 3,
+      "statement": "Một vật treo vào lực kế trong không khí chỉ {P} N. Khi nhúng chìm hoàn toàn trong nước, lực kế chỉ {P2} N (trọng lượng riêng của nước 10000 N/m³). Tính lực đẩy Ác-si-mét tác dụng lên vật và thể tích của vật (cm³).",
+      "parameters": [
+        {
+          "name": "P",
+          "values": [
+            5,
+            6,
+            8
+          ]
+        },
+        {
+          "name": "P2",
+          "values": [
+            3,
+            3.5,
+            4
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "FA",
+          "formula": "P-P2",
+          "unit": "N",
+          "decimals": 2
+        },
+        {
+          "id": "V_m3",
+          "formula": "FA/10000",
+          "unit": "m³",
+          "decimals": 6
+        },
+        {
+          "id": "V_cm3",
+          "formula": "V_m3*1000000",
+          "unit": "cm³",
+          "decimals": 0
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức lực đẩy",
+          "desc": "Lực đẩy bằng độ giảm số chỉ lực kế: FA = P - P₂",
+          "expect": [
+            "p-p2|p-p_2|p-p’"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Lực đẩy",
+          "desc": "Tính đúng FA = {FA} N và ghi đơn vị",
+          "expect": [
+            "#{FA}",
+            "~n|newton"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Công thức thể tích",
+          "desc": "Dùng FA = d.V suy ra V = FA/d",
+          "expect": [
+            "fa/d|fa:d|v=fa"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Thể tích (m³)",
+          "desc": "Tính đúng V = {V_m3} m³",
+          "expect": [
+            "#{V_m3}"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Thể tích (cm³)",
+          "desc": "Đổi sang cm³: V = {V_cm3} cm³",
+          "expect": [
+            "#{V_cm3}",
+            "~cm3"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "V_cm3",
+        "unit": "cm³",
+        "tolerance": 2
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "quen_P2_la_so_chi_trong_nuoc"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "nham_V=FA*d"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "quen_doi_don_vi"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "doi_sai_he_so_m3_cm3"
+          ]
+        }
+      ],
+      "hints": [
+        "Số chỉ lực kế giảm khi nhúng vật vào nước là do đâu?",
+        "Độ giảm số chỉ lực kế chính là lực đẩy Ác-si-mét.",
+        "Bước đầu: FA = P - P₂, rồi V = FA/d với d = 10000 N/m³ và đổi sang cm³."
+      ]
+    },
+    {
+      "id": "ly8-tocdotb-e01",
+      "subject": "ly",
+      "concept": "ly8.toc_do_trung_binh",
+      "level": 3,
+      "difficulty": "expert",
+      "scaffold": 3,
+      "statement": "Một xe đi {sa} km với tốc độ {va} km/h, sau đó đi tiếp {sb} km với tốc độ {vb} km/h. Tính tốc độ trung bình của xe trên cả hai đoạn đường (km/h).",
+      "parameters": [
+        {
+          "name": "sa",
+          "values": [
+            30,
+            60,
+            90
+          ]
+        },
+        {
+          "name": "va",
+          "values": [
+            30,
+            60
+          ]
+        },
+        {
+          "name": "sb",
+          "values": [
+            40,
+            80,
+            120
+          ]
+        },
+        {
+          "name": "vb",
+          "values": [
+            40,
+            80
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "ta",
+          "formula": "sa/va",
+          "unit": "h",
+          "decimals": 2
+        },
+        {
+          "id": "tb",
+          "formula": "sb/vb",
+          "unit": "h",
+          "decimals": 2
+        },
+        {
+          "id": "S",
+          "formula": "sa+sb",
+          "unit": "km",
+          "decimals": 0
+        },
+        {
+          "id": "T",
+          "formula": "ta+tb",
+          "unit": "h",
+          "decimals": 2
+        },
+        {
+          "id": "vtb",
+          "formula": "S/T",
+          "unit": "km/h",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức",
+          "desc": "Tốc độ trung bình = tổng quãng đường / tổng thời gian",
+          "expect": [
+            "vtb=s/t|vtb=(sa+sb)/(ta+tb)|tongquangduong|tong quang duong"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Thời gian đoạn 1",
+          "desc": "t₁ = s₁/v₁ = {ta} h",
+          "expect": [
+            "#{ta}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Thời gian đoạn 2",
+          "desc": "t₂ = s₂/v₂ = {tb} h",
+          "expect": [
+            "#{tb}"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Tổng quãng đường",
+          "desc": "S = {sa} + {sb} = {S} km",
+          "expect": [
+            "#{S}"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Tổng thời gian",
+          "desc": "T = t₁ + t₂ = {T} h",
+          "expect": [
+            "#{T}"
+          ]
+        },
+        {
+          "id": "s6",
+          "points": 2,
+          "label": "Kết quả",
+          "desc": "v tb = S/T = {vtb} km/h, ghi đơn vị",
+          "expect": [
+            "#{vtb}",
+            "~km/h"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "vtb",
+        "unit": "km/h",
+        "tolerance": 0.05
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_trung_binh_cong_van_toc"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_tinh_thoi_gian"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_tinh_thoi_gian"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "cong_thieu_quang_duong"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "cong_thieu_thoi_gian"
+          ]
+        },
+        {
+          "stepId": "s6",
+          "tags": [
+            "quen_don_vi"
+          ]
+        }
+      ],
+      "hints": [
+        "Tốc độ trung bình có phải là trung bình cộng của hai tốc độ không?",
+        "Cần tìm thời gian của từng đoạn trước.",
+        "Bước đầu: t = s/v cho từng đoạn, rồi lấy tổng S chia tổng T."
+      ]
+    },
+    {
+      "id": "ly8-mach-e02",
+      "subject": "ly",
+      "concept": "ly8.dien_noi_tiep",
+      "level": 3,
+      "difficulty": "expert",
+      "scaffold": 3,
+      "statement": "Hai điện trở R₁ = {R1} Ω và R₂ = {R2} Ω mắc nối tiếp vào nguồn điện có hiệu điện thế {U} V. Tính điện trở tương đương, cường độ dòng điện trong mạch, hiệu điện thế giữa hai đầu R₁ và công suất tiêu thụ của cả mạch.",
+      "parameters": [
+        {
+          "name": "R1",
+          "values": [
+            10,
+            20,
+            30
+          ]
+        },
+        {
+          "name": "R2",
+          "values": [
+            20,
+            30,
+            60
+          ]
+        },
+        {
+          "name": "U",
+          "values": [
+            12,
+            24,
+            36
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "Rtd",
+          "formula": "R1+R2",
+          "unit": "Ω",
+          "decimals": 0
+        },
+        {
+          "id": "I",
+          "formula": "U/Rtd",
+          "unit": "A",
+          "decimals": 2
+        },
+        {
+          "id": "U1",
+          "formula": "I*R1",
+          "unit": "V",
+          "decimals": 2
+        },
+        {
+          "id": "P",
+          "formula": "U*I",
+          "unit": "W",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức R",
+          "desc": "Mạch nối tiếp: Rtđ = R₁ + R₂",
+          "expect": [
+            "rtd=r1+r2|r=r1+r2|rtd=r_1+r_2"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Điện trở tương đương",
+          "desc": "Tính đúng Rtđ = {Rtd} Ω",
+          "expect": [
+            "#{Rtd}",
+            "~ω|ohm"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Định luật Ôm",
+          "desc": "Dùng I = U/Rtđ",
+          "expect": [
+            "i=u/r|i=u:r"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Cường độ dòng điện",
+          "desc": "Tính đúng I = {I} A",
+          "expect": [
+            "#{I}",
+            "~a"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Hiệu điện thế R₁",
+          "desc": "U₁ = I.R₁ = {U1} V",
+          "expect": [
+            "#{U1}",
+            "~v"
+          ]
+        },
+        {
+          "id": "s6",
+          "points": 2,
+          "label": "Công suất",
+          "desc": "P = U.I = {P} W",
+          "expect": [
+            "#{P}",
+            "~w"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "P",
+        "unit": "W",
+        "tolerance": 0.1
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "cong_dien_tro_song_song"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "nham_I=U*R"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "dung_U_nguon_cho_U1"
+          ]
+        },
+        {
+          "stepId": "s6",
+          "tags": [
+            "nham_P=U/I"
+          ]
+        }
+      ],
+      "hints": [
+        "Mạch nối tiếp thì điện trở tương đương tính thế nào?",
+        "Cường độ dòng điện chung của mạch cho phép tính U₁ và P.",
+        "Bước đầu: Rtđ = R₁ + R₂, rồi I = U/Rtđ."
+      ]
+    },
+    {
+      "id": "hoa8-trungHoa-h01",
+      "subject": "hoa",
+      "concept": "hoa8.tinh_theo_pthh",
+      "level": 3,
+      "difficulty": "hard",
+      "scaffold": 3,
+      "statement": "Hòa tan {m} g NaOH vào nước được dung dịch A. Cho dung dịch A tác dụng vừa đủ với dung dịch HCl 1M. Tính khối lượng NaCl tạo thành và thể tích dung dịch HCl cần dùng (mL). (Na = 23, O = 16, H = 1, Cl = 35,5)",
+      "parameters": [
+        {
+          "name": "m",
+          "values": [
+            4,
+            8,
+            12,
+            20
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "n",
+          "formula": "m/40",
+          "unit": "mol",
+          "decimals": 2
+        },
+        {
+          "id": "mNaCl",
+          "formula": "n*58.5",
+          "unit": "g",
+          "decimals": 2
+        },
+        {
+          "id": "V_HCl",
+          "formula": "n*1000",
+          "unit": "mL",
+          "decimals": 0
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Phương trình",
+          "desc": "Viết đúng PTHH: NaOH + HCl → NaCl + H₂O",
+          "expect": [
+            "naoh+hcl",
+            "nacl",
+            "h2o"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Số mol NaOH",
+          "desc": "n(NaOH) = m/M = {n} mol",
+          "expect": [
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Tỉ lệ mol",
+          "desc": "Theo PTHH tỉ lệ 1:1 nên n(NaCl) = n(HCl) = {n} mol",
+          "expect": [
+            "nacl",
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Khối lượng NaCl",
+          "desc": "m(NaCl) = {mNaCl} g",
+          "expect": [
+            "#{mNaCl}",
+            "~g"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Thể tích HCl",
+          "desc": "V(HCl) = n/CM = {V_HCl} mL",
+          "expect": [
+            "#{V_HCl}",
+            "~ml"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "mNaCl",
+        "unit": "g",
+        "tolerance": 0.05
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "viet_sai_PTHH"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "nham_M_NaOH"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "sai_ti_le_mol"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "quen_doi_L_ra_mL"
+          ]
+        }
+      ],
+      "hints": [
+        "Phản ứng giữa axit và bazơ tạo ra những chất nào?",
+        "Theo PTHH, 1 mol NaOH phản ứng với bao nhiêu mol HCl?",
+        "Bước đầu: n(NaOH) = m/40, rồi dùng tỉ lệ 1:1 để suy ra NaCl và HCl."
+      ]
+    },
+    {
+      "id": "hoa8-hieusuat-h02",
+      "subject": "hoa",
+      "concept": "hoa8.hieu_suat",
+      "level": 3,
+      "difficulty": "hard",
+      "scaffold": 3,
+      "statement": "Nung {m} g CaCO₃ với hiệu suất {H}%. Tính thể tích khí CO₂ thu được (đkc: 1 mol khí = 24,79 L) và khối lượng chất rắn còn lại sau phản ứng. (Ca = 40, C = 12, O = 16)",
+      "parameters": [
+        {
+          "name": "m",
+          "values": [
+            10,
+            20,
+            50
+          ]
+        },
+        {
+          "name": "H",
+          "values": [
+            75,
+            80,
+            90
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "n",
+          "formula": "m/100",
+          "unit": "mol",
+          "decimals": 3
+        },
+        {
+          "id": "npu",
+          "formula": "n*H/100",
+          "unit": "mol",
+          "decimals": 3
+        },
+        {
+          "id": "V",
+          "formula": "npu*24.79",
+          "unit": "L",
+          "decimals": 2
+        },
+        {
+          "id": "mCO2",
+          "formula": "npu*44",
+          "unit": "g",
+          "decimals": 2
+        },
+        {
+          "id": "mran",
+          "formula": "m-mCO2",
+          "unit": "g",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Phương trình",
+          "desc": "CaCO₃ → CaO + CO₂ (nhiệt độ)",
+          "expect": [
+            "caco3",
+            "cao",
+            "co2"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Số mol CaCO₃",
+          "desc": "n(CaCO₃) = m/100 = {n} mol",
+          "expect": [
+            "#{n}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Số mol phản ứng",
+          "desc": "n phản ứng = n.H% = {npu} mol",
+          "expect": [
+            "#{npu}"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Thể tích CO₂",
+          "desc": "V(CO₂) = {V} L",
+          "expect": [
+            "#{V}",
+            "~l|lit"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Khối lượng CO₂",
+          "desc": "m(CO₂) = {mCO2} g",
+          "expect": [
+            "#{mCO2}"
+          ]
+        },
+        {
+          "id": "s6",
+          "points": 2,
+          "label": "Chất rắn còn lại",
+          "desc": "Bảo toàn khối lượng: m rắn = m - m(CO₂) = {mran} g",
+          "expect": [
+            "#{mran}",
+            "~g"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "mran",
+        "unit": "g",
+        "tolerance": 0.05
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "viet_sai_PTHH"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "nham_M_CaCO3"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_nhan_hieu_suat"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "quen_don_vi"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "nham_M_CO2"
+          ]
+        },
+        {
+          "stepId": "s6",
+          "tags": [
+            "quen_bao_toan_khoi_luong"
+          ]
+        }
+      ],
+      "hints": [
+        "Hiệu suất cho biết điều gì về lượng chất phản ứng?",
+        "Chỉ một phần CaCO₃ bị phân hủy theo hiệu suất.",
+        "Bước đầu: n = m/100, n phản ứng = n.H%, rồi tính V và khối lượng rắn còn lại."
+      ]
+    },
+    {
+      "id": "hoa8-hon-hop-e01",
+      "subject": "hoa",
+      "concept": "hoa8.hon_hop_kim_loai",
+      "level": 3,
+      "difficulty": "expert",
+      "scaffold": 3,
+      "statement": "Cho {m} g hỗn hợp Fe và Cu vào dung dịch HCl dư, thu được {V} L khí H₂ (đkc: 1 mol khí = 24,79 L). Tính khối lượng và phần trăm khối lượng mỗi kim loại trong hỗn hợp. (Fe = 56, Cu = 64)",
+      "parameters": [
+        {
+          "name": "m",
+          "values": [
+            20,
+            25,
+            30
+          ]
+        },
+        {
+          "name": "V",
+          "values": [
+            2.479,
+            4.958,
+            7.437
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "nH2",
+          "formula": "V/24.79",
+          "unit": "mol",
+          "decimals": 2
+        },
+        {
+          "id": "mFe",
+          "formula": "nH2*56",
+          "unit": "g",
+          "decimals": 2
+        },
+        {
+          "id": "mCu",
+          "formula": "m-mFe",
+          "unit": "g",
+          "decimals": 2
+        },
+        {
+          "id": "pFe",
+          "formula": "mFe/m*100",
+          "unit": "%",
+          "decimals": 1
+        },
+        {
+          "id": "pCu",
+          "formula": "100-pFe",
+          "unit": "%",
+          "decimals": 1
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Phương trình",
+          "desc": "Fe + 2HCl → FeCl₂ + H₂; Cu không phản ứng với HCl",
+          "expect": [
+            "fe+2hcl",
+            "cu"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Số mol H₂",
+          "desc": "n(H₂) = V/24,79 = {nH2} mol",
+          "expect": [
+            "#{nH2}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Khối lượng Fe",
+          "desc": "n(Fe) = n(H₂) nên m(Fe) = {mFe} g",
+          "expect": [
+            "#{mFe}",
+            "~g"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Khối lượng Cu",
+          "desc": "m(Cu) = m hỗn hợp - m(Fe) = {mCu} g",
+          "expect": [
+            "#{mCu}"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "% Fe",
+          "desc": "%Fe = m(Fe)/m hỗn hợp . 100% = {pFe}%",
+          "expect": [
+            "#{pFe}"
+          ]
+        },
+        {
+          "id": "s6",
+          "points": 2,
+          "label": "% Cu",
+          "desc": "%Cu = 100% - %Fe = {pCu}%",
+          "expect": [
+            "#{pCu}"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "pFe",
+        "unit": "%",
+        "tolerance": 0.2
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "cho_rang_Cu_phan_ung"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_chia_24,79"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "sai_ti_le_mol_Fe_H2"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "quen_tru_khoi_luong"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "quen_nhan_100"
+          ]
+        },
+        {
+          "stepId": "s6",
+          "tags": [
+            "tinh_sai_phan_tram"
+          ]
+        }
+      ],
+      "hints": [
+        "Kim loại nào trong hỗn hợp tạo ra khí H₂?",
+        "Chỉ Fe phản ứng, nên số mol H₂ bằng số mol Fe.",
+        "Bước đầu: nH₂ = V/24,79, m(Fe) = nH₂.56, rồi suy ra m(Cu) và các phần trăm."
+      ]
+    },
+    {
+      "id": "hoa8-tron-dd-e02",
+      "subject": "hoa",
+      "concept": "hoa8.nong_do_phan_tram",
+      "level": 3,
+      "difficulty": "expert",
+      "scaffold": 3,
+      "statement": "Trộn {m1} g dung dịch NaCl {c1}% với {m2} g dung dịch NaCl {c2}%. Tính nồng độ phần trăm của dung dịch thu được sau khi trộn.",
+      "parameters": [
+        {
+          "name": "m1",
+          "values": [
+            100,
+            200
+          ]
+        },
+        {
+          "name": "c1",
+          "values": [
+            10,
+            20
+          ]
+        },
+        {
+          "name": "m2",
+          "values": [
+            100,
+            300
+          ]
+        },
+        {
+          "name": "c2",
+          "values": [
+            30,
+            40
+          ]
+        }
+      ],
+      "derived": [
+        {
+          "id": "mct1",
+          "formula": "m1*c1/100",
+          "unit": "g",
+          "decimals": 2
+        },
+        {
+          "id": "mct2",
+          "formula": "m2*c2/100",
+          "unit": "g",
+          "decimals": 2
+        },
+        {
+          "id": "mct",
+          "formula": "mct1+mct2",
+          "unit": "g",
+          "decimals": 2
+        },
+        {
+          "id": "mdd",
+          "formula": "m1+m2",
+          "unit": "g",
+          "decimals": 0
+        },
+        {
+          "id": "C",
+          "formula": "mct/mdd*100",
+          "unit": "%",
+          "decimals": 2
+        }
+      ],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Công thức",
+          "desc": "C% = mct/mdd . 100%",
+          "expect": [
+            "mct/mdd|mct:mdd"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Chất tan dd 1",
+          "desc": "m(ct1) = {m1}.{c1}% = {mct1} g",
+          "expect": [
+            "#{mct1}"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Chất tan dd 2",
+          "desc": "m(ct2) = {m2}.{c2}% = {mct2} g",
+          "expect": [
+            "#{mct2}"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Tổng chất tan",
+          "desc": "m(ct) = {mct} g",
+          "expect": [
+            "#{mct}"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Khối lượng dung dịch",
+          "desc": "m(dd) = {m1} + {m2} = {mdd} g",
+          "expect": [
+            "#{mdd}"
+          ]
+        },
+        {
+          "id": "s6",
+          "points": 2,
+          "label": "Kết quả",
+          "desc": "C% = {C}%",
+          "expect": [
+            "#{C}",
+            "~%"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "C",
+        "unit": "%",
+        "tolerance": 0.05
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "nham_C%=mdd/mct"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "quen_nhan_nong_do"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "quen_nhan_nong_do"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "cong_nong_do_thay_vi_khoi_luong"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "quen_cong_khoi_luong_dd"
+          ]
+        },
+        {
+          "stepId": "s6",
+          "tags": [
+            "quen_nhan_100"
+          ]
+        }
+      ],
+      "hints": [
+        "Khi trộn hai dung dịch, đại lượng nào được bảo toàn khi cộng lại?",
+        "Cộng khối lượng chất tan và cộng khối lượng dung dịch, đừng cộng nồng độ.",
+        "Bước đầu: tính mct của từng dung dịch, rồi C% = tổng mct / tổng mdd . 100%."
+      ]
+    },
+    {
+      "id": "sinh8-nuicao-h03",
+      "subject": "sinh",
+      "concept": "sinh8.ho_hap_tuan_hoan",
+      "level": 3,
+      "difficulty": "hard",
+      "scaffold": 3,
+      "statement": "Giải thích vì sao khi leo lên núi cao, cơ thể thường thở nhanh, sâu hơn và tim đập nhanh hơn.",
+      "parameters": [],
+      "derived": [],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Không khí loãng",
+          "desc": "Ở núi cao không khí loãng, nồng độ O₂ thấp hơn",
+          "expect": [
+            "loang|it o2|thieu o2|giam|thap",
+            "o2|oxi|oxygen"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Máu thiếu O₂",
+          "desc": "Máu nhận được ít O₂ hơn qua phổi",
+          "expect": [
+            "mau",
+            "phoi|hong cau|it o2|thieu"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Hô hấp",
+          "desc": "Cơ thể tăng nhịp thở, thở sâu để lấy thêm O₂",
+          "expect": [
+            "nhip tho|tho nhanh|tho sau|tang tho",
+            "o2|oxi|oxygen"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Tuần hoàn",
+          "desc": "Tim đập nhanh để máu mang O₂ đến tế bào nhanh hơn",
+          "expect": [
+            "tim dap nhanh|nhip tim|tim co nhanh|tim dap",
+            "mau|van chuyen"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Tế bào",
+          "desc": "Tế bào đủ O₂ để oxi hóa chất dinh dưỡng, tạo năng lượng",
+          "expect": [
+            "te bao",
+            "nang luong|oxi hoa|hoat dong"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "",
+        "unit": "",
+        "tolerance": 0
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "khong_noi_O2_giam"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "nham_mau_thieu_nuoc"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "khong_noi_tang_nhip_tho"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "khong_noi_vai_tro_tim"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "khong_noi_nang_luong"
+          ]
+        }
+      ],
+      "hints": [
+        "Điều gì thay đổi trong không khí khi lên cao?",
+        "Hai hệ cơ quan nào phối hợp để đưa O₂ tới tế bào?",
+        "Bước đầu: nêu O₂ giảm, rồi nói về nhịp thở và nhịp tim tăng."
+      ]
+    },
+    {
+      "id": "sinh8-mohoi-h04",
+      "subject": "sinh",
+      "concept": "sinh8.bai_tiet",
+      "level": 3,
+      "difficulty": "hard",
+      "scaffold": 3,
+      "statement": "Giải thích vì sao trời nóng, cơ thể ra nhiều mồ hôi thì lượng nước tiểu thường ít đi và sẫm màu hơn.",
+      "parameters": [],
+      "derived": [],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Mất nước qua mồ hôi",
+          "desc": "Trời nóng, cơ thể thải nhiều nước qua mồ hôi",
+          "expect": [
+            "mo hoi",
+            "nuoc"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Điều hòa thân nhiệt",
+          "desc": "Mồ hôi bay hơi giúp giải nhiệt, giữ thân nhiệt ổn định",
+          "expect": [
+            "nhiet|than nhiet|mat|giai nhiet|dieu hoa"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Lượng nước trong máu",
+          "desc": "Lượng nước trong máu giảm, máu đặc hơn",
+          "expect": [
+            "mau",
+            "giam|it|dac"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Hoạt động của thận",
+          "desc": "Thận tăng tái hấp thu nước để giữ nước cho cơ thể",
+          "expect": [
+            "than",
+            "tai hap thu|giu nuoc|giu lai nuoc|tang hap thu"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Nước tiểu",
+          "desc": "Nước tiểu ít hơn và đặc, sẫm màu hơn",
+          "expect": [
+            "nuoc tieu",
+            "it|giam|dac|sam|dam"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "",
+        "unit": "",
+        "tolerance": 0
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "khong_noi_mat_nuoc"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "khong_noi_dieu_hoa_than_nhiet"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "khong_noi_mau_dac"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "khong_noi_vai_tro_than"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "khong_ket_luan_nuoc_tieu"
+          ]
+        }
+      ],
+      "hints": [
+        "Mồ hôi chủ yếu là gì, và thoát ra từ đâu?",
+        "Khi cơ thể thiếu nước, thận phải làm gì?",
+        "Bước đầu: nêu mất nước qua mồ hôi, rồi nói thận giữ nước nên nước tiểu ít và đặc."
+      ]
+    },
+    {
+      "id": "sinh8-comtrang-e03",
+      "subject": "sinh",
+      "concept": "sinh8.tieu_hoa_hap_thu",
+      "level": 3,
+      "difficulty": "expert",
+      "scaffold": 3,
+      "statement": "Khi nhai kĩ cơm trắng trong miệng một lúc thì thấy có vị ngọt. Hãy giải thích hiện tượng này và cho biết sản phẩm tiêu hóa của tinh bột được hấp thu ở đâu, đi theo con đường nào tới tế bào.",
+      "parameters": [],
+      "derived": [],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Thành phần cơm",
+          "desc": "Cơm chứa nhiều tinh bột",
+          "expect": [
+            "tinh bot"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Enzim nước bọt",
+          "desc": "Nước bọt có enzim amilaza tác dụng lên tinh bột",
+          "expect": [
+            "amilaza|enzim|enzym",
+            "nuoc bot"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Biến đổi tinh bột",
+          "desc": "Tinh bột chín bị biến đổi thành đường mantôzơ",
+          "expect": [
+            "duong|mantozo|mantoza"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Vị ngọt",
+          "desc": "Đường tạo ra nên ta cảm nhận được vị ngọt",
+          "expect": [
+            "ngot"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Hấp thu",
+          "desc": "Sau khi tiêu hóa hoàn toàn, chất dinh dưỡng được hấp thu ở ruột non",
+          "expect": [
+            "ruot non",
+            "hap thu"
+          ]
+        },
+        {
+          "id": "s6",
+          "points": 2,
+          "label": "Vận chuyển",
+          "desc": "Chất dinh dưỡng vào máu (mao mạch) rồi đến các tế bào",
+          "expect": [
+            "mau|mao mach",
+            "te bao"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "",
+        "unit": "",
+        "tolerance": 0
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "khong_noi_tinh_bot"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "khong_noi_enzim_nuoc_bot"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "nham_voi_protein"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "khong_giai_thich_vi_ngot"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "nham_hap_thu_o_da_day"
+          ]
+        },
+        {
+          "stepId": "s6",
+          "tags": [
+            "khong_noi_con_duong_van_chuyen"
+          ]
+        }
+      ],
+      "hints": [
+        "Cơm chứa chất dinh dưỡng chủ yếu nào?",
+        "Trong nước bọt có chất nào tác dụng lên tinh bột?",
+        "Bước đầu: tinh bột + enzim amilaza → đường, rồi nói về hấp thu ở ruột non."
+      ]
+    },
+    {
+      "id": "sinh8-phanxa-e04",
+      "subject": "sinh",
+      "concept": "sinh8.than_kinh",
+      "level": 3,
+      "difficulty": "expert",
+      "scaffold": 3,
+      "statement": "Khi tay chạm vào vật nóng, ta rụt tay lại ngay trước khi kịp cảm thấy nóng. Hãy giải thích cơ chế của hiện tượng này và vai trò của tủy sống, não bộ.",
+      "parameters": [],
+      "derived": [],
+      "rubric": [
+        {
+          "id": "s1",
+          "points": 2,
+          "label": "Thụ thể",
+          "desc": "Thụ thể ở da tiếp nhận kích thích nóng",
+          "expect": [
+            "thu the|co quan thu cam|da",
+            "kich thich|nong"
+          ]
+        },
+        {
+          "id": "s2",
+          "points": 2,
+          "label": "Dẫn truyền vào",
+          "desc": "Xung thần kinh theo nơron cảm giác (hướng tâm) về trung ương",
+          "expect": [
+            "noron cam giac|huong tam|xung than kinh|day than kinh cam giac"
+          ]
+        },
+        {
+          "id": "s3",
+          "points": 2,
+          "label": "Trung ương",
+          "desc": "Trung ương thần kinh xử lí là tủy sống",
+          "expect": [
+            "tuy song"
+          ]
+        },
+        {
+          "id": "s4",
+          "points": 2,
+          "label": "Dẫn truyền ra",
+          "desc": "Xung theo nơron vận động (li tâm) đến cơ tay",
+          "expect": [
+            "noron van dong|ly tam|van dong",
+            "co"
+          ]
+        },
+        {
+          "id": "s5",
+          "points": 2,
+          "label": "Đáp ứng",
+          "desc": "Cơ co làm rụt tay nhanh, không cần ý thức: đó là phản xạ",
+          "expect": [
+            "rut tay|phan xa|co co",
+            "nhanh|khong|truoc"
+          ]
+        },
+        {
+          "id": "s6",
+          "points": 2,
+          "label": "Vai trò của não",
+          "desc": "Đồng thời xung lên não nên sau đó mới có cảm giác nóng",
+          "expect": [
+            "nao",
+            "cam giac|nong|nhan biet"
+          ]
+        }
+      ],
+      "finalAnswer": {
+        "derivedId": "",
+        "unit": "",
+        "tolerance": 0
+      },
+      "misconceptions": [
+        {
+          "stepId": "s1",
+          "tags": [
+            "khong_noi_thu_the"
+          ]
+        },
+        {
+          "stepId": "s2",
+          "tags": [
+            "khong_noi_xung_than_kinh"
+          ]
+        },
+        {
+          "stepId": "s3",
+          "tags": [
+            "nham_trung_uong_la_nao"
+          ]
+        },
+        {
+          "stepId": "s4",
+          "tags": [
+            "khong_noi_noron_van_dong"
+          ]
+        },
+        {
+          "stepId": "s5",
+          "tags": [
+            "khong_giai_thich_phan_xa_nhanh"
+          ]
+        },
+        {
+          "stepId": "s6",
+          "tags": [
+            "nham_nao_dieu_khien_phan_xa"
+          ]
+        }
+      ],
+      "hints": [
+        "Phản xạ rụt tay xảy ra nhanh nhờ trung ương thần kinh nào?",
+        "Con đường phản xạ gồm những bộ phận nào theo thứ tự?",
+        "Bước đầu: thụ thể → nơron cảm giác → tủy sống → nơron vận động → cơ."
+      ]
+    }
+  ]
+}

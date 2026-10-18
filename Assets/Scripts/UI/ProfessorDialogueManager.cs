@@ -82,7 +82,12 @@ public class ProfessorDialogueManager : MonoBehaviour
     {
         if (speakerText != null) speakerText.text = ProfessorLines.ProfessorName;
 
-        if (backButton != null) backButton.onClick.AddListener(GoMenu);
+        if (backButton != null)
+        {
+            backButton.onClick.AddListener(GoMenu);
+            var bl = backButton.GetComponentInChildren<TMP_Text>(true);
+            if (bl != null) bl.text = HasReturnScene ? "\u2190 Quay l\u1EA1i" : "\u2190 Menu";
+        }
         if (dialogueBox != null) dialogueBox.onClick.AddListener(() => skipTyping = true);
 
         if (choiceButtons != null)
@@ -156,7 +161,7 @@ public class ProfessorDialogueManager : MonoBehaviour
         {
             SetCounter(0, 0);
             yield return Say(ProfessorLines.NoWrong(), Face.Happy);
-            yield return Ask("Về menu");
+            yield return Ask(HasReturnScene ? "Quay lại màn chơi" : "Về menu");
             GoMenu();
             yield break;
         }
@@ -220,7 +225,7 @@ public class ProfessorDialogueManager : MonoBehaviour
         if (questionCard != null) questionCard.SetActive(false);
         yield return Say(ProfessorLines.Summary(selfFixedTotal, list.Count),
                          selfFixedTotal * 2 >= list.Count ? Face.Happy : Face.Neutral);
-        yield return Ask("Về menu");
+        yield return Ask(HasReturnScene ? "Quay lại màn chơi" : "Về menu");
         GoMenu();
     }
 
@@ -600,8 +605,11 @@ public class ProfessorDialogueManager : MonoBehaviour
         if (audioSource != null && clip != null) audioSource.PlayOneShot(clip);
     }
 
+    // Có scene game vừa chơi thì quay về đúng scene đó, không thì về menu.
+    static bool HasReturnScene => !string.IsNullOrEmpty(ReviewSessionData.returnScene) && Application.CanStreamedLevelBeLoaded(ReviewSessionData.returnScene);
+
     void GoMenu()
     {
-        SceneManager.LoadScene(menuSceneName);
+        SceneManager.LoadScene(HasReturnScene ? ReviewSessionData.returnScene : menuSceneName);
     }
 }

@@ -3,6 +3,7 @@
 public static class StudentProfileData
 {
     public static string studentName = "Học sinh";
+    public static string studentClass = "";
     public static int totalBadges = 0;
     public static int highestScore = 0;
     public static int lastScore = 0;
