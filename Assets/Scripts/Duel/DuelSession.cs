@@ -10,7 +10,7 @@ public enum DuelMode { None, Quiz, Essay }
 /// <summary>Dữ liệu một trận đối kháng, sống xuyên các scene (giống SubjectSession).</summary>
 public static class DuelSession
 {
-    public const float Duration = 180f;          // 3 phút
+    public const float Duration = 30f;          // 3 phút
 
     // Các scene thuộc về một trận đang diễn ra. Nạp scene khác giữa lúc đang tính giờ = bỏ cuộc.
     static readonly string[] DuelScenes = { "GameplayScene", "MillionareScene", "BiologyBossScene", "RoomScene", "DuelResultScene" };
