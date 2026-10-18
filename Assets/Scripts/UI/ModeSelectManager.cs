@@ -14,7 +14,7 @@ public class ModeSelectManager : MonoBehaviour
     [SerializeField] string essayScene = "";
 
     const float SceneW = 1920f, SceneH = 1080f;
-
+    const string DuelScene = "DuelLobbyScene";
     RectTransform artRoot, scene, ui;
     MenuNatureFx nature;
     Vector2 lastRect;
@@ -59,6 +59,7 @@ public class ModeSelectManager : MonoBehaviour
             "Chọn độ khó, chiến đấu trong hầm ngục\nvà viết lời giải để mở rương.",
             hasEssay ? "VÀO CHƠI" : "SẮP RA MẮT", hasEssay ? ButtonStyle.Bronze : ButtonStyle.Stone, !hasEssay, OpenEssay);
 
+        UIKit.MakeButton(ui, "Btn_Duel", "ĐỐI KHÁNG", new Vector2(0, -440), new Vector2(420, 84), OpenDuel, ButtonStyle.Danger, 36, .2f);
         UIKit.MakeButton(ui, "Btn_Back", "QUAY LẠI", new Vector2(-700, -450), new Vector2(320, 76), Back, ButtonStyle.Stone, 32, .3f);
     }
 
@@ -90,6 +91,17 @@ public class ModeSelectManager : MonoBehaviour
         }
         leaving = true;
         SceneRouter.Go(essayScene);
+    }
+    void OpenDuel()
+    {
+        if (leaving) return;
+        if (!Application.CanStreamedLevelBeLoaded(DuelScene))
+        {
+            UIKit.Toast(ui, "Chưa thêm DuelLobbyScene vào Build Settings");
+            return;
+        }
+        leaving = true;
+        SceneRouter.Go(DuelScene);
     }
 
     void Back()
