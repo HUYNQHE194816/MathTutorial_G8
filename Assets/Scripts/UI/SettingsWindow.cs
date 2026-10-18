@@ -25,7 +25,7 @@ public class SettingsWindow : MonoBehaviour
     Image soundDot, fullDot, vsyncDot;
     Text fontLabel, scaleLabel, qualityLabel, fpsLabel, previewText;
 
-    const int PreviewBase = 30;
+    const int PreviewBase = 26;
 
     public static SettingsWindow Open(Transform parent, Action onClose)
     {
@@ -99,8 +99,8 @@ public class SettingsWindow : MonoBehaviour
 
         // ---- Cột phải: TÀI KHOẢN (bí danh) ----
         Header("TÀI KHOẢN", R, -48);
-        Row("Bí danh", R, -110);
-        nickIn = UIKit.MakeInput(content, "In_Nick", "Bí danh của bạn", new Vector2(R + 130, -110), 14, 360);
+        Row("Bí danh", R, -116);
+        nickIn = UIKit.MakeInput(content, "In_Nick", "Bí danh của bạn", new Vector2(R + 130, -116), 14, 360);
         nickIn.text = GameSettings.Nickname;
         nickIn.onEndEdit.AddListener(s => { GameSettings.Nickname = s; PlayerPrefs.Save(); });
 

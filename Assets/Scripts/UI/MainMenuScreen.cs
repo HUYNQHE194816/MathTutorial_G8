@@ -23,7 +23,7 @@ public class MainMenuScreen : MonoBehaviour
 
     RectTransform artRoot, scene, ui;
     SettingsWindow settings;
-
+    PracticeLogWindow practiceLog;
     readonly List<Drift> drifts = new List<Drift>();
     readonly List<Puff> puffs = new List<Puff>();
     Sprite[] knightFrames, flameFrames, puffSprites;
@@ -186,13 +186,15 @@ public class MainMenuScreen : MonoBehaviour
         else UIKit.Panel(ui, "MenuFrame", new Vector2(0, -20), new Vector2(600, 520), PanelStyle.Dark, out _);
 
         UIKit.MakeButton(ui, "Btn_Start", "BẮT ĐẦU", new Vector2(0, 120), new Vector2(440, 88),
-            () => SceneRouter.Go("ModeSelectScene"), ButtonStyle.Bronze, 42, 0f);
+      () => SceneRouter.Go("ModeSelectScene"), ButtonStyle.Bronze, 42, 0f);
         UIKit.MakeButton(ui, "Btn_Dashboard", "TIẾN ĐỘ", new Vector2(0, 28), new Vector2(440, 72),
             OpenDashboard, ButtonStyle.Stone, 34, .08f);
-        UIKit.MakeButton(ui, "Btn_Settings", "CÀI ĐẶT", new Vector2(0, -56), new Vector2(440, 72),
-            OpenSettings, ButtonStyle.Stone, 34, .16f);
-        UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -140), new Vector2(440, 72),
-            Quit, ButtonStyle.Stone, 34, .24f);
+        UIKit.MakeButton(ui, "Btn_Log", "NHẬT KÝ", new Vector2(0, -56), new Vector2(440, 72),
+            OpenPracticeLog, ButtonStyle.Stone, 34, .16f);
+        UIKit.MakeButton(ui, "Btn_Settings", "CÀI ĐẶT", new Vector2(0, -140), new Vector2(440, 72),
+            OpenSettings, ButtonStyle.Stone, 34, .24f);
+        UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -224), new Vector2(440, 72),
+            Quit, ButtonStyle.Stone, 34, .32f);
     }
 
     void BuildFooter()
@@ -230,6 +232,11 @@ public class MainMenuScreen : MonoBehaviour
     {
         if (settings != null) return;
         settings = SettingsWindow.Open(ui, () => settings = null);
+    }
+    void OpenPracticeLog()
+    {
+        if (practiceLog != null) return;
+        practiceLog = PracticeLogWindow.Open(ui, () => practiceLog = null);
     }
 
     // ------------------------------------------------------------------ hoạt ảnh
