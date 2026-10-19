@@ -136,6 +136,8 @@ public class EssaySolveUI : MonoBehaviour
         input.targetGraphic = bg.GetComponent<Image>();
         input.textComponent = text; input.placeholder = ph;
         input.lineType = InputField.LineType.MultiLineNewline;
+        input.caretBlinkRate = 0f;   // THÊM: dấu nháy luôn hiện, không nhấp nháy
+        input.caretWidth = 3;        // THÊM (tuỳ chọn)
         input.characterLimit = EssaySymbols.MaxChars + 200;
         input.onValidateInput = (string t, int i, char ch) => ch == '\t' ? '\0' : ch;   // Tab dành cho nhận gợi ý, không chèn ký tự Tab
         input.text = a.draft ?? "";
@@ -304,17 +306,26 @@ public class EssaySolveUI : MonoBehaviour
         if (input == null) return;
         var k = Keyboard.current;
         if (k != null && k.f2Key.wasPressedThisFrame) TogglePalette();
+        // THÊM khối này:
+        if (!input.isFocused && input.gameObject.activeInHierarchy)
+        {
+            input.ActivateInputField();
+            input.caretPosition = Mathf.Clamp(lastFocus, 0, input.text.Length);
+        }
 
         if (input.isFocused)
         {
             lastAnchor = input.selectionAnchorPosition; lastFocus = input.selectionFocusPosition;
-            if (EssaySymbols.Suggest(input.text, input.caretPosition, out var def, out int len))
+            if (sugBox != null)   // THÊM: màn ShowTranscript không có thanh gợi ý
             {
-                sugBox.SetActive(true);
-                sugLabel.text = "Gợi ý: " + def.symbol + "  (" + def.name + ")  ·  bấm Tab hoặc bấm vào đây để nhận";
-                if (k != null && k.tabKey.wasPressedThisFrame) AcceptSuggestion();
+                if (EssaySymbols.Suggest(input.text, input.caretPosition, out var def, out int len))
+                {
+                    sugBox.SetActive(true);
+                    sugLabel.text = "Gợi ý: " + def.symbol + "  (" + def.name + ")  ·  bấm Tab hoặc bấm vào đây để nhận";
+                    if (k != null && k.tabKey.wasPressedThisFrame) AcceptSuggestion();
+                }
+                else sugBox.SetActive(false);
             }
-            else sugBox.SetActive(false);
         }
     }
 
@@ -369,6 +380,8 @@ public class EssaySolveUI : MonoBehaviour
         var ph = UIKit.Label("Placeholder", bg, "", 28, GameTheme.PaperMuted.WithAlpha(.5f), TextAnchor.UpperLeft, Vector2.zero, Vector2.zero); UIKit.Stretch(ph.rectTransform, 16, 14, 16, 12);
         input = bg.gameObject.AddComponent<InputField>(); input.targetGraphic = bg.GetComponent<Image>(); input.textComponent = text; input.placeholder = ph;
         input.lineType = InputField.LineType.MultiLineNewline; input.characterLimit = EssaySymbols.MaxChars + 200; input.text = sbText.ToString();
+        input.caretBlinkRate = 0f; input.caretWidth = 3;          // THÊM
+        lastAnchor = lastFocus = input.text.Length;               // THÊM: để lấy lại focus thì dấu nháy ở cuối bài, không về đầu
         string warn = low.Count > 0 ? "Dòng " + string.Join(", ", low) + " AI đọc chưa chắc, em kiểm tra kỹ nhé." : "AI đọc khá chắc, em vẫn nên đọc lại một lượt.";
         UIKit.Label("Warn", pc, warn, 26, low.Count > 0 ? GameTheme.Blood : GameTheme.EmberDeep, TextAnchor.MiddleLeft, new Vector2(0, -230), new Vector2(1080, 40), false, false, FontStyle.Bold);
         UIKit.Label("Note", pc, "Chỉ sau khi em xác nhận, bài mới được chấm. Ảnh được gửi thẳng cho AI để đọc và không được lưu lại.", 22, GameTheme.PaperMuted, TextAnchor.MiddleLeft, new Vector2(0, -275), new Vector2(1080, 36), false, false, FontStyle.Italic);
@@ -396,7 +409,15 @@ public class EssaySolveUI : MonoBehaviour
         if (hasAna)
         {
             UIKit.Label("AnaTitle", wc, "Thầy Cú nhận xét", 30, GameTheme.EmberDeep, TextAnchor.MiddleLeft, new Vector2(0, -35), new Vector2(740, 40), false, false, FontStyle.Bold);
-            var ana = UIKit.Label("Ana", wc, a.analysis, 22, GameTheme.PaperInk, TextAnchor.UpperLeft, new Vector2(0, -235), new Vector2(740, 300)); ana.verticalOverflow = VerticalWrapMode.Truncate;
+            // THAY BẰNG:
+            var anaContent = SinhMenuKit.MakeScroll(wc, new Vector2(0, -235), new Vector2(740, 300));
+            var vlg = anaContent.gameObject.AddComponent<VerticalLayoutGroup>();
+            vlg.childControlWidth = vlg.childControlHeight = true;
+            vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+            vlg.padding = new RectOffset(0, 12, 0, 12);
+            anaContent.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var ana = UIKit.Label("Ana", anaContent, a.analysis, 22, GameTheme.PaperInk, TextAnchor.UpperLeft, Vector2.zero, new Vector2(740, 0));
+            ana.verticalOverflow = VerticalWrapMode.Overflow;
         }
 
         // ---- phải: từng bước barem ----

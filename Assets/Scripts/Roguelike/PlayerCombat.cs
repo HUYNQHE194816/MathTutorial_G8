@@ -12,7 +12,7 @@ using UnityEngine.InputSystem;
 public class PlayerCombat : MonoBehaviour
 {
     public static float MaxHp => 100f + 10f * Meta.PermHp + 20f * RunState.Count(BuffId.Heart);
-    public const float Speed = 5.4f, DashCooldown = 3f;
+    public const float Speed = 5.4f, DashCooldown = 0.75f;
     public static bool AutoAim = true;
     public float radius = .3f;
     public bool Dead { get; private set; }
