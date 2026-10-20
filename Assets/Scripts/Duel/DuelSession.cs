@@ -7,7 +7,6 @@ using Random = UnityEngine.Random;   // tránh nhập nhằng với System.Rando
 public enum DuelMode { None, Quiz, Essay }
 
 /// <summary>Dữ liệu một trận đối kháng, sống xuyên các scene (giống SubjectSession).</summary>
-/// <summary>Dữ liệu một trận đối kháng, sống xuyên các scene (giống SubjectSession).</summary>
 public static class DuelSession
 {
     public const float Duration = 30f;          // 3 phút
@@ -23,6 +22,7 @@ public static class DuelSession
     public static int FinalScore;
     public static int EssayPoints;                // điểm tự luận cộng dồn (RoomManager ghi vào)
     public static Func<int> ScoreProbe;           // game trắc nghiệm đăng ký: () => điểm hiện tại
+    public static int Seed;                       // hạt giống dùng chung hai người (để dành cho bước đồng bộ câu hỏi)
 
     public static int MyScore
     {
@@ -94,6 +94,12 @@ public interface IDuelBackend
     int PeerScore { get; }
     bool PeerFinished { get; }
     void Tick();                                         // gọi mỗi frame từ UI
+
+    // ---- kênh lựa chọn theo vòng (game Cược Tri Thức) ----
+    void BeginRound(int round, int correctIndex);                 // báo vòng mới bắt đầu (chỉ bot dùng correctIndex)
+    void SendChoice(int round, DuelChoice choice);                // gửi lựa chọn đã khóa của mình
+    bool TryGetPeerChoice(int round, out DuelChoice choice);      // đã nhận lựa chọn của đối thủ cho vòng này chưa?
+    bool PeerLeft { get; }                                        // đối thủ đã rời hoặc mất kết nối
 }
 
 public static class DuelBackend
@@ -111,8 +117,7 @@ public class BotBackend : IDuelBackend
     readonly List<float> hits = new List<float>();
     float roundStart = -1f;
 
-    public void Connect(string myNick) { CancelSearch(); roundStart = -1f; hits.Clear(); }
-
+    public void Connect(string myNick) { CancelSearch(); roundStart = -1f; hits.Clear(); botChoice.Clear(); botDue.Clear(); }
     public void FindOpponent(Action<string> cb)
     {
         onFound = cb; foundAt = Time.unscaledTime + Random.Range(2f, 4f);
@@ -166,4 +171,35 @@ public class BotBackend : IDuelBackend
             cb(botAccepts);
         }
     }
+    // ---- kênh lựa chọn theo vòng: bot "suy nghĩ" 4-14 giây rồi mới có lựa chọn ----
+    public static float DelayScale = 1f;      // chỉ để kiểm tra nhanh (nhỏ hơn = bot trả lời nhanh hơn)
+    public static float Skill = 0.65f;        // xác suất bot biết đáp án
+
+    readonly Dictionary<int, DuelChoice> botChoice = new Dictionary<int, DuelChoice>();
+    readonly Dictionary<int, float> botDue = new Dictionary<int, float>();
+
+    public void BeginRound(int round, int correctIndex)
+    {
+        bool knows = Random.value < Skill;
+        int answer = knows ? correctIndex : Random.Range(0, 4);
+        int bet = knows ? 30 : (Random.value < .5f ? 0 : 10);    // biết thì cược lớn, không chắc thì thủ hoặc cược nhỏ
+        botChoice[round] = new DuelChoice(answer, bet);
+        botDue[round] = Time.unscaledTime + Random.Range(4f, 14f) * DelayScale;
+    }
+
+    public void SendChoice(int round, DuelChoice choice) { }     // bot không cần biết lựa chọn của mình
+
+    public bool TryGetPeerChoice(int round, out DuelChoice choice)
+    {
+        float due;
+        if (botDue.TryGetValue(round, out due) && Time.unscaledTime >= due)
+        {
+            choice = botChoice[round];
+            return true;
+        }
+        choice = DuelChoice.None;
+        return false;
+    }
+
+    public bool PeerLeft { get { return false; } }
 }
