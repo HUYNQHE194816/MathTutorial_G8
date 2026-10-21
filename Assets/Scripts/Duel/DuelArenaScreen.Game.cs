@@ -208,6 +208,9 @@ public partial class DuelArenaScreen
         Hit(me, res.myLoss);
         Hit(opp, res.oppLoss);
 
+        if (res.myLoss > 0) GameAudio.Play(myChoice.bet == 0 ? Snd.ShieldBlock : Snd.PlayerHurt);
+        else if (myChoice.answer >= 0) GameAudio.Play(res.myCorrect ? Snd.QuizCorrect : Snd.QuizWrong);
+
         revealMe.text = Describe(myChoice, res.myCorrect);
         revealMe.color = myChoice.answer < 0 ? GameTheme.Fog : res.myCorrect ? GoodCol : BadCol;
         revealOpp.text = Describe(peer, res.oppCorrect);
