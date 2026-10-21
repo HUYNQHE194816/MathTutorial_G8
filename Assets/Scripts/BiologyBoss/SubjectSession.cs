@@ -44,6 +44,8 @@ public static class SubjectSession
     public static SubjectId Subject;
     /// <summary>true khi đã chọn xong chương (đang đi trong luồng). Game dùng cờ này để biết có lọc theo bài hay không.</summary>
     public static bool Active;
+    /// <summary>true khi đang ôn TỔNG HỢP MÔN (gộp câu hỏi của mọi chương, không qua màn Chọn bài).</summary>
+    public static bool Combined;
     public static float Timeout = 8f;
     public static List<FlowChapter> Chapters = new List<FlowChapter>();
     public static FlowChapter Chapter;
@@ -53,14 +55,64 @@ public static class SubjectSession
     static readonly Dictionary<SubjectId, List<FlowChapter>> cache = new Dictionary<SubjectId, List<FlowChapter>>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() { Active = false; Chapter = null; Lesson = ""; Chapters = new List<FlowChapter>(); cache.Clear(); }
+    static void ResetStatics() { Active = false; Combined = false; Chapter = null; Lesson = ""; Chapters = new List<FlowChapter>(); cache.Clear(); }
 
     public static string ChapterScene(SubjectId s) => s == SubjectId.Ly ? "ChapterSelectScene_Ly" : s == SubjectId.Hoa ? "ChapterSelectScene_Hoa" : "ChapterSelectScene";
     public static string GameScene(SubjectId s) => s == SubjectId.Ly ? "GameplayScene" : s == SubjectId.Hoa ? "MillionareScene" : "BiologyBossScene";
 
-    public static void Begin(SubjectId s) { Subject = s; Active = false; Chapter = null; Lesson = ""; Chapters = new List<FlowChapter>(); }
+    public static void Begin(SubjectId s) { Subject = s; Active = false; Combined = false; Chapter = null; Lesson = ""; Chapters = new List<FlowChapter>(); }
 
-    public static void Choose(FlowChapter c) { Chapter = c; Lesson = ""; Active = true; }
+    public static void Choose(FlowChapter c) { Chapter = c; Lesson = ""; Active = true; Combined = false; }
+
+    /// <summary>Chọn chế độ ôn tổng hợp môn: <paramref name="all"/> lấy từ BuildCombined().</summary>
+    public static void ChooseCombined(FlowChapter all) { Chapter = all; Lesson = ""; Active = true; Combined = true; }
+
+    static readonly string[] StdHeader = { "STT", "Câu hỏi", "A", "B", "C", "D", "Đáp án", "Mức độ", "Chương", "Bài" };
+
+    static string Cell(string[] f, int i) { return i >= 0 && i < f.Length ? (f[i] ?? "") : ""; }
+
+    /// <summary>
+    /// Gộp câu hỏi của MỌI chương đã mở của môn hiện tại thành một "chương ảo" (chuẩn hoá về cùng một header, bỏ câu trùng nội dung).
+    /// Trả về null nếu môn chưa có dữ liệu hoặc chỉ có 1 chương (không cần nút tổng hợp).
+    /// </summary>
+    public static FlowChapter BuildCombined()
+    {
+        var all = new FlowChapter { title = "Tổng hợp môn", subtitle = "Toàn bộ chương", header = (string[])StdHeader.Clone() };
+        var seen = new HashSet<string>(); bool anyLevel = false; int chapters = 0;
+        foreach (var ch in Chapters)
+        {
+            if (ch == null || ch.locked || ch.rows.Count == 0 || ch.header == null) continue;
+            chapters++;
+            string[] h = ch.header;
+            int q = BioQuestionImporter.Col(h, "cauhoi", "question", "noidungcauhoi");
+            int a = BioQuestionImporter.Col(h, "a", "answera", "dapana"), b = BioQuestionImporter.Col(h, "b", "answerb", "dapanb");
+            int c = BioQuestionImporter.Col(h, "c", "answerc", "dapanc"), d = BioQuestionImporter.Col(h, "d", "answerd", "dapand");
+            int k = BioQuestionImporter.Col(h, "dapan", "dapandung", "correctindex", "correct", "answer");
+            int lv = BioQuestionImporter.Col(h, "mucdo", "level", "difficulty");
+            if (q < 0 || a < 0 || b < 0 || c < 0 || d < 0 || k < 0) { q = 1; a = 2; b = 3; c = 4; d = 5; k = 6; }   // thứ tự của file mẫu
+            if (lv >= 0) anyLevel = true;
+
+            foreach (var r in ch.rows)
+            {
+                string question = Cell(r.cells, q).Trim();
+                if (question.Length == 0 || !seen.Add(BioQuestionImporter.Norm(question))) continue;
+                all.rows.Add(new FlowRow
+                {
+                    lesson = r.lesson,
+                    cells = new[] { (all.rows.Count + 1).ToString(), question, Cell(r.cells, a), Cell(r.cells, b), Cell(r.cells, c), Cell(r.cells, d),
+                                    Cell(r.cells, k), Cell(r.cells, lv), ch.title, r.lesson == Other ? "" : r.lesson }
+                });
+            }
+        }
+        if (chapters < 2 || all.rows.Count == 0) return null;
+
+        if (!anyLevel)   // không nguồn nào có cột "Mức độ" -> bỏ cột này để game không bật chế độ bốc theo mức độ
+        {
+            var hl = new List<string>(all.header); hl.RemoveAt(7); all.header = hl.ToArray();
+            foreach (var r in all.rows) { var cl = new List<string>(r.cells); cl.RemoveAt(7); r.cells = cl.ToArray(); }
+        }
+        return all;
+    }
 
     // ---------------------------------------------------------------- nạp dữ liệu
     public static IEnumerator LoadSources(SubjectId s, SubjectSource[] sources)
@@ -191,8 +243,9 @@ public static class SubjectSession
     }
 
     /// <summary>Scene để quay về từ game: màn Chọn bài nếu đang đi trong luồng, ngược lại <paramref name="fallback"/>.</summary>
-    public static string BackSceneOr(SubjectId s, string fallback) => Active && Subject == s && Chapter != null ? LessonScene : fallback;
+    public static string BackSceneOr(SubjectId s, string fallback) => Active && Subject == s && Chapter != null ? (Combined ? ChapterScene(s) : LessonScene) : fallback;
 
-    public static string Describe(int questionCount) =>
-        $"{(Chapter != null ? Chapter.title : "")} • {(string.IsNullOrEmpty(Lesson) ? "Ôn cả chương" : Lesson)} • {questionCount} câu";
+    public static string Describe(int questionCount) => Combined
+        ? $"Ôn tổng hợp môn • {questionCount} câu"
+        : $"{(Chapter != null ? Chapter.title : "")} • {(string.IsNullOrEmpty(Lesson) ? "Ôn cả chương" : Lesson)} • {questionCount} câu";
 }
