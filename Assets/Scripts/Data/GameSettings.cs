@@ -1,3 +1,4 @@
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,15 +13,32 @@ public static class GameSettings
     const string KMuted = "KHTN_Muted";            // cùng khoá cũ của nút Âm thanh ở MainMenu
     const string KMaster = "KHTN_VolMaster", KMusic = "KHTN_VolMusic", KSfx = "KHTN_VolSfx";
     const string KBright = "KHTN_Brightness";
-    const string KFull = "KHTN_Fullscreen", KQuality = "KHTN_Quality", KFps = "KHTN_FpsIdx", KVsync = "KHTN_Vsync";
+    const string KFull = "KHTN_Fullscreen", KQuality = "KHTN_Quality", KFps = "KHTN_FpsIdx", KVsync = "KHTN_Vsync", KRes = "KHTN_ResIdx";
 
     public const float BrightMin = .5f, BrightMax = 1.25f;
     public static readonly int[] FpsOptions = { 30, 60, 120, -1 };
     public static readonly string[] FpsNames = { "30 FPS", "60 FPS", "120 FPS", "KHÔNG GIỚI HẠN" };
 
+    // ---------- Độ phân giải (danh sách giống Genshin Impact) ----------
+    public struct ResOption { public int w, h; public bool window; public string name; }
+    /// <summary>Mục 0 = "Không viền" (theo độ phân giải màn hình máy); các mục sau là chế độ cửa sổ. Chỉ giữ mục nhỏ hơn hoặc bằng màn hình.</summary>
+    public static readonly List<ResOption> Resolutions = new List<ResOption>();
+    static readonly int[] WinW = { 1680, 1600, 1440, 1400, 1366, 1360, 1280, 1280, 1280, 1280, 1280, 1280, 1152, 1024, 800, 640 };
+    static readonly int[] WinH = { 1050, 900, 900, 1050, 768, 768, 1024, 960, 800, 768, 720, 600, 864, 768, 600, 480 };
+
+    static void BuildResolutions()
+    {
+        Resolutions.Clear();
+        int sw = Mathf.Max(640, Display.main.systemWidth), sh = Mathf.Max(480, Display.main.systemHeight);
+        Resolutions.Add(new ResOption { w = sw, h = sh, window = false, name = sw + "×" + sh + " Không viền" });
+        for (int i = 0; i < WinW.Length; i++)
+            if (WinW[i] <= sw && WinH[i] <= sh)
+                Resolutions.Add(new ResOption { w = WinW[i], h = WinH[i], window = true, name = WinW[i] + "×" + WinH[i] + " Cửa Sổ" });
+    }
+
     static float master = 1f, music = 1f, sfx = 1f, brightness = 1f;
     static bool muted;
-    static int bootQuality, bootFpsIdx, bootFull, bootVsync;
+    static int bootQuality, bootFpsIdx, bootFull, bootVsync, bootRes;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Boot()
@@ -36,13 +54,39 @@ public static class GameSettings
         bootFpsIdx = FpsIndexOf(Application.targetFrameRate);
         bootFull = Screen.fullScreen ? 1 : 0;
         bootVsync = QualitySettings.vSyncCount > 0 ? 1 : 0;
+        BuildResolutions();
+        bootRes = Screen.fullScreenMode != FullScreenMode.Windowed ? 0 : ResIndexOfCurrent();
 
         ApplyAudio();
         if (PlayerPrefs.HasKey(KQuality)) QualitySettings.SetQualityLevel(Mathf.Clamp(PlayerPrefs.GetInt(KQuality), 0, QualitySettings.names.Length - 1), true);
         if (PlayerPrefs.HasKey(KVsync)) QualitySettings.vSyncCount = PlayerPrefs.GetInt(KVsync) == 1 ? 1 : 0;
         if (PlayerPrefs.HasKey(KFps)) Application.targetFrameRate = FpsOptions[Mathf.Clamp(PlayerPrefs.GetInt(KFps), 0, FpsOptions.Length - 1)];
-        if (PlayerPrefs.HasKey(KFull)) ApplyFullscreen(PlayerPrefs.GetInt(KFull) == 1);
+        if (PlayerPrefs.HasKey(KRes)) ApplyResolution(ResIdx);
+        else if (PlayerPrefs.HasKey(KFull)) ApplyFullscreen(PlayerPrefs.GetInt(KFull) == 1);   // tương thích bản cũ
         BrightnessOverlay.Ensure();
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (sc, mode) => BrightnessOverlay.Ensure();   // đảm bảo lớp phủ độ sáng luôn còn sau mỗi lần đổi scene
+    }
+
+    static int ResIndexOfCurrent()
+    {
+        for (int i = 1; i < Resolutions.Count; i++)
+            if (Resolutions[i].w == Screen.width && Resolutions[i].h == Screen.height) return i;
+        return 0;
+    }
+
+    static void ApplyResolution(int idx)
+    {
+        if (Resolutions.Count == 0) BuildResolutions();
+        var r = Resolutions[Mathf.Clamp(idx, 0, Resolutions.Count - 1)];
+        // Lưu ý: trong Unity Editor lệnh này không đổi cửa sổ Game view, chỉ có tác dụng trong bản Build.
+        Screen.SetResolution(r.w, r.h, r.window ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow);
+    }
+
+    /// <summary>Đặt lại giới hạn FPS + VSync. Khi VSync bật thì Unity BỎ QUA Application.targetFrameRate, nên 2 thứ này phải áp dụng cùng nhau.</summary>
+    static void ApplyFrameRate()
+    {
+        if (PlayerPrefs.HasKey(KVsync)) QualitySettings.vSyncCount = PlayerPrefs.GetInt(KVsync) == 1 ? 1 : 0;
+        if (PlayerPrefs.HasKey(KFps)) Application.targetFrameRate = FpsOptions[Mathf.Clamp(PlayerPrefs.GetInt(KFps), 0, FpsOptions.Length - 1)];
     }
 
     static int FpsIndexOf(int target)
@@ -92,25 +136,49 @@ public static class GameSettings
     public static int QualityLevel
     {
         get { return PlayerPrefs.HasKey(KQuality) ? Mathf.Clamp(PlayerPrefs.GetInt(KQuality), 0, QualitySettings.names.Length - 1) : QualitySettings.GetQualityLevel(); }
-        set { value = Mathf.Clamp(value, 0, QualitySettings.names.Length - 1); PlayerPrefs.SetInt(KQuality, value); QualitySettings.SetQualityLevel(value, true); }
+        set { value = Mathf.Clamp(value, 0, QualitySettings.names.Length - 1); PlayerPrefs.SetInt(KQuality, value); QualitySettings.SetQualityLevel(value, true); ApplyFrameRate(); }
     }
 
-    public static bool Fullscreen
+    /// <summary>Chỉ số trong Resolutions (0 = Không viền). Chưa chỉnh thì suy ra từ trạng thái cửa sổ hiện tại.</summary>
+    public static int ResIdx
     {
-        get { return PlayerPrefs.HasKey(KFull) ? PlayerPrefs.GetInt(KFull) == 1 : Screen.fullScreen; }
-        set { PlayerPrefs.SetInt(KFull, value ? 1 : 0); ApplyFullscreen(value); }
+        get
+        {
+            if (Resolutions.Count == 0) BuildResolutions();
+            if (!PlayerPrefs.HasKey(KRes)) return Screen.fullScreenMode != FullScreenMode.Windowed ? 0 : ResIndexOfCurrent();
+            return Mathf.Clamp(PlayerPrefs.GetInt(KRes), 0, Resolutions.Count - 1);
+        }
+        set
+        {
+            if (Resolutions.Count == 0) BuildResolutions();
+            value = Mathf.Clamp(value, 0, Resolutions.Count - 1);
+            PlayerPrefs.SetInt(KRes, value);
+            ApplyResolution(value);
+        }
+    }
+
+    public static string ResName(int idx)
+    {
+        if (Resolutions.Count == 0) BuildResolutions();
+        return Resolutions[Mathf.Clamp(idx, 0, Resolutions.Count - 1)].name;
     }
 
     public static int FpsIdx
     {
         get { return PlayerPrefs.HasKey(KFps) ? Mathf.Clamp(PlayerPrefs.GetInt(KFps), 0, FpsOptions.Length - 1) : FpsIndexOf(Application.targetFrameRate); }
-        set { value = Mathf.Clamp(value, 0, FpsOptions.Length - 1); PlayerPrefs.SetInt(KFps, value); Application.targetFrameRate = FpsOptions[value]; }
+        set
+        {
+            value = Mathf.Clamp(value, 0, FpsOptions.Length - 1);
+            PlayerPrefs.SetInt(KFps, value);
+            if (FpsOptions[value] > 0) PlayerPrefs.SetInt(KVsync, 0);   // VSync bật sẽ bỏ qua giới hạn FPS -> tự tắt để giới hạn có tác dụng
+            ApplyFrameRate();
+        }
     }
 
     public static bool Vsync
     {
         get { return PlayerPrefs.HasKey(KVsync) ? PlayerPrefs.GetInt(KVsync) == 1 : QualitySettings.vSyncCount > 0; }
-        set { PlayerPrefs.SetInt(KVsync, value ? 1 : 0); QualitySettings.vSyncCount = value ? 1 : 0; }
+        set { PlayerPrefs.SetInt(KVsync, value ? 1 : 0); ApplyFrameRate(); }
     }
 
     /// <summary>Tên mức chất lượng hiển thị (Việt hoá các tên Unity thường gặp, tên khác giữ nguyên).</summary>
@@ -135,7 +203,8 @@ public static class GameSettings
     {
         Master = 1f; Music = 1f; Sfx = 1f; Muted = false; Brightness = 1f;
         GameFont.Choice = 0; GameFont.ScaleIndex = 1;
-        QualityLevel = bootQuality; Fullscreen = bootFull == 1; FpsIdx = bootFpsIdx; Vsync = bootVsync == 1;
+        QualityLevel = bootQuality; ResIdx = bootRes; Vsync = bootVsync == 1; FpsIdx = bootFpsIdx;
+        if (bootVsync == 1) Vsync = true;   // FpsIdx có thể vừa tắt VSync, trả lại đúng mặc định
         PlayerPrefs.Save();
     }
 }
@@ -185,6 +254,6 @@ public class BrightnessOverlay : MonoBehaviour
     {
         float b = GameSettings.Brightness;
         dark.color = Color.black.WithAlpha(b < 1f ? (1f - b) : 0f);
-        light.color = Color.white.WithAlpha(b > 1f ? (b - 1f) * .5f : 0f);
+        light.color = Color.white.WithAlpha(b > 1f ? (b - 1f) * 1.2f : 0f);   // 125% -> phủ trắng 30% (trước đây chỉ ~12% nên gần như không thấy)
     }
 }

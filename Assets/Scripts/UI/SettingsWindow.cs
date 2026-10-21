@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -21,9 +21,9 @@ public class SettingsWindow : MonoBehaviour
     Slider master, music, sfx, bright;
     InputField nickIn;
     Text masterVal, musicVal, sfxVal, brightVal;
-    Text soundBtnLabel, fullBtnLabel, vsyncBtnLabel;
-    Image soundDot, fullDot, vsyncDot;
-    Text fontLabel, scaleLabel, qualityLabel, fpsLabel, previewText;
+    Text soundBtnLabel, vsyncBtnLabel;
+    Image soundDot, vsyncDot;
+    Text fontLabel, scaleLabel, qualityLabel, fpsLabel, resLabel, previewText;
 
     const int PreviewBase = 26;
 
@@ -90,8 +90,9 @@ public class SettingsWindow : MonoBehaviour
         Header("CẤU HÌNH GAME", R, 262);
         Row("Chất lượng", R, 200);
         Selector(R, 200, d => StepQuality(d), out qualityLabel);
-        Row("Toàn màn hình", R, 138);
-        Toggle(R, 138, ToggleFullscreen, out fullBtnLabel, out fullDot);
+        Row("Độ phân giải", R, 138);
+        Selector(R, 138, d => StepRes(d), out resLabel);
+        resLabel.resizeTextForBestFit = true; resLabel.resizeTextMinSize = 14; resLabel.resizeTextMaxSize = 24;
         Row("Giới hạn FPS", R, 76);
         Selector(R, 76, d => StepFps(d), out fpsLabel);
         Row("Đồng bộ dọc", R, 14);
@@ -201,13 +202,13 @@ public class SettingsWindow : MonoBehaviour
         if (brightVal != null) brightVal.text = Mathf.RoundToInt(GameSettings.Brightness * 100f) + "%";
 
         SetToggle(soundBtnLabel, soundDot, !GameSettings.Muted);
-        SetToggle(fullBtnLabel, fullDot, GameSettings.Fullscreen);
         SetToggle(vsyncBtnLabel, vsyncDot, GameSettings.Vsync);
 
         if (fontLabel != null) fontLabel.text = GameFont.Names[GameFont.Choice];
         if (scaleLabel != null) scaleLabel.text = GameFont.ScaleNames[GameFont.ScaleIndex];
         if (qualityLabel != null) qualityLabel.text = GameSettings.QualityName(GameSettings.QualityLevel);
         if (fpsLabel != null) fpsLabel.text = GameSettings.FpsNames[GameSettings.FpsIdx];
+        if (resLabel != null) resLabel.text = GameSettings.ResName(GameSettings.ResIdx);
         if (previewText != null) previewText.fontSize = Mathf.RoundToInt(PreviewBase * GameFont.Scale);
     }
 
@@ -220,7 +221,7 @@ public class SettingsWindow : MonoBehaviour
     static int Wrap(int v, int n) { return ((v % n) + n) % n; }
 
     void ToggleSound() { GameSettings.Muted = !GameSettings.Muted; RefreshValues(); }
-    void ToggleFullscreen() { GameSettings.Fullscreen = !GameSettings.Fullscreen; RefreshValues(); }
+    void StepRes(int d) { GameSettings.ResIdx = Wrap(GameSettings.ResIdx + d, GameSettings.Resolutions.Count); RefreshValues(); }
     void ToggleVsync() { GameSettings.Vsync = !GameSettings.Vsync; RefreshValues(); }
 
     void StepQuality(int d)

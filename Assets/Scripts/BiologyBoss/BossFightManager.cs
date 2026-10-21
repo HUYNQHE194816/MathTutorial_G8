@@ -51,8 +51,7 @@ public class BossFightManager : MonoBehaviour
 
     void Awake()
     {
-        I = this; Time.timeScale = 1f; Application.targetFrameRate = 60;
-
+        I = this; Time.timeScale = 1f; if (!PlayerPrefs.HasKey("KHTN_FpsIdx")) Application.targetFrameRate = 60;
         Sfx.CorrectClip = correctClip; Sfx.WrongClip = wrongClip;
         configuredTotal = totalQuestions;
         string key = (sheetUrl ?? "").Trim() + "|" + (csvFile != null ? csvFile.name : "");
