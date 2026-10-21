@@ -38,14 +38,12 @@ public partial class DuelArenaScreen
     {
         be = DuelBackend.Current;
         practice = !DuelSession.Active;          // mở thẳng scene này = chơi thử một mình với bot
-        if (practice)
-        {
-            be.Connect(GameSettings.Nickname);
-            if (be is BotBackend) BotBackend.DelayScale = PracticeFast ? .3f : 1f;
-        }
+        if (practice) be.Connect(GameSettings.Nickname);
+        else DuelSession.InMatch = true;
+        if (be is BotBackend) BotBackend.DelayScale = practice && PracticeFast ? .3f : 1f;
 
         int seed = DuelSession.Seed != 0 ? DuelSession.Seed : Random.Range(1, int.MaxValue);
-        questions = DuelQuestionBank.BuildMatch(seed, null, DuelQuestionBank.DefaultPlan);
+        questions = DuelQuestionBank.BuildMatch(seed, SubjectName(DuelSession.Subject), DuelQuestionBank.DefaultPlan);
         match = new DuelMatch(questions.Count);
 
         BuildGameUi();
@@ -57,6 +55,11 @@ public partial class DuelArenaScreen
             return;
         }
         StartRound(0);
+    }
+
+    static string SubjectName(string code)
+    {
+        switch (code) { case "ly": return "Lý"; case "hoa": return "Hóa"; case "sinh": return "Sinh"; default: return null; }
     }
 
     // ------------------------------------------------------------------ giao diện chơi
@@ -304,12 +307,20 @@ public partial class DuelArenaScreen
     // Đấu lại ngay trong scene này (chỉ đúng cho chế độ thử một mình; bước nối với sảnh sẽ đổi lại)
     void RestartMatch()
     {
+        if (!practice)
+        {
+            be.Leave();
+            DuelSession.Reset();
+            if (Application.CanStreamedLevelBeLoaded("DuelLobbyScene")) { SceneRouter.Go("DuelLobbyScene"); return; }
+        }
+
+        // chế độ thử một mình: chơi lại ngay trong scene
         if (endRoot != null) Destroy(endRoot);
-        questions = DuelQuestionBank.BuildMatch(Random.Range(1, int.MaxValue), null, DuelQuestionBank.DefaultPlan);
+        questions = DuelQuestionBank.BuildMatch(Random.Range(1, int.MaxValue), SubjectName(DuelSession.Subject), DuelQuestionBank.DefaultPlan);
         match = new DuelMatch(questions.Count);
         SetHp(me, DuelRules.MaxHp);
         SetHp(opp, DuelRules.MaxHp);
-        if (practice) be.Connect(GameSettings.Nickname);
+        be.Connect(GameSettings.Nickname);
         StartRound(0);
     }
 
@@ -318,4 +329,4 @@ public partial class DuelArenaScreen
         if (!Application.CanStreamedLevelBeLoaded("MainMenu")) { UIKit.Toast(ui, "Chưa có MainMenu trong Build Settings"); return; }
         SceneRouter.Go("MainMenu");
     }
-}
+}   

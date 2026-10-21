@@ -8,11 +8,10 @@ public class DuelLobbyScreen : MonoBehaviour
 {
     const string LobbyScene = "DuelLobbyScene";
     const string BackScene = "ModeSelectScene";
-    const string QuizScene = "SubjectSelectScene";
-    const string EssayScene = "EssaySubjectSelectScene";
+    const string ArenaScene = "DuelArenaScene";
     const float AcceptSeconds = 15f;
 
-    enum State { Searching, Found, Waiting, Choose, Declined }
+    enum State { Searching, Found, Waiting, Choose, Declined, WaitSubject }
 
     RectTransform artRoot, scene, ui, content, body;
     MenuNatureFx nature;
@@ -137,22 +136,34 @@ public class DuelLobbyScreen : MonoBehaviour
 
     void GoChoose()
     {
+        if (!DuelBackend.Current.IsHost) { GoWaitSubject(); return; }   // chỉ người tạo phòng được chọn môn
         Enter(State.Choose);
-        Lbl("CHỌN THỂ THỨC THI ĐẤU", 46, GameTheme.GoldHi, 190, true);
-        Lbl("Đối thủ: " + oppNick, 34, GameTheme.Bone, 120);
-        Lbl("Thời gian 3 phút. Đồng hồ bắt đầu khi bạn vào màn chơi.", 26, GameTheme.Fog, 60);
-        UIKit.MakeButton(body, "Btn_Quiz", "TRẮC NGHIỆM", new Vector2(-230, -50), new Vector2(420, 96), () => Choose(DuelMode.Quiz), ButtonStyle.Bronze, 36, .1f);
-        UIKit.MakeButton(body, "Btn_Essay", "TỰ LUẬN", new Vector2(230, -50), new Vector2(420, 96), () => Choose(DuelMode.Essay), ButtonStyle.Bronze, 36, .16f);
-        UIKit.MakeButton(body, "Btn_Leave", "THOÁT TRẬN", new Vector2(0, -200), new Vector2(360, 70), Back, ButtonStyle.Stone, 32, .22f);
+        Lbl("CHỌN MÔN THI ĐẤU", 46, GameTheme.GoldHi, 190, true);
+        Lbl("Đối thủ: " + oppNick, 34, GameTheme.Bone, 125);
+        UIKit.MakeButton(body, "Btn_All", "TỔNG HỢP", new Vector2(-230, 40), new Vector2(420, 84), () => Choose("all"), ButtonStyle.Bronze, 34, .1f);
+        UIKit.MakeButton(body, "Btn_Ly", "VẬT LÝ", new Vector2(230, 40), new Vector2(420, 84), () => Choose("ly"), ButtonStyle.Bronze, 34, .14f);
+        UIKit.MakeButton(body, "Btn_Hoa", "HÓA HỌC", new Vector2(-230, -60), new Vector2(420, 84), () => Choose("hoa"), ButtonStyle.Bronze, 34, .18f);
+        UIKit.MakeButton(body, "Btn_Sinh", "SINH HỌC", new Vector2(230, -60), new Vector2(420, 84), () => Choose("sinh"), ButtonStyle.Bronze, 34, .22f);
+        UIKit.MakeButton(body, "Btn_Leave", "THOÁT TRẬN", new Vector2(0, -190), new Vector2(360, 70), Back, ButtonStyle.Stone, 32, .26f);
     }
 
-    // ------------------------------------------------------------------ hành vi
-    void Choose(DuelMode mode)
+    void GoWaitSubject()
+    {
+        Enter(State.WaitSubject);
+        Lbl("ĐỐI THỦ ĐANG CHỌN MÔN…", 42, GameTheme.GoldHi, 100, true);
+        Lbl("Đối thủ: " + oppNick, 34, GameTheme.Bone, 20);
+        UIKit.MakeButton(body, "Btn_Leave", "THOÁT TRẬN", new Vector2(0, -150), new Vector2(360, 76), Back, ButtonStyle.Stone, 34, .1f);
+    }
+
+    void Choose(string subject, bool announce = true)
     {
         if (leaving) return;
         leaving = true;
-        DuelSession.Begin(mode, oppNick);
-        SceneRouter.Go(mode == DuelMode.Quiz ? QuizScene : EssayScene);
+        if (announce) DuelBackend.Current.SetSubject(subject);
+        DuelSession.Begin(DuelMode.Quiz, oppNick);
+        DuelSession.Subject = subject;                  // gán SAU Begin vì Begin xóa trắng dữ liệu
+        DuelSession.Seed = DuelBackend.Current.Seed;
+        SceneRouter.Go(ArenaScene);
     }
 
     void Back()
@@ -181,6 +192,14 @@ public class DuelLobbyScreen : MonoBehaviour
             if (timerLabel != null) timerLabel.text = "Còn " + Mathf.CeilToInt(Mathf.Max(0f, left)) + " giây để trả lời";
             if (left <= 0f) Decline();
         }
+        if (state == State.WaitSubject)
+        {
+            string s = DuelBackend.Current.PeerSubject;
+            if (!string.IsNullOrEmpty(s)) Choose(s, false);
+        }
+
+        if (state == State.Searching && DuelBackend.Current.Error != null)
+            GoDeclined("Không kết nối được máy chủ.\nKiểm tra mạng rồi thử lại.");
 
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Back();
     }
