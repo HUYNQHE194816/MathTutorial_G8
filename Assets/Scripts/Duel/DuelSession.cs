@@ -12,8 +12,7 @@ public static class DuelSession
     public const float Duration = 30f;          // 3 phút
 
     // Các scene thuộc về một trận đang diễn ra. Nạp scene khác giữa lúc đang tính giờ = bỏ cuộc.
-    static readonly string[] DuelScenes = { "GameplayScene", "MillionareScene", "BiologyBossScene", "RoomScene", "DuelResultScene" };
-
+    static readonly string[] DuelScenes = { "GameplayScene", "MillionareScene", "BiologyBossScene", "RoomScene", "DuelResultScene", "DuelArenaScene" };
     public static bool Active;
     public static DuelMode Mode;
     public static string OppNick = "";
@@ -23,6 +22,8 @@ public static class DuelSession
     public static int EssayPoints;                // điểm tự luận cộng dồn (RoomManager ghi vào)
     public static Func<int> ScoreProbe;           // game trắc nghiệm đăng ký: () => điểm hiện tại
     public static int Seed;                       // hạt giống dùng chung hai người (để dành cho bước đồng bộ câu hỏi)
+    public static string Subject = "all";         // môn đã chọn: all / ly / hoa / sinh
+    public static bool InMatch;                   // đang trong đấu trường
 
     public static int MyScore
     {
@@ -62,6 +63,7 @@ public static class DuelSession
     {
         Active = false; Mode = DuelMode.None; OppNick = "";
         EndAt = 0f; Finished = false; FinalScore = 0; EssayPoints = 0; ScoreProbe = null;
+        Subject = "all"; Seed = 0; InMatch = false;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -75,9 +77,9 @@ public static class DuelSession
     static void OnLoaded(Scene s, LoadSceneMode m)
     {
         // Về menu / chọn chế độ = thoát trận
-        if (s.name == "MainMenu" || s.name == "ModeSelectScene") { Reset(); return; }
-        // Đang tính giờ mà sang scene lạ (vd bấm "Về menu" trong game) = bỏ cuộc
-        if (Active && EndAt > 0f && Array.IndexOf(DuelScenes, s.name) < 0) Reset();
+        if (s.name == "MainMenu" || s.name == "ModeSelectScene") { DuelBackend.Current.Leave(); Reset(); return; }
+        // Đang trong trận mà sang scene lạ = bỏ cuộc
+        if (Active && (EndAt > 0f || InMatch) && Array.IndexOf(DuelScenes, s.name) < 0) { DuelBackend.Current.Leave(); Reset(); }
     }
 }
 
@@ -100,11 +102,23 @@ public interface IDuelBackend
     void SendChoice(int round, DuelChoice choice);                // gửi lựa chọn đã khóa của mình
     bool TryGetPeerChoice(int round, out DuelChoice choice);      // đã nhận lựa chọn của đối thủ cho vòng này chưa?
     bool PeerLeft { get; }                                        // đối thủ đã rời hoặc mất kết nối
+
+    // ---- thiết lập trận (5E) ----
+    bool IsHost { get; }                 // người tạo phòng = người chọn môn
+    int Seed { get; }                    // hạt giống chung để hai máy dựng cùng bộ câu hỏi
+    string Error { get; }                // lỗi kết nối, null nếu ổn
+    void SetSubject(string subject);     // host ghi môn đã chọn: "all", "ly", "hoa", "sinh"
+    string PeerSubject { get; }          // môn host đã chọn (người còn lại đọc), null nếu chưa chọn
+    void Leave();                        // rời phòng
 }
 
 public static class DuelBackend
 {
+#if DUEL_UGS
+    public static IDuelBackend Current = new UgsBackend();
+#else
     public static IDuelBackend Current = new BotBackend();
+#endif
 }
 
 /// <summary>Đối thủ giả để thử luồng khi chưa có mạng: tìm 2-4 giây, 85% đồng ý, mỗi 8-18 giây đúng một câu (10 điểm).</summary>
@@ -117,7 +131,7 @@ public class BotBackend : IDuelBackend
     readonly List<float> hits = new List<float>();
     float roundStart = -1f;
 
-    public void Connect(string myNick) { CancelSearch(); roundStart = -1f; hits.Clear(); botChoice.Clear(); botDue.Clear(); }
+    public void Connect(string myNick) { CancelSearch(); roundStart = -1f; hits.Clear(); botChoice.Clear(); botDue.Clear(); seedValue = Random.Range(1, int.MaxValue); }
     public void FindOpponent(Action<string> cb)
     {
         onFound = cb; foundAt = Time.unscaledTime + Random.Range(2f, 4f);
@@ -202,4 +216,12 @@ public class BotBackend : IDuelBackend
     }
 
     public bool PeerLeft { get { return false; } }
+    // ---- thiết lập trận ----
+    int seedValue;
+    public bool IsHost { get { return true; } }          // bot luôn để bạn chọn môn
+    public int Seed { get { return seedValue; } }
+    public string Error { get { return null; } }
+    public void SetSubject(string subject) { }
+    public string PeerSubject { get { return null; } }
+    public void Leave() { }
 }
