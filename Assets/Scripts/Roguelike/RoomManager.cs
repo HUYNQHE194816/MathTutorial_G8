@@ -75,6 +75,9 @@ public class RoomManager : MonoBehaviour
     EssaySolveUI solve; float hudT, reactionT, bannerT, introT, hurtA; Color overlayTarget; float darkCur, darkTarget, darkUntil;
     StoryDirector story; TouchControls touch;
 
+    // ---- menu tạm dừng (Esc) ----
+    RectTransform pauseRoot; bool paused, frozenBeforePause;
+
     // ---- trạng thái ----
     List<EssayProblem> problems = new List<EssayProblem>();
     State state = State.Fighting;
@@ -88,7 +91,7 @@ public class RoomManager : MonoBehaviour
     System.Action<GradeBand, string> bossDone; bool inBossEssay; string essaySubject; string essayTitle;
     const string StudentCode = "local";
 
-    void OnDestroy() { if (Instance == this) Instance = null; Frozen = false; Foe.Killed = null; Cursor.visible = true; Combat.FieldStrength = 0f; Combat.Gravity = Vector2.zero; }
+    void OnDestroy() { Time.timeScale = 1f; if (Instance == this) Instance = null; Frozen = false; Foe.Killed = null; Cursor.visible = true; Combat.FieldStrength = 0f; Combat.Gravity = Vector2.zero; }
 
     void Start()
     {
@@ -337,6 +340,8 @@ public class RoomManager : MonoBehaviour
     // ------------------------------------------------------------------ vòng lặp
     void Update()
     {
+        HandlePauseKey();
+        if (paused) return;   // đang tạm dừng: không chạy logic màn chơi
         Combat.Now += Combat.Dt;
         float rdt = Time.deltaTime;
         if (reactionT > 0f) { reactionT -= rdt; if (reactionT <= 0f) reactionText.text = ""; }
@@ -366,6 +371,45 @@ public class RoomManager : MonoBehaviour
             case State.Rest: RestUpdate(); break;
             case State.Final: FinalUpdate(); break;
         }
+    }
+
+    // ------------------------------------------------------------------ MENU TẠM DỪNG (Esc)
+    void HandlePauseKey()
+    {
+        var kb = Keyboard.current;
+        if (kb == null || !kb.escapeKey.wasPressedThisFrame) return;
+        if (paused) { ClosePause(); return; }          // Esc lần nữa = tiếp tục chơi
+        if (state == State.Cutscene) return;           // đang chiếu cốt truyện: Esc dùng để bỏ qua (StoryDirector xử lý)
+        OpenPause();
+    }
+
+    void OpenPause()
+    {
+        paused = true; frozenBeforePause = Frozen; Frozen = true; Time.timeScale = 0f;
+        GameAudio.Play(Snd.UiClick);
+        pauseRoot = UIKit.BuildCanvas(transform, "Pause_UI", 400);
+        var dim = UIKit.CBox("Dim", pauseRoot, new Color(0, 0, 0, .78f), Vector2.zero, Vector2.zero, true); UIKit.Stretch(dim, 0, 0, 0, 0);
+        UIKit.Panel(dim, "Panel", Vector2.zero, new Vector2(1000, 520), PanelStyle.Dark, out var c);
+        UIKit.Label("T", c, "TẠM DỪNG", 64, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 150), new Vector2(900, 90), true, true, FontStyle.Bold);
+        UIKit.Divider(c, new Vector2(0, 98), 560);
+        UIKit.Label("Q", c, "Bạn có muốn thoát game không?\nLượt chơi được lưu ở đầu màn hiện tại, có thể bấm TIẾP TỤC LƯỢT DỞ ở menu.", 30, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 10), new Vector2(880, 130));
+        UIKit.MakeButton(c, "Yes", "ĐỒNG Ý THOÁT", new Vector2(-230, -160), new Vector2(400, 84), QuitFromPause, ButtonStyle.Danger, 32);
+        UIKit.MakeButton(c, "No", "TIẾP TỤC CHƠI", new Vector2(230, -160), new Vector2(400, 84), ClosePause, ButtonStyle.Bronze, 32);
+    }
+
+    void ClosePause()
+    {
+        if (!paused) return;
+        paused = false; Time.timeScale = 1f;
+        Frozen = frozenBeforePause || state == State.Panel;
+        if (pauseRoot != null) { Destroy(pauseRoot.gameObject); pauseRoot = null; }
+    }
+
+    void QuitFromPause()
+    {
+        if (!Application.CanStreamedLevelBeLoaded(menuSceneName)) { ClosePause(); UIKit.Toast(hud, "Không tìm thấy scene menu: " + menuSceneName); return; }
+        RogueAudio.Stop();
+        SceneRouter.Go(menuSceneName);   // giữ nguyên timeScale = 0 và Frozen cho đến khi scene mới nạp xong (SceneRouter tự đặt lại timeScale = 1)
     }
 
     bool Interact() { var k = Keyboard.current; return (k != null && k.eKey.wasPressedThisFrame) || TouchControls.InteractPressed; }
