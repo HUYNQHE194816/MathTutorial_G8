@@ -84,7 +84,7 @@ public class RoomManager : MonoBehaviour
     // ---- một rương / một trụ đá ----
     EssayProblem prob; EssayVariant variant; EssayDifficulty difficulty;
     int attemptsUsed, hintLevel, hintsPaid, hintCap; int[] missStreak;
-    int duelBest;   // điểm cao nhất đã tính cho bài đang làm (Đối kháng)
+
     System.Action<GradeBand, string> bossDone; bool inBossEssay; string essaySubject; string essayTitle;
     const string StudentCode = "local";
 
@@ -481,7 +481,7 @@ public class RoomManager : MonoBehaviour
         state = State.Solving; Frozen = true; RogueAudio.Play(RSfx.Select, .7f);
         var p = RoomRules.PickProblem(problems, Subject, RunState.difficulty, usedIds, rng);
         if (p == null) { UIKit.Toast(hud, "Môn này chưa có bài."); Frozen = false; state = State.ChestReady; return; }
-        difficulty = RunState.difficulty; prob = p; usedIds.Add(p.id); attemptsUsed = 0; duelBest = 0; missStreak = new int[p.rubric.Length]; inBossEssay = false; essaySubject = Subject;
+        difficulty = RunState.difficulty; prob = p; usedIds.Add(p.id); attemptsUsed = 0; missStreak = new int[p.rubric.Length]; inBossEssay = false; essaySubject = Subject;
         essayTitle = "Rương Câu Đố · Màn " + StageLabel + " · " + SubjectName(Subject) + " · " + RoomRules.DifficultyName(difficulty);
         StartAttempt();
     }
@@ -600,11 +600,7 @@ public class RoomManager : MonoBehaviour
     void FinishGrade(string[] lines, EssayGradeResult res, string note)
     {
         attemptsUsed++;
-        if (DuelSession.Active && DuelSession.Mode == DuelMode.Essay && res.score > duelBest)
-        {   // chỉ cộng phần cải thiện, tránh nộp lại nhiều lần để cày điểm
-            DuelSession.EssayPoints += res.score - duelBest;
-            duelBest = res.score;
-        }
+
         for (int i = 0; i < missStreak.Length; i++) missStreak[i] = res.steps[i].status == EssayStepStatus.Missing || res.steps[i].status == EssayStepStatus.Wrong ? missStreak[i] + 1 : 0;
         var band = RoomRules.Band(res.score, res.maxScore);
         int earned = RoomRules.InkFor(res.score, difficulty, hintsPaid); RunState.ink += earned; RefreshHud();
@@ -672,7 +668,7 @@ public class RoomManager : MonoBehaviour
         var p = RoomRules.PickProblem(problems, subject, d, usedIds, rng);
         if (p == null) { foreach (var s in new[] { "ly", "hoa", "sinh" }) { p = RoomRules.PickProblem(problems, s, d, usedIds, rng); if (p != null) { essaySubject = s; break; } } }
         if (p == null) { Frozen = false; inBossEssay = false; UIKit.Toast(hud, "Chưa có đề cho trụ đá."); done?.Invoke(GradeBand.Pass, null); return; }
-        prob = p; usedIds.Add(p.id); attemptsUsed = 0; duelBest = 0; missStreak = new int[p.rubric.Length];
+        prob = p; usedIds.Add(p.id); attemptsUsed = 0; missStreak = new int[p.rubric.Length];
         essayTitle = (BossBase.Current != null ? BossBase.Current.bossName : "Boss") + " · Trụ đá · " + SubjectName(essaySubject) + " · " + RoomRules.DifficultyName(d);
         NewVariant(); int have = prob.hints != null ? prob.hints.Length : 0; hintCap = Mathf.Min(RoomRules.MaxHints(d), have); hintLevel = 0; hintsPaid = 0;
         if (hintCap > 0 && RoomRules.AutoFirstHint(d)) hintLevel = 1;
