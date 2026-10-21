@@ -142,7 +142,7 @@ public class MillionaireManager : MonoBehaviour
 
     void Start()
     {
-        DuelSession.ScoreProbe = () => current * 10;   // Đối kháng: số câu đã đúng x 10
+
         StartCoroutine(InitRoutine());
     }
     IEnumerator InitRoutine()

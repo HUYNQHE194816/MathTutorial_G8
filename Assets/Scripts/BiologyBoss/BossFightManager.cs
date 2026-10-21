@@ -52,7 +52,7 @@ public class BossFightManager : MonoBehaviour
     void Awake()
     {
         I = this; Time.timeScale = 1f; Application.targetFrameRate = 60;
-        DuelSession.ScoreProbe = () => correct * 10;   // Đối kháng
+
         Sfx.CorrectClip = correctClip; Sfx.WrongClip = wrongClip;
         configuredTotal = totalQuestions;
         string key = (sheetUrl ?? "").Trim() + "|" + (csvFile != null ? csvFile.name : "");
