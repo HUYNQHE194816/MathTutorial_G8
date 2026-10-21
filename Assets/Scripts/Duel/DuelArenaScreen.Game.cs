@@ -237,6 +237,7 @@ public partial class DuelArenaScreen
         {
             case Phase.Question:
                 {
+                    if (be.PeerLeft) { EndMatch(true); break; }
                     float left = RoundSeconds - (now - phaseT0);
                     timerText.text = Mathf.CeilToInt(Mathf.Max(0f, left)).ToString();
                     timerText.color = left <= 5f ? new Color(1f, .4f, .35f) : GameTheme.Bone;
