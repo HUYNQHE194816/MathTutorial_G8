@@ -27,6 +27,9 @@ public partial class DuelArenaScreen
     readonly Text[] ansTxt = new Text[4];
     readonly Image[] ansMark = new Image[4], betMark = new Image[4];
     Button lockBtn;
+    Button quitBtn;
+    Text quitLabel;
+    float quitArmedAt = -10f;
     GameObject endRoot;
 
     static readonly Color Gold = new Color(1f, .82f, .35f);
@@ -105,6 +108,8 @@ public partial class DuelArenaScreen
             me.home + new Vector2(50f, 320f), new Vector2(260f, 90f), false, true, FontStyle.Bold);
         revealOpp = UIKit.Label("RevealOpp", scene, "", 30, GameTheme.Bone, TextAnchor.MiddleCenter,
             opp.home + new Vector2(-50f, 320f), new Vector2(260f, 90f), false, true, FontStyle.Bold);
+        quitBtn = UIKit.MakeButton(ui, "Btn_Quit", "BỎ CUỘC", new Vector2(-800f, -480f), new Vector2(240f, 56f), QuitMatch, ButtonStyle.Danger, 24, .3f);
+        quitLabel = quitBtn.GetComponentInChildren<Text>();
     }
 
     // Viền sáng nằm sau nút (tạo trước nút nên được vẽ phía sau); bật/tắt để đánh dấu lựa chọn.
@@ -232,7 +237,7 @@ public partial class DuelArenaScreen
         if (phase == Phase.None || be == null) return;
         float now = Time.unscaledTime;
         be.Tick();
-
+        if (quitLabel != null && quitLabel.text != "BỎ CUỘC" && now - quitArmedAt > 3f) quitLabel.text = "BỎ CUỘC";
         switch (phase)
         {
             case Phase.Question:
@@ -329,5 +334,18 @@ public partial class DuelArenaScreen
     {
         if (!Application.CanStreamedLevelBeLoaded("MainMenu")) { UIKit.Toast(ui, "Chưa có MainMenu trong Build Settings"); return; }
         SceneRouter.Go("MainMenu");
+    }
+    void QuitMatch()
+    {
+        if (phase == Phase.End) return;
+        if (Time.unscaledTime - quitArmedAt > 3f)
+        {   // lần bấm đầu: hỏi lại, tránh bấm nhầm
+            quitArmedAt = Time.unscaledTime;
+            quitLabel.text = "BẤM LẦN NỮA";
+            return;
+        }
+        be.Leave();
+        DuelSession.Reset();
+        GoMenu();
     }
 }   
