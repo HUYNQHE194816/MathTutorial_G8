@@ -109,7 +109,9 @@ public partial class DuelArenaScreen : MonoBehaviour
         BuildHpBar(opp, 560f, true, GameTheme.Ember);
 
         me.nameText.text = GameSettings.Nickname;
-        opp.nameText.text = string.IsNullOrEmpty(DuelSession.OppNick) ? "Đối thủ thử" : DuelSession.OppNick;
+        string oppName = string.IsNullOrEmpty(DuelSession.OppNick) ? "Đối thủ thử" : DuelSession.OppNick;
+        if (string.Equals(oppName, GameSettings.Nickname, System.StringComparison.OrdinalIgnoreCase)) oppName += " (2)";
+        opp.nameText.text = oppName;
 
         roundText = UIKit.Label("Round", ui, "VÒNG 1 / 10", 34, GameTheme.GoldHi, TextAnchor.MiddleCenter,
             new Vector2(0, 505f), new Vector2(400f, 44f), true, true, FontStyle.Bold);
