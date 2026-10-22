@@ -26,9 +26,11 @@ public static class ProgressSaveSystem
     public const string SubjectLy = "Lý";
     public const string SubjectHoa = "Hóa";
     public const string SubjectSinh = "Sinh";
+    /// <summary>Chế độ Tự luận (roguelike). Không nằm trong Subjects nên Dashboard vẫn chỉ hiện 3 môn.</summary>
+    public const string SubjectTuLuan = "Tự luận";
     public static readonly string[] Subjects = { SubjectLy, SubjectHoa, SubjectSinh };
 
-    private const int MaxSessions = 30;
+    private const int MaxSessions = 200;
 
     public static readonly BadgeDef[] Badges =
     {
@@ -117,7 +119,8 @@ public static class ProgressSaveSystem
     }
 
     // ---------- Ghi kết quả một lượt chơi ----------
-    public static void RecordSession(string subject, int score, int correct, int wrong, bool won, float seconds)
+    /// <param name="essayInfo">null = các game trắc nghiệm Lý/Hóa/Sinh. Khác null = lượt Tự luận (vd. "Độ khó: Khó"), ghi vào cột Chương.</param>
+    public static void RecordSession(string subject, int score, int correct, int wrong, bool won, float seconds, string essayInfo = null)
     {
 
         var d = Current;
@@ -125,10 +128,11 @@ public static class ProgressSaveSystem
 
         // Bài đang chơi (lấy từ luồng Chọn môn > Chương > Bài; không đi qua luồng thì để trống)
         string chapter = "", lesson = "";
-        if (SubjectSession.Active && SubjectSession.Chapter != null && SubjectSession.Subject == ToId(subject))
+        if (essayInfo != null) chapter = essayInfo;
+        else if (SubjectSession.Active && SubjectSession.Chapter != null && SubjectSession.Subject == ToId(subject))
         {
             chapter = SubjectSession.Chapter.title;
-            lesson = string.IsNullOrEmpty(SubjectSession.Lesson) ? "Ôn cả chương" : SubjectSession.Lesson;
+            lesson = SubjectSession.Combined ? "Ôn tổng hợp môn" : (string.IsNullOrEmpty(SubjectSession.Lesson) ? "Ôn cả chương" : SubjectSession.Lesson);
         }
 
         d.sessions.Add(new SessionRecord
@@ -171,6 +175,23 @@ public static class ProgressSaveSystem
 
         Refresh(d);
         Save();
+
+        // Gửi lên database online (bảng xếp hạng + lịch sử mọi người chơi). Mất mạng thì CloudSync giữ lại và gửi sau.
+        CloudSync.Submit(new CloudResult
+        {
+            student_name = d.studentName,
+            student_class = d.studentClass,
+            nickname = GameSettings.Nickname,
+            mode = essayInfo != null ? "tu_luan" : "trac_nghiem",
+            subject = subject,
+            chapter = chapter,
+            lesson = lesson,
+            score = score,
+            correct = correct,
+            wrong = wrong,
+            won = won,
+            seconds = Mathf.RoundToInt(seconds)
+        });
     }
 
     private static SubjectId ToId(string subject)
@@ -262,12 +283,14 @@ public static class ProgressSaveSystem
     /// <summary>Thêm vài lượt chơi mẫu để xem dashboard khi chưa chơi thật.</summary>
     public static void DebugAddDemoData()
     {
+        CloudSync.Suppress = true;   // dữ liệu mẫu chỉ ở máy, không gửi lên database
         RecordSession(SubjectLy, 40, 4, 1, false, 300f);
         RecordSession(SubjectHoa, 60, 6, 1, false, 240f);
         RecordSession(SubjectLy, 90, 9, 1, true, 520f);
         RecordSession(SubjectHoa, 100, 10, 0, true, 410f);
         RecordSession(SubjectLy, 120, 12, 2, true, 480f);
         RecordSession(SubjectHoa, 30, 3, 1, false, 150f);
+        CloudSync.Suppress = false;
         Debug.Log("[Progress] Đã thêm dữ liệu mẫu cho " + Current.studentName);
     }
 }

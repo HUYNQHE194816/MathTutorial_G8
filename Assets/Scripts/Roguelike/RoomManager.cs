@@ -78,6 +78,10 @@ public class RoomManager : MonoBehaviour
     // ---- menu tạm dừng (Esc) ----
     RectTransform pauseRoot; bool paused, frozenBeforePause;
 
+    // ---- ghi kết quả lượt chơi Tự luận (lưu local + gửi database) ----
+    static float runSeconds;      // thời gian thật đã chơi của lượt này (xuyên các màn, vì mỗi màn là một lần nạp scene)
+    bool resultRecorded;
+
     // ---- trạng thái ----
     List<EssayProblem> problems = new List<EssayProblem>();
     State state = State.Fighting;
@@ -99,7 +103,7 @@ public class RoomManager : MonoBehaviour
         Combat.Reset(); CombatBolt.Enemy.Clear();
         if (RunState.ink < 0) RunState.ink = startInk;
         if (RunState.main == null) RunState.ResetAll(true);
-        if (RunState.stage == 1 && RunState.room == 1 && RunState.phase == RunPhase.Room) usedIds.Clear();
+        if (RunState.stage == 1 && RunState.room == 1 && RunState.phase == RunPhase.Room) { usedIds.Clear(); runSeconds = 0f; }
         biome = RunState.phase == RunPhase.Final || RunState.phase == RunPhase.Ending ? 2 : RunState.Biome;
 
         problems = problemsJson != null ? EssayProblemBank.Parse(problemsJson.text) : new List<EssayProblem>();
@@ -342,6 +346,7 @@ public class RoomManager : MonoBehaviour
     {
         HandlePauseKey();
         if (paused) return;   // đang tạm dừng: không chạy logic màn chơi
+        runSeconds += Time.unscaledDeltaTime;
         Combat.Now += Combat.Dt;
         float rdt = Time.deltaTime;
         if (reactionT > 0f) { reactionT -= rdt; if (reactionT <= 0f) reactionText.text = ""; }
@@ -955,14 +960,33 @@ public class RoomManager : MonoBehaviour
         story.PlayEnding(FinishRun);
     }
 
+    /// <summary>
+    /// Ghi kết quả khi lượt kết thúc (chết hoặc thắng). Điểm = (số màn đã vượt x 100 + số boss đã hạ x 250) x hệ số độ khó (Dễ 1 · Thường 1.5 · Khó 2 · Siêu khó 3).
+    /// Màn đánh số 1..15 (mỗi chặng 4 màn + boss) rồi màn cuối 16.
+    /// </summary>
+    void RecordRun(bool won)
+    {
+        if (resultRecorded) return; resultRecorded = true;
+        bool last = RunState.phase == RunPhase.Final || RunState.phase == RunPhase.Ending;
+        int index = last ? 16 : (RunState.stage - 1) * (RunState.RoomsPerStage + 1) + RunState.room;
+        int cleared = Mathf.Max(0, index - 1) + (won ? 1 : 0);
+        float mul = RunState.difficulty == EssayDifficulty.Expert ? 3f : RunState.difficulty == EssayDifficulty.Hard ? 2f : RunState.difficulty == EssayDifficulty.Normal ? 1.5f : 1f;
+        string dName = RunState.difficulty == EssayDifficulty.Expert ? "Siêu khó" : RunState.difficulty == EssayDifficulty.Hard ? "Khó" : RunState.difficulty == EssayDifficulty.Normal ? "Bình thường" : "Dễ";
+        int score = Mathf.RoundToInt((cleared * 100 + RunState.bossesDown * 250) * mul);
+        try { ProgressSaveSystem.RecordSession(ProgressSaveSystem.SubjectTuLuan, score, 0, 0, won, runSeconds, "Độ khó: " + dName); }
+        catch (System.Exception e) { Debug.LogWarning("Không ghi được kết quả tự luận: " + e.Message); }
+    }
+
     void FinishRun()
     {
+        RecordRun(true);
         Meta.Clears = Meta.Clears + 1; RunSave.Clear(); RunState.ResetAll(true); RogueAudio.Stop(); SceneRouter.Go(menuSceneName);
     }
 
     // ------------------------------------------------------------------ chết
     void OnPlayerDied()
     {
+        RecordRun(false);
         GameAudio.Play(Snd.Defeat); RogueAudio.Duck(.2f);
         OpenPanel(new Vector2(1000, 600), out var c);
         string where = RunState.checkpoint.phase == RunPhase.Rest ? "phòng nghỉ sau boss của chặng " + (RunState.checkpoint.stage - 1) : "màn " + RunState.checkpoint.stage + "-1";
