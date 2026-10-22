@@ -24,6 +24,7 @@ public class MainMenuScreen : MonoBehaviour
     RectTransform artRoot, scene, ui;
     SettingsWindow settings;
     PracticeLogWindow practiceLog;
+    LeaderboardWindow leaderboard;
     readonly List<Drift> drifts = new List<Drift>();
     readonly List<Puff> puffs = new List<Puff>();
     Sprite[] knightFrames, flameFrames, puffSprites;
@@ -185,16 +186,19 @@ public class MainMenuScreen : MonoBehaviour
         }
         else UIKit.Panel(ui, "MenuFrame", new Vector2(0, -50), new Vector2(600, 580), PanelStyle.Dark, out _);
 
-        UIKit.MakeButton(ui, "Btn_Start", "BẮT ĐẦU", new Vector2(0, 113), new Vector2(440, 88),
-      () => SceneRouter.Go("ModeSelectScene"), ButtonStyle.Bronze, 42, 0f);
-        UIKit.MakeButton(ui, "Btn_Dashboard", "TIẾN ĐỘ", new Vector2(0, 21), new Vector2(440, 72),
-            OpenDashboard, ButtonStyle.Stone, 34, .08f);
-        UIKit.MakeButton(ui, "Btn_Log", "NHẬT KÝ", new Vector2(0, -63), new Vector2(440, 72),
-            OpenPracticeLog, ButtonStyle.Stone, 34, .16f);
-        UIKit.MakeButton(ui, "Btn_Settings", "CÀI ĐẶT", new Vector2(0, -147), new Vector2(440, 72),
-            OpenSettings, ButtonStyle.Stone, 34, .24f);
-        UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -231), new Vector2(440, 72),
-            Quit, ButtonStyle.Stone, 34, .32f);
+        // 6 nút nằm gọn trong vùng trong của khung (y từ -267 đến 157, như lúc còn 5 nút): nút BẮT ĐẦU cao 80, 5 nút còn lại cao 60, cách nhau 8
+        UIKit.MakeButton(ui, "Btn_Start", "BẮT ĐẦU", new Vector2(0, 117), new Vector2(440, 80),
+      () => SceneRouter.Go("ModeSelectScene"), ButtonStyle.Bronze, 40, 0f);
+        UIKit.MakeButton(ui, "Btn_Dashboard", "TIẾN ĐỘ", new Vector2(0, 39), new Vector2(440, 60),
+            OpenDashboard, ButtonStyle.Stone, 32, .08f);
+        UIKit.MakeButton(ui, "Btn_Board", "XẾP HẠNG", new Vector2(0, -29), new Vector2(440, 60),
+            OpenLeaderboard, ButtonStyle.Stone, 32, .14f);
+        UIKit.MakeButton(ui, "Btn_Log", "NHẬT KÝ", new Vector2(0, -97), new Vector2(440, 60),
+            OpenPracticeLog, ButtonStyle.Stone, 32, .20f);
+        UIKit.MakeButton(ui, "Btn_Settings", "CÀI ĐẶT", new Vector2(0, -165), new Vector2(440, 60),
+            OpenSettings, ButtonStyle.Stone, 32, .26f);
+        UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -233), new Vector2(440, 60),
+            Quit, ButtonStyle.Stone, 32, .32f);
     }
 
     void BuildFooter()
@@ -232,6 +236,12 @@ public class MainMenuScreen : MonoBehaviour
     {
         if (settings != null) return;
         settings = SettingsWindow.Open(ui, () => settings = null);
+    }
+    // Bảng xếp hạng + lịch sử của tất cả người chơi (LeaderboardWindow, dữ liệu từ Supabase). Tự xử lý Esc và đóng.
+    void OpenLeaderboard()
+    {
+        if (leaderboard != null) return;
+        leaderboard = LeaderboardWindow.Open(ui, () => leaderboard = null);
     }
     void OpenPracticeLog()
     {
