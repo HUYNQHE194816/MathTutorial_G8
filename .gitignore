@@ -117,3 +117,8 @@ InitTestScene*.unity*
 
 # Khóa API (KHÔNG commit)
 /ai_key.txt
+# Cấu hình / khóa bí mật (KHÔNG commit)
+.env
+.env.*
+/Assets/Resources/cloud_config.json
+/Assets/Resources/cloud_config.json.meta

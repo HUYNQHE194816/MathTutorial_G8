@@ -59,7 +59,7 @@ public class AIService : MonoBehaviour
     [SerializeField] private int timeoutText = 30, timeoutImage = 60;
 
     /// <summary>Đã có khóa API để gọi Gemini chưa (tự luận dùng để quyết định bật AI hay rơi về bộ chấm tạm).</summary>
-    public bool HasKey => !string.IsNullOrWhiteSpace(apiKey);
+    public bool HasKey => CloudConfig.Configured;
 
     private const string URL_FORMAT = "https://generativelanguage.googleapis.com/v1beta/models/{0}:generateContent";
 
@@ -248,7 +248,7 @@ Thông tin câu hỏi gốc:
         while (busy) yield return null;
         busy = true;
 
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (!CloudConfig.Configured)
         {
             busy = false;
             onError?.Invoke("Chưa cấu hình API key cho AIService.");
@@ -282,7 +282,7 @@ Thông tin câu hỏi gốc:
         foreach (string model in models)
         {
             if (string.IsNullOrWhiteSpace(model)) continue;
-            string url = string.Format(URL_FORMAT, model.Trim());
+            string url = CloudConfig.Url.TrimEnd('/') + "/functions/v1/ai-proxy?model=" + Uri.EscapeDataString(model.Trim());
 
             for (int attempt = 0; attempt < attemptsPerModel; attempt++)
             {
@@ -291,7 +291,7 @@ Thông tin câu hỏi gốc:
                     request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                     request.downloadHandler = new DownloadHandlerBuffer();
                     request.SetRequestHeader("Content-Type", "application/json");
-                    request.SetRequestHeader("x-goog-api-key", apiKey);
+                    request.SetRequestHeader("apikey", CloudConfig.AnonKey);
                     request.timeout = timeout;      // tránh kẹt hàng đợi khi mạng treo
 
                     yield return request.SendWebRequest();
