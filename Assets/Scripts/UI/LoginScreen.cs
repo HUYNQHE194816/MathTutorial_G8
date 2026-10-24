@@ -12,14 +12,17 @@ using UnityEngine.UI;
 /// </summary>
 public class LoginScreen : MonoBehaviour
 {
-    const string PrefName = "login.name", PrefClass = "login.class";
+    const string PrefName = "login.name", PrefClass = "login.class", PrefTeacherEmail = "login.teacher_email";
+    const string StudentBtn = "BƯỚC VÀO MÀN SƯƠNG", TeacherBtn = "ĐĂNG NHẬP GIÁO VIÊN";
     [SerializeField] string nextScene = "MainMenu";
 
     RectTransform artRoot, scene, ui, panel, plate, knightRt;
     CanvasGroup headCg, panelCg, plateCg;
     InputField nameIn, classIn;
     Image nameFrame, classFrame;
-    Text message, plateText, btnLabel;
+    Text message, plateText, btnLabel, lbl1, lbl2, titleText, modeLabel;
+    Button modeBtn;
+    bool teacherMode;
     Button loginBtn;
     MenuNatureFx nature;
     Sprite[] knightFrames;
@@ -121,17 +124,19 @@ public class LoginScreen : MonoBehaviour
         panel = UIKit.Panel(ui, "LoginPanel", panelBase, new Vector2(780, 660), PanelStyle.Dark, out var c);
         panelCg = panel.gameObject.AddComponent<CanvasGroup>();
 
-        UIKit.Label("T", c, "Sổ Ký Ức", 56, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 245), new Vector2(660, 76), true, true, FontStyle.Bold);
+        titleText = UIKit.Label("T", c, "Sổ Ký Ức", 56, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 245), new Vector2(660, 76), true, true, FontStyle.Bold);
         UIKit.Divider(c, new Vector2(0, 196), 420);
 
-        UIKit.Label("L1", c, "TÊN CỦA BẠN", 24, GameTheme.Fog, TextAnchor.MiddleLeft, new Vector2(0, 140), new Vector2(580, 34), false, true);
+        lbl1 = UIKit.Label("L1", c, "TÊN CỦA BẠN", 24, GameTheme.Fog, TextAnchor.MiddleLeft, new Vector2(0, 140), new Vector2(580, 34), false, true);
         nameIn = MakeInput(c, "In_Name", "Ví dụ: Nguyễn Văn An", new Vector2(0, 80), 28, out nameFrame);
-        UIKit.Label("L2", c, "LỚP", 24, GameTheme.Fog, TextAnchor.MiddleLeft, new Vector2(0, 10), new Vector2(580, 34), false, true);
+        lbl2 = UIKit.Label("L2", c, "LỚP", 24, GameTheme.Fog, TextAnchor.MiddleLeft, new Vector2(0, 10), new Vector2(580, 34), false, true);
         classIn = MakeInput(c, "In_Class", "Ví dụ: 8A1", new Vector2(0, -50), 8, out classFrame);
 
         message = UIKit.Label("Msg", c, "", 28, GameTheme.Blood, TextAnchor.MiddleCenter, new Vector2(0, -125), new Vector2(600, 40));
         loginBtn = UIKit.MakeButton(c, "Btn_Login", "BƯỚC VÀO MÀN SƯƠNG", new Vector2(0, -205), new Vector2(580, 92), TrySubmit, ButtonStyle.Bronze, 36, .5f);
         btnLabel = loginBtn.GetComponentInChildren<Text>();
+        modeBtn = UIKit.MakeButton(c, "Btn_Mode", "TÔI LÀ GIÁO VIÊN", new Vector2(0, -288), new Vector2(420, 48), ToggleMode, ButtonStyle.Stone, 22, .6f);
+        modeLabel = modeBtn.GetComponentInChildren<Text>();
 
         nameIn.onEndEdit.AddListener(s => { if (EnterPressed() && s.Trim().Length > 0) Focus(classIn); });
         classIn.onEndEdit.AddListener(s => { if (EnterPressed()) TrySubmit(); });
@@ -170,6 +175,7 @@ public class LoginScreen : MonoBehaviour
     void TrySubmit()
     {
         if (locked || Time.unscaledTime - t0 < 1.2f) return;
+        if (teacherMode) { TeacherSubmit(); return; }
         string n = nameIn.text.Trim(), c = classIn.text.Trim().ToUpperInvariant();
         if (n.Length < 2) { Fail(true, "Bạn chưa khắc tên vào Sổ Ký Ức!"); return; }
         if (c.Length < 1) { Fail(false, "Hãy nhập lớp của bạn (ví dụ 8A1)."); return; }
@@ -193,14 +199,102 @@ public class LoginScreen : MonoBehaviour
         ProgressSaveSystem.Load(n, c);
         PlayerPrefs.SetString(PrefName, n); PlayerPrefs.SetString(PrefClass, c); PlayerPrefs.Save();
 
-        nameIn.interactable = false; classIn.interactable = false; loginBtn.interactable = false;
+        SetBusy(true);
         btnLabel.text = "ĐANG VÀO...";
+        message.text = "Đang mở cánh cổng..."; message.color = GameTheme.Fog;
+        Say("Chào " + n + "! Chờ ta một chút.");
+
+        // Đăng nhập ẩn danh lên Supabase. Mất mạng / lỗi thì vẫn cho vào chơi, kết quả sẽ được gửi sau.
+        if (CloudSync.Enabled)
+            SupabaseAuth.StartStudent(n, c, (ok, err) =>
+            {
+                if (this == null) return;
+                if (!ok) Debug.LogWarning("[Auth] Học sinh chưa đăng nhập được Supabase: " + err);
+                Enter(n);
+            });
+        else Enter(n);
+    }
+
+    void Enter(string n)
+    {
         message.text = "Cánh cổng sương đã mở!"; message.color = GameTheme.Moss;
         Say("Chào " + n + "! Màn sương đang chờ ngươi.");
         GameAudio.Play(Snd.CardSelect);
         SpawnBurst(panelBase + new Vector2(0, -205));
         jump = 0f;
         Invoke(nameof(Leave), .95f);
+    }
+
+    // ------------------------------------------------------------------ giáo viên
+    void SetBusy(bool busy)
+    {
+        nameIn.interactable = !busy; classIn.interactable = !busy; loginBtn.interactable = !busy; modeBtn.interactable = !busy;
+    }
+
+    static void SetHint(InputField f, string s) { var t = f.placeholder as Text; if (t != null) t.text = s; }
+
+    void ToggleMode()
+    {
+        if (locked) return;
+        teacherMode = !teacherMode;
+        nameErr = classErr = false; message.text = "";
+        if (teacherMode)
+        {
+            titleText.text = "Phòng Giáo Viên";
+            lbl1.text = "EMAIL"; lbl2.text = "MẬT KHẨU";
+            SetHint(nameIn, "email@truong.edu.vn"); SetHint(classIn, "Mật khẩu");
+            nameIn.characterLimit = 120; classIn.characterLimit = 64;
+            classIn.contentType = InputField.ContentType.Password;
+            nameIn.text = PlayerPrefs.GetString(PrefTeacherEmail, ""); classIn.text = "";
+            btnLabel.text = TeacherBtn; modeLabel.text = "TÔI LÀ HỌC SINH";
+            Say("Thầy cô hãy xác nhận danh tính.");
+        }
+        else
+        {
+            titleText.text = "Sổ Ký Ức";
+            lbl1.text = "TÊN CỦA BẠN"; lbl2.text = "LỚP";
+            SetHint(nameIn, "Ví dụ: Nguyễn Văn An"); SetHint(classIn, "Ví dụ: 8A1");
+            classIn.contentType = InputField.ContentType.Standard;
+            nameIn.characterLimit = 28; classIn.characterLimit = 8;
+            nameIn.text = PlayerPrefs.GetString(PrefName, ""); classIn.text = PlayerPrefs.GetString(PrefClass, "");
+            btnLabel.text = StudentBtn; modeLabel.text = "TÔI LÀ GIÁO VIÊN";
+            Say("Lữ khách, hãy cho ta biết tên ngươi.");
+        }
+        GameAudio.Play(Snd.UiClick);
+        Focus(nameIn);
+    }
+
+    void TeacherSubmit()
+    {
+        string email = nameIn.text.Trim(), pw = classIn.text;
+        if (email.Length < 5 || email.IndexOf('@') < 1) { Fail(true, "Hãy nhập email giáo viên."); return; }
+        if (pw.Length < 6) { Fail(false, "Mật khẩu có ít nhất 6 ký tự."); return; }
+        if (!CloudSync.Enabled) { Fail(true, "Chưa cấu hình Supabase nên chưa đăng nhập giáo viên được."); return; }
+
+        locked = true; SetBusy(true);
+        btnLabel.text = "ĐANG KIỂM TRA...";
+        message.text = ""; Say("Để ta kiểm tra danh tính của ngươi...");
+        SupabaseAuth.StartTeacher(email, pw, (ok, err) =>
+        {
+            if (this == null) return;
+            if (!ok)
+            {
+                locked = false; SetBusy(false); btnLabel.text = TeacherBtn;
+                Fail(false, err);
+                return;
+            }
+            PlayerPrefs.SetString(PrefTeacherEmail, email); PlayerPrefs.Save();
+            string dn = SupabaseAuth.DisplayName;
+            StudentProfileData.studentName = string.IsNullOrEmpty(dn) ? "Giáo viên" : dn;
+            StudentProfileData.studentClass = "GV";
+            ProgressSaveSystem.Load(StudentProfileData.studentName, StudentProfileData.studentClass);
+            message.text = "Xin chào thầy/cô!"; message.color = GameTheme.Moss;
+            Say("Chào mừng " + StudentProfileData.studentName + " trở lại.");
+            GameAudio.Play(Snd.CardSelect);
+            SpawnBurst(panelBase + new Vector2(0, -205));
+            jump = 0f;
+            Invoke(nameof(Leave), .95f);
+        });
     }
 
     void Leave() { SceneRouter.Go(nextScene); }

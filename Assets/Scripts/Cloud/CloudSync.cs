@@ -109,6 +109,7 @@ public class CloudSync : MonoBehaviour
         int take = BatchSize;
         while (pending.Count > 0)
         {
+            yield return SupabaseAuth.EnsureFresh();   // token sắp hết hạn thì làm mới trước khi gửi
             var batch = pending.GetRange(0, Mathf.Min(take, pending.Count));
             var sb = new StringBuilder("[");
             for (int i = 0; i < batch.Count; i++) { if (i > 0) sb.Append(','); sb.Append(JsonUtility.ToJson(batch[i])); }
@@ -182,6 +183,7 @@ public class CloudSync : MonoBehaviour
 
     static IEnumerator Get(string path, Action<string, string> done)
     {
+        yield return SupabaseAuth.EnsureFresh();
         using (var req = UnityWebRequest.Get(CloudConfig.Url + path))
         {
             Headers(req);
@@ -195,8 +197,7 @@ public class CloudSync : MonoBehaviour
 
     static void Headers(UnityWebRequest r)
     {
-        r.SetRequestHeader("apikey", CloudConfig.AnonKey);
-        if (CloudConfig.AnonKey.StartsWith("eyJ")) r.SetRequestHeader("Authorization", "Bearer " + CloudConfig.AnonKey);   // khóa anon kiểu cũ (JWT)
+        SupabaseAuth.ApplyHeaders(r);   // có đăng nhập thì gửi kèm token của người dùng, chưa thì dùng khóa anon
     }
 
     // ------------------------------------------------------------ hàng đợi lưu trên máy
