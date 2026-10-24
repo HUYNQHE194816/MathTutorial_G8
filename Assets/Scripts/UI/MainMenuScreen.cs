@@ -25,6 +25,7 @@ public class MainMenuScreen : MonoBehaviour
     SettingsWindow settings;
     PracticeLogWindow practiceLog;
     LeaderboardWindow leaderboard;
+    TeacherWindow teacherWin;
     readonly List<Drift> drifts = new List<Drift>();
     readonly List<Puff> puffs = new List<Puff>();
     Sprite[] knightFrames, flameFrames, puffSprites;
@@ -199,6 +200,11 @@ public class MainMenuScreen : MonoBehaviour
             OpenSettings, ButtonStyle.Stone, 32, .26f);
         UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -233), new Vector2(440, 60),
             Quit, ButtonStyle.Stone, 32, .32f);
+
+        // Chỉ giáo viên (đăng nhập bằng email) mới thấy nút này; nằm ở góc trên bên trái, ngoài khung menu.
+        if (SupabaseAuth.IsTeacher)
+            UIKit.MakeButton(ui, "Btn_Teacher", "QUẢN LÝ BÀI GIẢNG", new Vector2(-660, 470), new Vector2(480, 64),
+                OpenTeacher, ButtonStyle.Bronze, 30, .4f);
     }
 
     void BuildFooter()
@@ -242,6 +248,11 @@ public class MainMenuScreen : MonoBehaviour
     {
         if (leaderboard != null) return;
         leaderboard = LeaderboardWindow.Open(ui, () => leaderboard = null);
+    }
+    void OpenTeacher()
+    {
+        if (teacherWin != null) return;
+        teacherWin = TeacherWindow.Open(ui, () => teacherWin = null);
     }
     void OpenPracticeLog()
     {

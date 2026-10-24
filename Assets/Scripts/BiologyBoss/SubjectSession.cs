@@ -115,7 +115,86 @@ public static class SubjectSession
     }
 
     // ---------------------------------------------------------------- nạp dữ liệu
+    /// <summary>
+    /// Nạp chương/bài của môn: CSV/Google Sheet như cũ, rồi trộn thêm bài giảng đã XUẤT BẢN từ Supabase (giáo viên tạo).
+    /// Bài của Supabase thắng bài CSV cùng chương + cùng tên bài. Không tải được Supabase thì chỉ dùng CSV.
+    /// </summary>
     public static IEnumerator LoadSources(SubjectId s, SubjectSource[] sources)
+    {
+        yield return LoadCsvSources(s, sources);
+        var csvList = Chapters;
+        var cloud = new List<CloudQuestionBank.Lesson>();
+        yield return CloudQuestionBank.Load(SubjectName(s), cloud);
+        if (cloud.Count > 0) Chapters = Merge(csvList, cloud);
+    }
+
+    static string SubjectName(SubjectId s) => s == SubjectId.Ly ? ProgressSaveSystem.SubjectLy : s == SubjectId.Hoa ? ProgressSaveSystem.SubjectHoa : ProgressSaveSystem.SubjectSinh;
+
+    /// <summary>Không sửa danh sách CSV (đang nằm trong cache): chương bị ảnh hưởng được tạo bản mới, chương khác dùng lại nguyên.</summary>
+    static List<FlowChapter> Merge(List<FlowChapter> csv, List<CloudQuestionBank.Lesson> cloud)
+    {
+        var result = new List<FlowChapter>(csv);
+        var order = new List<string>();
+        var byChapter = new Dictionary<string, List<CloudQuestionBank.Lesson>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var l in cloud)
+        {
+            string t = string.IsNullOrWhiteSpace(l.chapter) ? "(chưa phân chương)" : l.chapter.Trim();
+            if (!byChapter.ContainsKey(t)) { byChapter[t] = new List<CloudQuestionBank.Lesson>(); order.Add(t); }
+            byChapter[t].Add(l);
+        }
+
+        string subject = SubjectName(Subject);
+        foreach (var title in order)
+        {
+            var lessons = byChapter[title];
+            int idx = result.FindIndex(c => string.Equals(c.title, title, StringComparison.OrdinalIgnoreCase));
+            FlowChapter target;
+            if (idx >= 0 && !result[idx].locked)
+            {
+                var old = result[idx];
+                target = new FlowChapter { title = old.title, subtitle = old.subtitle, header = old.header };
+                var cloudTitles = new HashSet<string>(lessons.Select(l => l.title), StringComparer.OrdinalIgnoreCase);
+                foreach (var r in old.rows) if (!cloudTitles.Contains(r.lesson)) target.rows.Add(r);   // bài CSV trùng tên với bài Supabase thì nhường
+                result[idx] = target;
+            }
+            else
+            {
+                bool multiLevel = lessons.SelectMany(l => l.questions).Select(q => q.level ?? "").Distinct().Count() > 1;
+                var h = new List<string>(StdHeader);
+                if (!multiLevel) h.RemoveAt(7);   // chỉ có 1 mức độ: bỏ cột để game không bật chế độ bốc theo mức độ
+                target = new FlowChapter { title = title, subtitle = "Bài giảng giáo viên", header = h.ToArray() };
+                if (idx >= 0) result[idx] = target; else result.Add(target);   // thay thẻ "Sắp ra mắt" cùng tên nếu có
+            }
+            foreach (var l in lessons)
+                foreach (var q in l.questions)
+                    target.rows.Add(new FlowRow { lesson = l.title, cells = MapRow(target.header, q, target.rows.Count + 1, subject, title, l.title) });
+        }
+        return result;
+    }
+
+    /// <summary>Xếp một câu hỏi từ Supabase vào đúng thứ tự cột của header chương.</summary>
+    static string[] MapRow(string[] h, CloudQuestionBank.Question q, int stt, string subject, string chapter, string lesson)
+    {
+        var cells = new string[h.Length];
+        for (int i = 0; i < cells.Length; i++) cells[i] = "";
+        int cq = BioQuestionImporter.Col(h, "cauhoi", "question", "noidungcauhoi");
+        int a = BioQuestionImporter.Col(h, "a", "answera", "dapana"), b = BioQuestionImporter.Col(h, "b", "answerb", "dapanb");
+        int c = BioQuestionImporter.Col(h, "c", "answerc", "dapanc"), d = BioQuestionImporter.Col(h, "d", "answerd", "dapand");
+        int k = BioQuestionImporter.Col(h, "dapan", "dapandung", "correctindex", "correct", "answer");
+        if (cq < 0 || a < 0 || b < 0 || c < 0 || d < 0 || k < 0) { cq = 1; a = 2; b = 3; c = 4; d = 5; k = 6; }   // thứ tự của file mẫu
+        Put(cells, BioQuestionImporter.Col(h, "stt"), stt.ToString());
+        Put(cells, cq, q.text); Put(cells, a, q.a); Put(cells, b, q.b); Put(cells, c, q.c); Put(cells, d, q.d); Put(cells, k, q.answer);
+        Put(cells, BioQuestionImporter.Col(h, "mucdo", "level", "difficulty"), q.level);
+        Put(cells, BioQuestionImporter.Col(h, "giaithich", "explanation", "loigiai"), q.explanation);
+        Put(cells, BioQuestionImporter.Col(h, "mon", "subject"), subject);
+        Put(cells, BioQuestionImporter.Col(h, "chuong", "chapter"), chapter);
+        Put(cells, BioQuestionImporter.Col(h, "bai", "lesson", "baihoc"), lesson);
+        return cells;
+    }
+
+    static void Put(string[] cells, int i, string v) { if (i >= 0 && i < cells.Length) cells[i] = v ?? ""; }
+
+    static IEnumerator LoadCsvSources(SubjectId s, SubjectSource[] sources)
     {
         if (cache.TryGetValue(s, out var cached)) { Chapters = cached; yield break; }
         var list = new List<FlowChapter>();
