@@ -575,8 +575,18 @@ public class TeacherWindow : MonoBehaviour
     {
         if (!FilePicker.Supported) { Notice("Nền tảng này chưa hỗ trợ chọn file (chỉ Windows và Unity Editor).", false); return null; }
         string path = FilePicker.PickCsv();
-        if (string.IsNullOrEmpty(path)) return null;   // người dùng hủy
-        try { return File.ReadAllText(path, Encoding.UTF8); }
+        if (string.IsNullOrEmpty(path))
+        {
+            if (!string.IsNullOrEmpty(FilePicker.LastError)) Notice("Không mở được hộp chọn file: " + FilePicker.LastError, false);
+            return null;   // người dùng hủy hoặc lỗi hộp thoại
+        }
+        try
+        {
+            // FileShare.ReadWrite: vẫn đọc được khi file đang mở trong Excel.
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var sr = new StreamReader(fs, Encoding.UTF8, true))
+                return sr.ReadToEnd();
+        }
         catch (Exception e) { Notice("Không đọc được file: " + e.Message, false); return null; }
     }
 
