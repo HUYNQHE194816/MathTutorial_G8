@@ -23,13 +23,13 @@ public static class DuelRulesTest
 
         // ---- Từng vòng ----
         var r = DuelRules.Resolve(C(2, 20), C(2, 10), right);
-        Check("1. Cùng đúng, cược 20 và 10: mất 10 / 20", r.myLoss == 10 && r.oppLoss == 20);
+        Check("1. Cùng đúng, cược 20 và 10: không ai mất máu", r.myLoss == 0 && r.oppLoss == 0);
 
         r = DuelRules.Resolve(C(2, 30), C(1, 20), right);
         Check("2. Mình đúng 30, đối thủ sai 20: mình 0, đối thủ 30 + 10 phạt = 40", r.myLoss == 0 && r.oppLoss == 40);
 
-        r = DuelRules.Resolve(C(2, 30), C(2, 0), right);
-        Check("3. Đối thủ thủ thế: nhận một nửa 30 = 15", r.myLoss == 0 && r.oppLoss == 15);
+        r = DuelRules.Resolve(C(2, 30), C(1, 0), right);
+        Check("3. Mình đúng 30, đối thủ thủ thế (trả lời sai, không phạt): nhận một nửa 30 = 15", r.myLoss == 0 && r.oppLoss == 15);
 
         r = DuelRules.Resolve(C(1, 30), C(2, 10), right);
         Check("4. Mình sai cược 30, đối thủ đúng cược 10: mất 10 + 15 phạt = 25", r.myLoss == 25 && r.oppLoss == 0);
@@ -44,7 +44,7 @@ public static class DuelRulesTest
         Check("7. Cả hai sai cược 30: mỗi bên tự mất 15", r.myLoss == 15 && r.oppLoss == 15);
 
         r = DuelRules.Resolve(C(2, 30), C(2, 30), right);
-        Check("8. Cả hai đúng cược 30: mỗi bên mất 30", r.myLoss == 30 && r.oppLoss == 30);
+        Check("8. Cả hai đúng cược 30: không ai mất máu", r.myLoss == 0 && r.oppLoss == 0);
 
         // ---- Tính đối xứng: đổi chỗ hai người thì kết quả phải đảo ngược ----
         bool sym = true;
@@ -69,8 +69,9 @@ public static class DuelRulesTest
               m.roundsDone == 5 && m.myHp == 0 && m.oppHp == DuelRules.MaxHp && m.Winner == -1);
 
         m = new DuelMatch(10);
-        while (!m.Over) m.Play(C(2, 30), C(2, 30), right);   // cả hai đúng cược 30: cùng hết máu ở vòng 5
-        Check("12. Cùng hết máu, đúng bằng nhau: hòa", m.roundsDone == 5 && m.myHp == 0 && m.oppHp == 0 && m.Winner == 0);
+        while (!m.Over) m.Play(C(2, 30), C(2, 30), right);   // cả hai đúng cược 30: không ai mất máu, chơi đủ 10 vòng
+        Check("12. Cả hai luôn đúng: đủ 10 vòng, máu đầy, đúng bằng nhau: hòa",
+              m.roundsDone == 10 && m.myHp == DuelRules.MaxHp && m.oppHp == DuelRules.MaxHp && m.Winner == 0);
 
         m = new DuelMatch(1);
         m.Play(C(2, 0), C(1, 0), right);                     // bằng máu, mình đúng 1 câu còn đối thủ 0

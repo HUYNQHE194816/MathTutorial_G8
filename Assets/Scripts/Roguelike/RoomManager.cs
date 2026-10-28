@@ -662,7 +662,7 @@ public class RoomManager : MonoBehaviour
             r.footer = BossEffectText(band) + "\n+" + earned + " Mực";
             string bnote = band == GradeBand.Pass ? MissingNoteFor(res) : null;
             r.buttons.Add(new SolveResultButton { label = "Tiếp tục trận đấu", onClick = () => { solve.Hide(); Frozen = false; inBossEssay = false; var d = bossDone; bossDone = null; d?.Invoke(band, bnote); } });
-            GameAudio.Play(band == GradeBand.Fail ? Snd.QuizWrong : Snd.QuizCorrect); solve.ShowResult(r); return;
+            GameAudio.Play(band == GradeBand.Fail ? Snd.QuizWrong : Snd.QuizCorrect); ShowResultWithFix(r); return;
         }
 
         if (RoomRules.DoorOpens(band))
@@ -685,7 +685,27 @@ public class RoomManager : MonoBehaviour
             }
             GameAudio.Play(Snd.QuizWrong);
         }
+        ShowResultWithFix(r);
+    }
+
+    /// <summary>Bước có công thức số mà làm chưa đúng: bắt điền lại số vào công thức cho đúng rồi mới hiện các nút của kết quả (điểm không đổi).</summary>
+    void ShowResultWithFix(SolveResultArgs r)
+    {
+        var items = EssayFormulaFix.Build(prob, variant, r.grade);
+        if (items.Count == 0) { solve.ShowResult(r); return; }
+        var realButtons = r.buttons; string st = variant.statement, title = essayTitle, subj = essaySubject;
+        r.buttons = new List<SolveResultButton> { new SolveResultButton { label = "Sửa công thức (" + items.Count + " bước)", style = ButtonStyle.Primary, onClick = () => RunFormulaFix(r, realButtons, items, 0, st, title, subj) } };
         solve.ShowResult(r);
+    }
+
+    void RunFormulaFix(SolveResultArgs r, List<SolveResultButton> realButtons, List<FormulaFixItem> items, int idx, string statement, string title, string subj)
+    {
+        if (idx >= items.Count) { r.buttons = realButtons; solve.ShowResult(r); return; }
+        solve.ShowFormulaFix(new FormulaFixArgs
+        {
+            title = title, subjectId = subj, statement = statement, stepNo = idx + 1, stepCount = items.Count, item = items[idx],
+            onDone = () => RunFormulaFix(r, realButtons, items, idx + 1, statement, title, subj),
+        });
     }
 
     string BossEffectText(GradeBand band)

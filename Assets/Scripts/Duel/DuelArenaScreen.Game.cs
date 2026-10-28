@@ -224,7 +224,8 @@ public partial class DuelArenaScreen
             ansMark[i].gameObject.SetActive(isRight || myWrong);
             ansMark[i].color = isRight ? GoodCol : BadCol;
         }
-        SetStatus("Đáp án đúng: " + (char)('A' + q.correct) + ".  " + q.options[q.correct]);
+        SetStatus("Đáp án đúng: " + (char)('A' + q.correct) + ".  " + q.options[q.correct]
+            + (res.myCorrect && res.oppCorrect ? "\nCả hai cùng đúng: không ai mất máu." : ""));
     }
 
     static string Describe(DuelChoice c, bool correct)

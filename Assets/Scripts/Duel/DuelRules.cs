@@ -43,6 +43,10 @@ public static class DuelRules
         bool myOk = mine.answer == correctIndex;
         bool oppOk = opp.answer == correctIndex;
 
+        // Cả hai cùng trả lời đúng: hai đòn hóa giải nhau, không ai mất máu
+        if (myOk && oppOk)
+            return new DuelRoundResult { myCorrect = true, oppCorrect = true, myLoss = 0, oppLoss = 0 };
+
         // Sát thương mỗi bên gây ra: đúng mới gây, bằng mức cược
         int myDealt = myOk ? mine.bet : 0;
         int oppDealt = oppOk ? opp.bet : 0;

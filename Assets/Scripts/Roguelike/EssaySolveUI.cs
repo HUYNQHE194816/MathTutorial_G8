@@ -391,6 +391,79 @@ public class EssaySolveUI : MonoBehaviour
         CheckFontOnce();
     }
 
+    // ================================================================== sửa công thức: bắt điền lại số cho đúng
+    /// <summary>Màn bắt buộc: bước có công thức làm chưa đúng thì phải điền lại các số vào công thức. Chỉ đi tiếp (onDone) khi đúng hết.</summary>
+    public void ShowFormulaFix(FormulaFixArgs a)
+    {
+        var s = NewScreen(); Dim(s);
+        var it = a.item; int n = it.blanks.Length;
+        UIKit.Panel(s, "FixPanel", Vector2.zero, new Vector2(1500, 800), PanelStyle.Dark, out var c);
+        UIKit.Label("T", c, "Sửa công thức · Bước " + (it.stepIndex + 1) + ": " + it.label, 46, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 335), new Vector2(1360, 70), true, true, FontStyle.Bold);
+        UIKit.Label("S", c, "Bước này em chưa đúng. Điền lại các số vào công thức cho đúng để đi tiếp (" + a.stepNo + "/" + a.stepCount + ").", 28, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 275), new Vector2(1360, 44));
+        UIKit.Label("Q", c, "Đề: " + a.statement, 24, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(1360, 110));
+        UIKit.Label("F", c, it.Template(), 38, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 80), new Vector2(1360, 130), false, true, FontStyle.Bold);
+
+        int cols = Mathf.Min(n, 4);
+        var ins = new InputField[n]; var frames = new Image[n];
+        for (int i = 0; i < n; i++)
+        {
+            int idx = i;
+            float x = (idx % cols - (cols - 1) / 2f) * 320f, y = -30f - (idx / cols) * 110f;
+            UIKit.Label("L" + i, c, "Ô (" + (i + 1) + ")", 22, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(x, y + 52), new Vector2(280, 28));
+            ins[i] = UIKit.MakeInput(c, "In" + i, "nhập số", new Vector2(x, y), 14, 280);
+            frames[i] = (Image)ins[i].targetGraphic;
+        }
+
+        var fb = UIKit.Label("FB", c, "Gõ dấu phẩy hoặc dấu chấm đều được.", 26, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, -225), new Vector2(1360, 90));
+        int tries = 0; bool solved = false; Text btnLabel = null; Action check = null;
+        check = () =>
+        {
+            if (solved) { a.onDone?.Invoke(); return; }
+            var typed = new string[n];
+            for (int i = 0; i < n; i++)
+            {
+                typed[i] = ins[i].text;
+                if (string.IsNullOrWhiteSpace(typed[i])) { fb.text = "Em điền đủ tất cả các ô nhé."; fb.color = GameTheme.EmberHi; return; }
+            }
+            var ok = EssayFormulaFix.Check(it, typed); tries++;
+            bool all = true; var bad = new List<int>();
+            for (int i = 0; i < n; i++) { frames[i].color = ok[i] ? GameTheme.Moss : GameTheme.Blood; if (!ok[i]) { all = false; bad.Add(i); } }
+            if (all)
+            {
+                solved = true;
+                foreach (var f in ins) f.interactable = false;
+                fb.text = "Chính xác! Công thức đã đúng."; fb.color = GameTheme.Moss;
+                if (btnLabel != null) btnLabel.text = a.stepNo < a.stepCount ? "Bước tiếp theo" : "Xem kết quả";
+                GameAudio.Play(Snd.QuizCorrect);
+                return;
+            }
+            GameAudio.Play(Snd.QuizWrong);
+            var sb = new StringBuilder("Ô ");
+            for (int k = 0; k < bad.Count; k++) sb.Append(k > 0 ? ", " : "").Append('(').Append(bad[k] + 1).Append(')');
+            sb.Append(" chưa đúng (viền đỏ). Xem lại đề rồi tính lại nhé.");
+            if (tries >= 3)
+            {   // tránh kẹt: sau 3 lần sai thì cho xem số đúng, nhưng em vẫn phải tự gõ lại vào ô
+                sb.Append("\nSố đúng: ");
+                for (int k = 0; k < bad.Count; k++) sb.Append(k > 0 ? ";  " : "").Append('(').Append(bad[k] + 1).Append(") = ").Append(it.blanks[bad[k]].shown);
+            }
+            fb.text = sb.ToString(); fb.color = GameTheme.Blood;
+        };
+
+        for (int i = 0; i < n; i++)
+        {
+            int idx = i;
+            ins[i].onValueChanged.AddListener(_ => { if (!solved) frames[idx].color = GameTheme.Iron; });
+            ins[i].onEndEdit.AddListener(_ =>
+            {
+                var k = Keyboard.current;
+                if (k != null && (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame)) check();
+            });
+        }
+        var btn = UIKit.MakeButton(c, "CheckBtn", "Kiểm tra", new Vector2(0, -335), new Vector2(460, 76), () => check(), ButtonStyle.Primary, 34, .1f);
+        btnLabel = btn.GetComponentInChildren<Text>();
+        if (n > 0) { ins[0].Select(); ins[0].ActivateInputField(); }
+    }
+
     // ================================================================== màn kết quả
     public void ShowResult(SolveResultArgs a)
     {
