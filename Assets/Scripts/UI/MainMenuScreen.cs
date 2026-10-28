@@ -26,6 +26,7 @@ public class MainMenuScreen : MonoBehaviour
     PracticeLogWindow practiceLog;
     LeaderboardWindow leaderboard;
     TeacherWindow teacherWin;
+    RectTransform exitDlg;
     readonly List<Drift> drifts = new List<Drift>();
     readonly List<Puff> puffs = new List<Puff>();
     Sprite[] knightFrames, flameFrames, puffSprites;
@@ -199,7 +200,7 @@ public class MainMenuScreen : MonoBehaviour
         UIKit.MakeButton(ui, "Btn_Settings", "CÀI ĐẶT", new Vector2(0, -165), new Vector2(440, 60),
             OpenSettings, ButtonStyle.Stone, 32, .26f);
         UIKit.MakeButton(ui, "Btn_Exit", "THOÁT", new Vector2(0, -233), new Vector2(440, 60),
-            Quit, ButtonStyle.Stone, 32, .32f);
+            OpenExitDialog, ButtonStyle.Stone, 32, .32f);
 
         // Chỉ giáo viên (đăng nhập bằng email) mới thấy nút này; nằm ở góc trên bên trái, ngoài khung menu.
         if (SupabaseAuth.IsTeacher)
@@ -235,6 +236,38 @@ public class MainMenuScreen : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    // Hộp thoại THOÁT: về giao diện đăng nhập (đăng xuất rồi sang LoginScene) hoặc về máy tính (đóng game). Esc / Ở LẠI để đóng hộp.
+    void OpenExitDialog()
+    {
+        if (exitDlg != null) return;
+        exitDlg = UIKit.CBox("ExitDim", ui, new Color(0, 0, 0, .78f), Vector2.zero, Vector2.zero, true);
+        UIKit.Stretch(exitDlg, 0, 0, 0, 0);
+        RectTransform c;
+        UIKit.Panel(exitDlg, "ExitPanel", Vector2.zero, new Vector2(1200, 420), PanelStyle.Dark, out c);
+        UIKit.Label("T", c, "THOÁT", 56, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 140), new Vector2(900, 80), true, true, FontStyle.Bold);
+        UIKit.Divider(c, new Vector2(0, 92), 520);
+        UIKit.Label("Q", c, "Bạn muốn thoát về đâu?", 32, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 40), new Vector2(900, 60));
+        UIKit.MakeButton(c, "Btn_ToLogin", "THOÁT VỀ GIAO DIỆN ĐĂNG NHẬP", new Vector2(-290, -50), new Vector2(540, 90), ExitToLogin, ButtonStyle.Bronze, 26, 0f);
+        UIKit.MakeButton(c, "Btn_ToDesktop", "THOÁT VỀ GIAO DIỆN MÁY TÍNH", new Vector2(290, -50), new Vector2(540, 90), Quit, ButtonStyle.Danger, 26, 0f);
+        UIKit.MakeButton(c, "Btn_ExitCancel", "Ở LẠI", new Vector2(0, -150), new Vector2(300, 64), CloseExitDialog, ButtonStyle.Stone, 28, 0f);
+    }
+
+    void CloseExitDialog()
+    {
+        if (exitDlg != null) { Destroy(exitDlg.gameObject); exitDlg = null; }
+    }
+
+    void ExitToLogin()
+    {
+        if (!Application.CanStreamedLevelBeLoaded("LoginScene"))
+        {
+            UIKit.Toast(ui, "Chưa có LoginScene trong Build Settings");
+            return;
+        }
+        SupabaseAuth.SignOut();
+        SceneRouter.Go("LoginScene");
     }
 
     // Cửa sổ Cài đặt (SettingsWindow): âm lượng, độ sáng, font chữ, cấu hình game. Tự xử lý Esc và đóng.
@@ -276,6 +309,7 @@ public class MainMenuScreen : MonoBehaviour
     {
         float t = Time.unscaledTime, dt = Time.unscaledDeltaTime;
         FitScene();
+        if (exitDlg != null && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) CloseExitDialog();
 
         foreach (var d in drifts)
         {
