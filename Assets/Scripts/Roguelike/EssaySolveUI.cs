@@ -16,6 +16,8 @@ public class SolveWritingArgs
     public Action<string> onHint;        // tham số: văn bản thô (để giữ bản nháp)
     public Action<string> onExit;        // thoát đề: bản nháp bị hủy, không tính lần làm
     public Action<string> onPickImage;   // E5: bấm "Tải ảnh" (null = ẩn nút); tham số: bản nháp đang gõ
+    public string referenceTitle, referenceText;   // chép phạt: khung tham chiếu (công thức đã sửa) thay cho khung mẹo bên phải; để trống = hiện mẹo gõ ký hiệu
+    public string submitLabel = "Nộp bài", exitLabel = "Thoát đề";
 }
 
 /// <summary>Dữ liệu dựng màn xác nhận bản chép từ ảnh (E5).</summary>
@@ -155,7 +157,7 @@ public class EssaySolveUI : MonoBehaviour
         // ---- cột phải: bảng ký hiệu hoặc mẹo ----
         paletteHost = UIKit.CBox("Palette", pc, Color.clear, new Vector2(545, 20), new Vector2(520, 470));
         tipHost = UIKit.CBox("Tip", pc, Color.clear, new Vector2(545, 20), new Vector2(520, 470));
-        BuildTip();
+        BuildTip(a.referenceTitle, a.referenceText);
         paletteHost.gameObject.SetActive(false);
 
         hintLabel = UIKit.Label("Hint", pc, a.hintText, 28, GameTheme.EmberDeep, TextAnchor.MiddleLeft, new Vector2(0, -302), new Vector2(1640, 44), false, false, FontStyle.Italic);
@@ -170,12 +172,12 @@ public class EssaySolveUI : MonoBehaviour
         }
         else { hintBtn = null; hintBtnLabel = null; }
         UIKit.MakeButton(pc, "SymBtn", "Ký hiệu (F2)", new Vector2(-400, -372), new Vector2(220, 70), TogglePalette, ButtonStyle.Secondary, 26);
-        UIKit.MakeButton(pc, "ExitBtn", "Thoát đề", new Vector2(-130, -372), new Vector2(260, 70),
+        UIKit.MakeButton(pc, "ExitBtn", a.exitLabel, new Vector2(-130, -372), new Vector2(260, 70),
             () => a.onExit?.Invoke(input != null ? input.text : ""), ButtonStyle.Secondary, 28);
         if (a.onPickImage != null)
             UIKit.MakeButton(pc, "ImgBtn", "Tải ảnh bài viết tay", new Vector2(240, -372), new Vector2(390, 70),
                 () => a.onPickImage?.Invoke(input != null ? input.text : ""), ButtonStyle.Bronze, 26);
-        UIKit.MakeButton(pc, "SubmitBtn", "Nộp bài", new Vector2(620, -372), new Vector2(340, 70),
+        UIKit.MakeButton(pc, "SubmitBtn", a.submitLabel, new Vector2(620, -372), new Vector2(340, 70),
             () => a.onSubmit?.Invoke(input != null ? input.text : ""), ButtonStyle.Primary, 34);
 
         input.Select(); input.ActivateInputField();
@@ -189,10 +191,22 @@ public class EssaySolveUI : MonoBehaviour
         if (hintBtn != null) { hintBtn.interactable = enabled; if (hintBtnLabel != null) hintBtnLabel.text = buttonLabel; }
     }
 
-    void BuildTip()
+    void BuildTip(string refTitle = null, string refText = null)
     {
         var f = UIKit.CBox("TipFrame", tipHost, GameTheme.ParchmentDark.WithAlpha(.55f), Vector2.zero, Vector2.zero);
         UIKit.Stretch(f, 0, 0, 0, 0);
+        if (!string.IsNullOrEmpty(refText))
+        {   // chép phạt: hiện công thức đã sửa để em chép lại vào lời giải (cuộn được khi dài)
+            UIKit.Label("RefTitle", f, string.IsNullOrEmpty(refTitle) ? "Công thức đã sửa" : refTitle, 30, GameTheme.PaperInk, TextAnchor.UpperLeft, new Vector2(0, 190), new Vector2(480, 44), false, false, FontStyle.Bold);
+            var rc = SinhMenuKit.MakeScroll(f, new Vector2(0, -30), new Vector2(480, 370));
+            var rv = rc.gameObject.AddComponent<VerticalLayoutGroup>();
+            rv.childControlWidth = rv.childControlHeight = true; rv.childForceExpandWidth = true; rv.childForceExpandHeight = false;
+            rv.padding = new RectOffset(0, 12, 0, 12);
+            rc.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var rt = UIKit.Label("RefBody", rc, refText, 24, GameTheme.PaperInk, TextAnchor.UpperLeft, Vector2.zero, new Vector2(470, 0));
+            rt.verticalOverflow = VerticalWrapMode.Overflow;
+            return;
+        }
         UIKit.Label("TipTitle", f, "Mẹo gõ ký hiệu", 30, GameTheme.PaperInk, TextAnchor.UpperLeft, new Vector2(0, 190), new Vector2(480, 44), false, false, FontStyle.Bold);
         UIKit.Label("TipBody", f,
             "Bấm nút Ký hiệu hoặc phím F2 để mở bảng.\n\nGõ tắt rồi bấm Tab để nhận gợi ý:\n   ^2 cho ²     _2 cho ₂\n   -> cho →     sqrt cho √\n   delta cho Δ\n\nGõ H2O hay x^2 cũng được, trò chơi tự đổi thành H₂O và x² khi nộp bài.",
@@ -391,30 +405,65 @@ public class EssaySolveUI : MonoBehaviour
         CheckFontOnce();
     }
 
-    // ================================================================== sửa công thức: bắt điền lại số cho đúng
-    /// <summary>Màn bắt buộc: bước có công thức làm chưa đúng thì phải điền lại các số vào công thức. Chỉ đi tiếp (onDone) khi đúng hết.</summary>
+    // ================================================================== sửa công thức: công thức có sẵn, em điền số vào ô trống
+    /// <summary>Công thức bước làm chưa đúng được viết sẵn, các số cần tìm là ô trống nằm ngay trong công thức. Chỉ đi tiếp (onDone) khi điền đúng hết.</summary>
     public void ShowFormulaFix(FormulaFixArgs a)
     {
         var s = NewScreen(); Dim(s);
         var it = a.item; int n = it.blanks.Length;
         UIKit.Panel(s, "FixPanel", Vector2.zero, new Vector2(1500, 800), PanelStyle.Dark, out var c);
         UIKit.Label("T", c, "Sửa công thức · Bước " + (it.stepIndex + 1) + ": " + it.label, 46, GameTheme.EmberHi, TextAnchor.MiddleCenter, new Vector2(0, 335), new Vector2(1360, 70), true, true, FontStyle.Bold);
-        UIKit.Label("S", c, "Bước này em chưa đúng. Điền lại các số vào công thức cho đúng để đi tiếp (" + a.stepNo + "/" + a.stepCount + ").", 28, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 275), new Vector2(1360, 44));
+        UIKit.Label("S", c, "Công thức đã viết sẵn, em điền các số còn thiếu vào ô trống (" + a.stepNo + "/" + a.stepCount + ").", 28, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 275), new Vector2(1360, 44));
         UIKit.Label("Q", c, "Đề: " + a.statement, 24, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, 190), new Vector2(1360, 110));
-        UIKit.Label("F", c, it.Template(), 38, GameTheme.GoldHi, TextAnchor.MiddleCenter, new Vector2(0, 80), new Vector2(1360, 130), false, true, FontStyle.Bold);
 
-        int cols = Mathf.Min(n, 4);
-        var ins = new InputField[n]; var frames = new Image[n];
-        for (int i = 0; i < n; i++)
+        // ---- khung công thức: chữ và ô nhập xếp thành dòng, tự xuống dòng khi hết chỗ ----
+        const float flowW = 1340f, rowH = 90f, inW = 170f, gap = 14f;
+        var bg = UIKit.CBox("FormulaBg", c, GameTheme.Ink.WithAlpha(.6f), new Vector2(0, -25), new Vector2(1400, 300));
+        var flow = UIKit.CBox("Flow", c, Color.clear, new Vector2(0, -25), new Vector2(flowW, 300));
+
+        var toks = new List<FlowTok>(); bool space = false;
+        for (int pi = 0; pi < it.parts.Length; pi++)
         {
-            int idx = i;
-            float x = (idx % cols - (cols - 1) / 2f) * 320f, y = -30f - (idx / cols) * 110f;
-            UIKit.Label("L" + i, c, "Ô (" + (i + 1) + ")", 22, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(x, y + 52), new Vector2(280, 28));
-            ins[i] = UIKit.MakeInput(c, "In" + i, "nhập số", new Vector2(x, y), 14, 280);
-            frames[i] = (Image)ins[i].targetGraphic;
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(it.parts[pi], @"\s+|\S+"))
+            {
+                if (char.IsWhiteSpace(m.Value[0])) { space = true; continue; }
+                var lb = UIKit.Label("W", flow, m.Value, 40, GameTheme.GoldHi, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(100, 70), false, false, FontStyle.Bold);
+                lb.horizontalOverflow = HorizontalWrapMode.Overflow;
+                float w = Mathf.Ceil(lb.preferredWidth) + 4f; lb.rectTransform.sizeDelta = new Vector2(w, 70);
+                toks.Add(new FlowTok { rt = lb.rectTransform, w = w, spaceBefore = space }); space = false;
+            }
+            if (pi < n)
+            {
+                var inp = UIKit.MakeInput(flow, "In" + pi, it.blanks[pi].name, Vector2.zero, 10, inW);
+                toks.Add(new FlowTok { rt = (RectTransform)inp.transform, w = inW, spaceBefore = space, blank = pi }); space = false;
+            }
         }
 
-        var fb = UIKit.Label("FB", c, "Gõ dấu phẩy hoặc dấu chấm đều được.", 26, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, -225), new Vector2(1360, 90));
+        // gom thành nhóm không có khoảng trắng ở giữa (vd ô/ô trong "(1)/(2)") để không bị ngắt giữa chừng
+        var rows = new List<List<FlowTok>>(); var cur = new List<FlowTok>(); float curW = 0f;
+        for (int gi = 0; gi < toks.Count;)
+        {
+            int gj = gi + 1; float gw = toks[gi].w;
+            while (gj < toks.Count && !toks[gj].spaceBefore) { gw += toks[gj].w; gj++; }
+            float need = cur.Count == 0 ? gw : curW + gap + gw;
+            if (cur.Count > 0 && need > flowW) { rows.Add(cur); cur = new List<FlowTok>(); curW = 0f; need = gw; }
+            toks[gi].lead = cur.Count > 0 ? gap : 0f;
+            for (int k = gi; k < gj; k++) cur.Add(toks[k]);
+            curW = need; gi = gj;
+        }
+        if (cur.Count > 0) rows.Add(cur);
+        float top = (rows.Count - 1) * rowH / 2f;
+        for (int ri = 0; ri < rows.Count; ri++)
+        {
+            float total = 0f; foreach (var t in rows[ri]) total += t.lead + t.w;
+            float x = -total / 2f;
+            foreach (var t in rows[ri]) { x += t.lead; t.rt.anchoredPosition = new Vector2(x + t.w / 2f, top - ri * rowH); x += t.w; }
+        }
+
+        var ins = new InputField[n]; var frames = new Image[n];
+        foreach (var t in toks) if (t.blank >= 0) { ins[t.blank] = t.rt.GetComponent<InputField>(); frames[t.blank] = (Image)ins[t.blank].targetGraphic; }
+
+        var fb = UIKit.Label("FB", c, "Gõ dấu phẩy hoặc dấu chấm đều được. Chữ mờ trong ô là tên đại lượng cần điền.", 26, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0, -232), new Vector2(1360, 90));
         int tries = 0; bool solved = false; Text btnLabel = null; Action check = null;
         check = () =>
         {
@@ -440,7 +489,7 @@ public class EssaySolveUI : MonoBehaviour
             GameAudio.Play(Snd.QuizWrong);
             var sb = new StringBuilder("Ô ");
             for (int k = 0; k < bad.Count; k++) sb.Append(k > 0 ? ", " : "").Append('(').Append(bad[k] + 1).Append(')');
-            sb.Append(" chưa đúng (viền đỏ). Xem lại đề rồi tính lại nhé.");
+            sb.Append(" chưa đúng (viền đỏ, tính từ trái sang). Xem lại đề rồi tính lại nhé.");
             if (tries >= 3)
             {   // tránh kẹt: sau 3 lần sai thì cho xem số đúng, nhưng em vẫn phải tự gõ lại vào ô
                 sb.Append("\nSố đúng: ");
@@ -456,13 +505,22 @@ public class EssaySolveUI : MonoBehaviour
             ins[i].onEndEdit.AddListener(_ =>
             {
                 var k = Keyboard.current;
-                if (k != null && (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame)) check();
+                if (k == null || !(k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame)) return;
+                if (!solved)   // Enter: nhảy sang ô còn trống tiếp theo, hết ô trống thì kiểm tra
+                    for (int j = 1; j <= n; j++)
+                    {
+                        int nx = (idx + j) % n;
+                        if (string.IsNullOrWhiteSpace(ins[nx].text)) { ins[nx].Select(); ins[nx].ActivateInputField(); return; }
+                    }
+                check();
             });
         }
         var btn = UIKit.MakeButton(c, "CheckBtn", "Kiểm tra", new Vector2(0, -335), new Vector2(460, 76), () => check(), ButtonStyle.Primary, 34, .1f);
         btnLabel = btn.GetComponentInChildren<Text>();
         if (n > 0) { ins[0].Select(); ins[0].ActivateInputField(); }
     }
+
+    class FlowTok { public RectTransform rt; public float w, lead; public bool spaceBefore; public int blank = -1; }
 
     // ================================================================== màn kết quả
     public void ShowResult(SolveResultArgs a)
@@ -530,8 +588,9 @@ public class EssaySolveUI : MonoBehaviour
         for (int i = 0; i < nb; i++)
         {
             var b = a.buttons[i];
-            float x = nb == 1 ? 0 : (i == 0 ? -200 : 200);
-            UIKit.MakeButton(rc, "Btn" + i, b.label, new Vector2(x, -365), new Vector2(nb == 1 ? 520 : 380, 72), b.onClick, b.style, nb == 1 ? 34 : 26, .1f * i);
+            float x = nb == 1 ? 0 : nb == 2 ? (i == 0 ? -200 : 200) : (i - 1) * 270f;
+            float bw = nb == 1 ? 520 : nb == 2 ? 380 : 256;
+            UIKit.MakeButton(rc, "Btn" + i, b.label, new Vector2(x, -365), new Vector2(bw, 72), b.onClick, b.style, nb == 1 ? 34 : nb == 2 ? 26 : 22, .1f * i);
         }
     }
 }

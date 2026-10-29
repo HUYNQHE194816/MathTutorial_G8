@@ -32,6 +32,18 @@ public class FormulaFixItem
         }
         return sb.ToString();
     }
+
+    /// <summary>Công thức đã điền đủ số đúng (dùng làm bản tham chiếu khi chép phạt).</summary>
+    public string Filled()
+    {
+        var sb = new StringBuilder();
+        for (int i = 0; i < parts.Length; i++)
+        {
+            sb.Append(parts[i]);
+            if (i < blanks.Length) sb.Append(blanks[i].shown);
+        }
+        return sb.ToString();
+    }
 }
 
 /// <summary>Dữ liệu dựng màn "Sửa công thức".</summary>
@@ -88,7 +100,25 @@ public static class EssayFormulaFix
         }
         if (blanks.Count == 0) return null;
         parts.Add(desc.Substring(last));
+        parts[0] = TrimLead(parts[0]);
+        parts[parts.Count - 1] = TrimTail(parts[parts.Count - 1]);
         return new FormulaFixItem { stepIndex = i, label = p.rubric[i].label, parts = parts.ToArray(), blanks = blanks.ToArray() };
+    }
+
+    /// <summary>Bỏ lời dẫn kiểu "Thế số đúng: " ở đầu (dấu ':' dính liền chữ phía trước, không phải tỉ lệ "Fe : FeCl₂").</summary>
+    static string TrimLead(string s)
+    {
+        for (int i = 1; i + 1 < s.Length; i++)
+            if (s[i] == ':' && s[i - 1] != ' ' && s[i + 1] == ' ') return s.Substring(i + 1).TrimStart();
+        return s;
+    }
+
+    /// <summary>Sau ô cuối chỉ giữ đơn vị: cắt ở ", ..." hoặc " và ..." (vd " g/cm³ và ghi đơn vị" thành " g/cm³").</summary>
+    static string TrimTail(string s)
+    {
+        int c = s.IndexOf(", ", StringComparison.Ordinal), v = s.IndexOf(" và ", StringComparison.Ordinal);
+        int cut = c < 0 ? v : v < 0 ? c : Math.Min(c, v);
+        return cut >= 0 ? s.Substring(0, cut) : s;
     }
 
     static int DecimalsOf(EssayProblem p, string name)

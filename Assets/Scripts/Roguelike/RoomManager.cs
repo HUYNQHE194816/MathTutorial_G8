@@ -530,7 +530,7 @@ public class RoomManager : MonoBehaviour
         state = State.Solving; Frozen = true; RogueAudio.Play(RSfx.Select, .7f);
         var p = RoomRules.PickProblem(problems, Subject, RunState.difficulty, usedIds, rng);
         if (p == null) { UIKit.Toast(hud, "Môn này chưa có bài."); Frozen = false; state = State.ChestReady; return; }
-        difficulty = RunState.difficulty; prob = p; usedIds.Add(p.id); attemptsUsed = 0; missStreak = new int[p.rubric.Length]; inBossEssay = false; essaySubject = Subject;
+        revising = false; difficulty = RunState.difficulty; prob = p; usedIds.Add(p.id); attemptsUsed = 0; missStreak = new int[p.rubric.Length]; inBossEssay = false; essaySubject = Subject;
         essayTitle = "Rương Câu Đố · Màn " + StageLabel + " · " + SubjectName(Subject) + " · " + RoomRules.DifficultyName(difficulty);
         StartAttempt();
     }
@@ -547,7 +547,7 @@ public class RoomManager : MonoBehaviour
 
     void StartAttempt()
     {
-        NewVariant();
+        revising = false; NewVariant();
         int have = prob.hints != null ? prob.hints.Length : 0; hintCap = Mathf.Min(RoomRules.MaxHints(difficulty), have); hintLevel = 0; hintsPaid = 0;
         bool streak = false; foreach (var m in missStreak) if (m >= 2) streak = true;
         if (hintCap > 0 && (RoomRules.AutoFirstHint(difficulty) || streak)) hintLevel = 1;
@@ -578,7 +578,7 @@ public class RoomManager : MonoBehaviour
 
     void OnExitEssay(string draft)
     {
-        gradeToken++; grading = false; visionToken++; DropTex();
+        gradeToken++; grading = false; visionToken++; DropTex(); revising = false;
         if (inBossEssay) { solve.Hide(); Frozen = false; inBossEssay = false; var d = bossDone; bossDone = null; UIKit.Toast(hud, "Bỏ trụ đá: tính là chưa đạt."); d?.Invoke(GradeBand.Fail, null); return; }
         if (prob != null) usedIds.Remove(prob.id);
         solve.Hide(); Frozen = false; state = State.ChestReady; UIKit.Toast(hud, "Đã thoát đề, không tính lần làm.");
@@ -586,6 +586,7 @@ public class RoomManager : MonoBehaviour
 
     // ------------------------------------------------------------------ chấm bài: AI (Gemini) hoặc bộ chấm tạm, và đọc ảnh bài viết tay
     bool grading; int gradeToken, visionToken; Texture2D lastTex; string lastDraft = "";
+    bool revising; int lastEarned;   // revising: đang chấm lại sau chép phạt (không tính thêm lần làm, Mực chỉ cộng phần tăng thêm)
     /// <summary>Nút tải ảnh bài viết tay hiện ở độ khó Khó trở lên trên máy tính; có bấm được hay không phụ thuộc AI đã kết nối chưa (xem OnPickImage).</summary>
     bool ImageAllowed => NativeFilePicker.Supported;
 
@@ -648,11 +649,17 @@ public class RoomManager : MonoBehaviour
 
     void FinishGrade(string[] lines, EssayGradeResult res, string note)
     {
-        attemptsUsed++;
-
-        for (int i = 0; i < missStreak.Length; i++) missStreak[i] = res.steps[i].status == EssayStepStatus.Missing || res.steps[i].status == EssayStepStatus.Wrong ? missStreak[i] + 1 : 0;
+        if (!revising)
+        {
+            attemptsUsed++;
+            for (int i = 0; i < missStreak.Length; i++) missStreak[i] = res.steps[i].status == EssayStepStatus.Missing || res.steps[i].status == EssayStepStatus.Wrong ? missStreak[i] + 1 : 0;
+        }
         var band = RoomRules.Band(res.score, res.maxScore);
-        int earned = RoomRules.InkFor(res.score, difficulty, hintsPaid); RunState.ink += earned; RefreshHud();
+        int full = RoomRules.InkFor(res.score, difficulty, hintsPaid);
+        int earned = revising ? Mathf.Max(0, full - lastEarned) : full;   // chấm lại: chỉ cộng phần Mực tăng thêm so với lần chấm trước
+        lastEarned = revising ? Mathf.Max(lastEarned, full) : full;
+        RunState.ink += earned; RefreshHud();
+        if (revising && string.IsNullOrEmpty(note)) note = "Chấm lại sau khi chép phạt, không tính thêm lần làm.";
         var r = new SolveResultArgs { subjectId = essaySubject, problem = prob, variant = variant, grade = res, band = band, lines = lines, note = note };
         var ai = res as EssayAIResult; if (ai != null) { r.analysis = ai.AnalysisText(); r.stepWhy = ai.why; }
 
@@ -700,12 +707,49 @@ public class RoomManager : MonoBehaviour
 
     void RunFormulaFix(SolveResultArgs r, List<SolveResultButton> realButtons, List<FormulaFixItem> items, int idx, string statement, string title, string subj)
     {
-        if (idx >= items.Count) { r.buttons = realButtons; solve.ShowResult(r); return; }
+        if (idx >= items.Count) { ShowFixedResult(r, realButtons, items); return; }
         solve.ShowFormulaFix(new FormulaFixArgs
         {
             title = title, subjectId = subj, statement = statement, stepNo = idx + 1, stepCount = items.Count, item = items[idx],
             onDone = () => RunFormulaFix(r, realButtons, items, idx + 1, statement, title, subj),
         });
+    }
+
+    /// <summary>
+    /// Sửa công thức xong: hiện lại kết quả. Nếu bài chưa đạt (rương chưa mở), thêm nút "Chép phạt": em chép lại cả lời giải với công thức đã sửa
+    /// rồi gửi cho AI chấm lại. Không áp dụng cho trụ đá của boss (một lần duy nhất) và chỉ cho một lần chép phạt mỗi lượt làm.
+    /// </summary>
+    void ShowFixedResult(SolveResultArgs r, List<SolveResultButton> realButtons, List<FormulaFixItem> items)
+    {
+        var btns = new List<SolveResultButton>();
+        if (!inBossEssay && !revising && r.band == GradeBand.Fail)
+            btns.Add(new SolveResultButton { label = "Chép phạt", style = ButtonStyle.Bronze, onClick = () => ShowPenaltyCopy(r, realButtons, items) });
+        btns.AddRange(realButtons);
+        r.buttons = btns; solve.ShowResult(r);
+    }
+
+    /// <summary>Màn chép phạt: ô viết lời giải trống, bên phải là các công thức đã sửa để chép theo; nộp xong gửi lại cho AI chấm.</summary>
+    void ShowPenaltyCopy(SolveResultArgs r, List<SolveResultButton> realButtons, List<FormulaFixItem> items)
+    {
+        Frozen = true;
+        var sb = new System.Text.StringBuilder();
+        foreach (var it in items) sb.Append("Bước ").Append(it.stepIndex + 1).Append(" · ").Append(it.label).Append(":\n").Append(it.Filled()).Append("\n\n");
+        solve.ShowWriting(new SolveWritingArgs
+        {
+            title = essayTitle + " · Chép phạt", subjectId = essaySubject, statement = variant.statement, draft = "",
+            hintText = "Chép lại cả lời giải của em, đưa các công thức vừa sửa vào đúng chỗ. Thầy Cú sẽ chấm lại bài này.",
+            referenceTitle = "Công thức đã sửa", referenceText = sb.ToString().TrimEnd(),
+            submitLabel = "Nộp chấm lại", exitLabel = "Về kết quả",
+            onSubmit = raw => OnPenaltySubmit(raw, r),
+            onExit = _ => { revising = false; ShowFixedResult(r, realButtons, items); },
+        });
+    }
+
+    void OnPenaltySubmit(string raw, SolveResultArgs r)
+    {
+        EssaySymbols.Prepare(raw, out var nl);
+        if (nl != null && nl.Length > 0 && r.lines != null && string.Join("\n", nl) == string.Join("\n", r.lines)) { UIKit.Toast(solve.Root, "Lời giải chưa khác bài cũ. Em chép lại và sửa công thức nhé."); return; }
+        revising = true; OnSubmit(raw);
     }
 
     string BossEffectText(GradeBand band)
@@ -733,7 +777,7 @@ public class RoomManager : MonoBehaviour
     // ------------------------------------------------------------------ Trụ đá của boss: giải đề một lần
     public void StartBossEssay(EssayDifficulty d, string subject, System.Action<GradeBand, string> done)
     {
-        bossDone = done; inBossEssay = true; essaySubject = subject; difficulty = d; Frozen = true;
+        revising = false; bossDone = done; inBossEssay = true; essaySubject = subject; difficulty = d; Frozen = true;
         var p = RoomRules.PickProblem(problems, subject, d, usedIds, rng);
         if (p == null) { foreach (var s in new[] { "ly", "hoa", "sinh" }) { p = RoomRules.PickProblem(problems, s, d, usedIds, rng); if (p != null) { essaySubject = s; break; } } }
         if (p == null) { Frozen = false; inBossEssay = false; UIKit.Toast(hud, "Chưa có đề cho trụ đá."); done?.Invoke(GradeBand.Pass, null); return; }
