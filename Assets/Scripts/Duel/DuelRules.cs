@@ -4,7 +4,7 @@
 public struct DuelChoice
 {
     public int answer;   // 0..3; -1 = không chọn / hết giờ
-    public int bet;      // 0 (thủ thế), 10, 20 hoặc 30
+    public int bet;      // 0 (thủ thế), 10, 20 hoặc 30 (mức cược chung của vòng là mức cao hơn của hai bên)
 
     public DuelChoice(int answer, int bet) { this.answer = answer; this.bet = bet; }
     public static DuelChoice None { get { return new DuelChoice(-1, 0); } }
@@ -47,9 +47,11 @@ public static class DuelRules
         if (myOk && oppOk)
             return new DuelRoundResult { myCorrect = true, oppCorrect = true, myLoss = 0, oppLoss = 0 };
 
-        // Sát thương mỗi bên gây ra: đúng mới gây, bằng mức cược
-        int myDealt = myOk ? mine.bet : 0;
-        int oppDealt = oppOk ? opp.bet : 0;
+        // Mức cược chung của vòng = mức cược CAO HƠN của hai bên (mình 30, đối thủ 10 => cả hai cùng đặt 30).
+        // Bên trả lời đúng (và có cược, không thủ thế) gây sát thương bằng mức cược chung này, dù mình thắng hay đối thủ thắng.
+        int stake = Mathf.Max(mine.bet, opp.bet);
+        int myDealt = myOk && mine.bet > 0 ? stake : 0;
+        int oppDealt = oppOk && opp.bet > 0 ? stake : 0;
 
         // Thủ thế (cược 0) nhận một nửa sát thương
         int myLoss = mine.bet == 0 ? oppDealt / 2 : oppDealt;

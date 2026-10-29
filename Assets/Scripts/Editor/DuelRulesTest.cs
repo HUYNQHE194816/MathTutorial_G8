@@ -32,7 +32,16 @@ public static class DuelRulesTest
         Check("3. Mình đúng 30, đối thủ thủ thế (trả lời sai, không phạt): nhận một nửa 30 = 15", r.myLoss == 0 && r.oppLoss == 15);
 
         r = DuelRules.Resolve(C(1, 30), C(2, 10), right);
-        Check("4. Mình sai cược 30, đối thủ đúng cược 10: mất 10 + 15 phạt = 25", r.myLoss == 25 && r.oppLoss == 0);
+        Check("4. Mình sai cược 30, đối thủ đúng cược 10: mức chung 30 => mất 30 + 15 phạt = 45", r.myLoss == 45 && r.oppLoss == 0);
+
+        r = DuelRules.Resolve(C(2, 10), C(1, 30), right);
+        Check("4b. Mình đúng cược 10, đối thủ sai cược 30: mức chung 30 => đối thủ mất 30 + 15 phạt = 45", r.myLoss == 0 && r.oppLoss == 45);
+
+        r = DuelRules.Resolve(C(2, 30), C(1, 10), right);
+        Check("4c. Mình đúng cược 30, đối thủ sai cược 10: đối thủ mất 30 + 5 phạt = 35", r.myLoss == 0 && r.oppLoss == 35);
+
+        r = DuelRules.Resolve(C(2, 0), C(1, 30), right);
+        Check("4d. Mình thủ thế mà đúng, đối thủ sai cược 30: không gây sát thương, đối thủ chỉ tự phạt 15", r.myLoss == 0 && r.oppLoss == 15);
 
         r = DuelRules.Resolve(C(-1, 30), C(2, 20), right);
         Check("5. Mình bỏ trống (coi như thủ thế): nhận một nửa 20 = 10, không phạt", r.myLoss == 10 && r.oppLoss == 0);

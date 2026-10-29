@@ -88,7 +88,7 @@ public partial class DuelArenaScreen
         }
 
         // bốn mức cược
-        UIKit.Label("BetHint", ui, "MỨC CƯỢC  (đúng: gây sát thương bằng mức cược  ·  sai: tự mất một nửa  ·  thủ thế: nhận một nửa sát thương)",
+        UIKit.Label("BetHint", ui, "MỨC CƯỢC  (đúng: gây sát thương bằng mức cược cao hơn của hai bên  ·  sai: tự mất nửa cược  ·  thủ thế: nhận nửa)",
             22, GameTheme.Fog, TextAnchor.MiddleCenter, new Vector2(0f, -114f), new Vector2(1300f, 30f));
         string[] names = { "THỦ THẾ", "CƯỢC 10", "CƯỢC 20", "CƯỢC 30" };
         for (int i = 0; i < 4; i++)
