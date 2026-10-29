@@ -1007,13 +1007,14 @@ public class RoomManager : MonoBehaviour
     void OnPlayerDied()
     {
         RecordRun(false);
+        RunSave.Clear();   // ngã xuống: xóa lượt dở, menu sẽ không còn nút TIẾP TỤC LƯỢT DỞ (chỉ có khi người chơi chủ động dừng game rồi thoát)
         GameAudio.Play(Snd.Defeat); RogueAudio.Duck(.2f);
         OpenPanel(new Vector2(1000, 600), out var c);
         string where = RunState.checkpoint.phase == RunPhase.Rest ? "phòng nghỉ sau boss của chặng " + (RunState.checkpoint.stage - 1) : "màn " + RunState.checkpoint.stage + "-1";
         UIKit.Label("T", c, "Hiệp sĩ gục ngã", 60, GameTheme.Blood, TextAnchor.MiddleCenter, new Vector2(0, 210), new Vector2(900, 90), true, true, FontStyle.Bold);
         UIKit.Label("B", c, "Bóng tối nuốt lấy em, nhưng tri thức thì không mất.\nEm quay về điểm lưu đầu chặng (" + where + "), giữ vũ khí và buff lúc đó, mất các vật nhặt trong chặng.\nMực và Mảnh Ký Ức vẫn giữ nguyên: " + RunState.ink + " Mực.", 28, GameTheme.Bone, TextAnchor.MiddleCenter, new Vector2(0, 30), new Vector2(900, 240));
         UIKit.MakeButton(c, "Back", "Về điểm lưu", new Vector2(-220, -210), new Vector2(380, 80), () => { RunState.ResetToStageStart(); Reload(); }, ButtonStyle.Primary, 32);
-        UIKit.MakeButton(c, "Menu", "Về menu", new Vector2(220, -210), new Vector2(380, 80), () => { RunState.ResetToStageStart(); RogueAudio.Stop(); SceneRouter.Go(menuSceneName); }, ButtonStyle.Secondary, 32);
+        UIKit.MakeButton(c, "Menu", "Về menu", new Vector2(220, -210), new Vector2(380, 80), () => { RunSave.Clear(); RunState.ResetAll(true); RogueAudio.Stop(); SceneRouter.Go(menuSceneName); }, ButtonStyle.Secondary, 32);
     }
 
     void Reload() { Frozen = false; SceneRouter.Go(SceneManager.GetActiveScene().name); }
