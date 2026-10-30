@@ -198,6 +198,18 @@ public static class ProcSprites
                 R(3, 5, 3, 12, "#7fe3ff"); R(3, 14, 14, 3, "#7fe3ff"); R(14, 6, 3, 9, "#7fe3ff"); R(4, 15, 12, 1, "#e8fbff");
                 P("#7fe3ff", new Vector2(11.5f, 8), new Vector2(19.5f, 8), new Vector2(15.5f, 1));
                 E(4.5f, 3.2f, 3.2f, 3.2f, "#ff7a2e"); E(4.5f, 3.2f, 1.6f, 1.6f, "#ffe14d"); break;
+            case "wind":
+                SwordIcon("#8fe08a", "#e8ffe0");
+                R(1, 12, 5, 1, "#d9ffd0"); R(1, 13, 1, 2, "#d9ffd0"); R(2, 14, 3, 1, "#d9ffd0");
+                R(14, 9, 5, 1, "#d9ffd0"); R(18, 10, 1, 2, "#d9ffd0"); R(15, 12, 3, 1, "#d9ffd0"); break;
+            case "water":
+                SwordIcon("#3b8fe0", "#cfeeff");
+                E(4.5f, 12f, 1.8f, 2.4f, "#6ec6ff"); P("#6ec6ff", new Vector2(3.3f, 13), new Vector2(5.7f, 13), new Vector2(4.5f, 16.5f));
+                E(15.5f, 10f, 1.8f, 2.4f, "#6ec6ff"); P("#6ec6ff", new Vector2(14.3f, 11), new Vector2(16.7f, 11), new Vector2(15.5f, 14.5f)); break;
+            case "elec":
+                SwordIcon("#ffe14d", "#ffffff");
+                P("#fff176", new Vector2(6, 17), new Vector2(3, 11), new Vector2(5.5f, 11), new Vector2(4, 6), new Vector2(8, 13), new Vector2(6, 13));
+                P("#fff176", new Vector2(15, 15), new Vector2(13, 10), new Vector2(15.5f, 10), new Vector2(14, 6), new Vector2(18, 12), new Vector2(15.8f, 12)); break;
             default:
                 E(10f, 10f, 8f, 8f, "#c9d6ff"); break;
         }
