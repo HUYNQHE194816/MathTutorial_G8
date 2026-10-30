@@ -30,6 +30,9 @@ public static class BuffSystem
         new BuffDef("regen",   "Hồi Phục",    "Hồi 1 máu mỗi giây",          new Color(.4f,.85f,.5f),  p => p.Regen = 1f),
         new BuffDef("reflect", "Chém Phản",   "Chém hất đạn lửa bay ngược về phía rồng",        new Color(.5f,.9f,1f),   p => p.Reflect = true),
         new BuffDef("ally",    "Đệ Hiệp Sĩ",  "Đệ đi theo hiệp sĩ, tự bắn phép vào địch",  new Color(.45f,.9f,.65f), p => p.SpawnCompanion()),
+        new BuffDef("wind",    "Kiếm Gió",    "Mỗi 3 đòn chém tạo 1 lốc xoáy đuổi theo rồng",   new Color(.6f,.95f,.55f), p => p.WindSword = true),
+        new BuffDef("water",   "Kiếm Nước",   "Chém kèm sát thương nước, có tỉ lệ tạo sóng đẩy lùi rồng", new Color(.35f,.65f,1f), p => p.WaterSword = true),
+        new BuffDef("elec",    "Kiếm Sét",    "Chém 3 đòn: quẹt trái (5 tia sét), quẹt phải (5 tia), xoay tròn (8 tia)", new Color(1f,.9f,.3f), p => p.LightningSword = true),
     };
 
     /// <summary>Số buff tối đa người chơi có thể giữ, cứ sau bao nhiêu câu thì được chọn, và số lựa chọn mỗi lần.</summary>
